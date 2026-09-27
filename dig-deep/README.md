@@ -61,12 +61,29 @@ While an ID is `0`, the item shows **"Soon"** in the live game. **In Studio, buy
 
 ## Simulator features
 
-- **Pets:** 16 pets from 4 eggs in the 🥚 Pet Shop next to the museum (coins only, odds shown on each egg), plus the exclusive Starter Pup. Pets follow you and boost your coins. New pets equip themselves if they're better, and the Pets window has Equip, Delete and Equip Best.
+- **Pets:** 16 pets from 4 eggs, each hand-built with glossy eyes, blush and idle animations (wings flap, tails wag, slimes squish) in the 🥚 Pet Shop next to the museum (coins only, odds shown on each egg), plus the exclusive Starter Pup. Pets follow you and boost your coins. New pets equip themselves if they're better, and the Pets window has Equip, Delete and Equip Best.
 - **Miner Level:** XP for every block (deeper layers give more). Each level gives +1% ore value and a coin reward. Your level shows over your head.
 - **🎡 Spin wheel:** a free spin every 20 minutes (coins, potions, a free egg, or a 💎 jackpot).
 - **🎟️ Codes:** `RELEASE`, `DIGDEEP`, `GOLDRUSH`, `THANKYOU`. Add more in the `CODES` table and post them on your group or socials.
 - **Potions:** timers show under your coins.
 - **Cartoony UI:** a button stack on the left (Shop, Pets, Spin, Codes, Offer), chunky gradient buttons, bouncy windows, confetti, and a level-up burst.
+
+## Sound and music
+
+- **Music:** licensed APM tracks (*Happy Song*, *Breezy Days*, *Relaxed Scene*) that play on a loop and get quieter underground.
+- **Ambience:** forest wind on the surface fades into an eerie cave hum as you dig.
+- **Sound effects:** pickaxe hits, block breaks, ore dings, cash register, level-up, egg cracks, and UI pops and clicks.
+- **Fallbacks:** every sound lists fallback IDs, ending with Roblox's built-in sounds. If an ID can't load, the game switches to the next one and prints a warning in Output. To swap a sound, edit `SOUNDS`, `MUSIC` or `AMBIENCE` at the top of `DigDeepClient`.
+- **⚙️ Settings** (saved per player): music on/off and volume, sound effects on/off and volume, ambience, other players' pets, screen shake.
+
+## Retention features
+
+- **Welcome back:** your pets keep digging while you're offline (15% of your normal rate, up to 8 h), and a popup reminds you when your daily chest is ready.
+- **📜 Daily Quests:** three per day, the same for everyone, reset at midnight UTC. Finish all three for a free egg and a Luck potion. The Quests window has an Invite Friends button.
+- **Next-goal bar** above your bag, showing progress to your next pickaxe (or to Ascension).
+- **🏆 Top Miners board** by spawn: a global leaderboard where Ascensions outrank depth. It needs API access; in Studio without it, it ranks the current server.
+- **Pet Index:** "📖 5/17" collection counter in the Pets window.
+- **Guide beams** lead new players to their first pet and to the daily chest.
 
 ## What keeps players coming back
 

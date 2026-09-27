@@ -167,23 +167,23 @@ local PRODUCTS = {
 -- Eggs cost coins only (never Robux), so there are no paid random items.
 --------------------------------------------------------------------------------
 local PETS = {
-	Mole = { name = "Mole", rarity = "Common", boost = 0.05, color = { 150, 108, 78 }, accent = { 255, 170, 170 }, ears = "round", icon = "🐹" },
-	Bunny = { name = "Bunny", rarity = "Uncommon", boost = 0.1, color = { 240, 238, 242 }, accent = { 255, 170, 195 }, ears = "long", icon = "🐰" },
-	PebblePup = { name = "Pebble Pup", rarity = "Rare", boost = 0.2, color = { 150, 150, 162 }, accent = { 90, 90, 104 }, ears = "pointy", tail = true, icon = "🐶" },
-	GoldenMole = { name = "Golden Mole", rarity = "Legendary", boost = 0.5, color = { 255, 200, 60 }, accent = { 255, 240, 170 }, ears = "round", glow = true, icon = "🌟" },
-	Bat = { name = "Cave Bat", rarity = "Common", boost = 0.25, color = { 84, 64, 112 }, accent = { 255, 140, 200 }, ears = "pointy", wings = true, icon = "🦇" },
-	Slime = { name = "Slime", rarity = "Uncommon", boost = 0.4, color = { 90, 222, 124 }, accent = { 40, 140, 70 }, ears = "none", jelly = true, icon = "🟢" },
-	RockGolem = { name = "Rock Golem", rarity = "Rare", boost = 0.7, color = { 124, 114, 104 }, accent = { 255, 170, 60 }, ears = "none", horns = true, icon = "🗿" },
-	LavaPup = { name = "Lava Pup", rarity = "Legendary", boost = 1.5, color = { 255, 92, 32 }, accent = { 255, 222, 92 }, ears = "pointy", tail = true, glow = true, icon = "🔥" },
-	CrystalFox = { name = "Crystal Fox", rarity = "Common", boost = 1, color = { 140, 210, 255 }, accent = { 255, 255, 255 }, ears = "pointy", tail = true, icon = "🦊" },
-	GemOwl = { name = "Gem Owl", rarity = "Uncommon", boost = 1.5, color = { 170, 110, 255 }, accent = { 255, 222, 122 }, ears = "pointy", wings = true, icon = "🦉" },
-	PrismDragon = { name = "Prism Dragon", rarity = "Rare", boost = 2.5, color = { 255, 122, 222 }, accent = { 122, 255, 240 }, ears = "none", horns = true, wings = true, tail = true, icon = "🐲" },
-	DiamondDragon = { name = "Diamond Dragon", rarity = "Legendary", boost = 6, color = { 205, 245, 255 }, accent = { 120, 200, 255 }, ears = "none", horns = true, wings = true, tail = true, glow = true, icon = "💎" },
-	ShadowCat = { name = "Shadow Cat", rarity = "Common", boost = 3, color = { 44, 34, 64 }, accent = { 182, 122, 255 }, ears = "pointy", tail = true, icon = "🐈‍⬛" },
-	VoidWisp = { name = "Void Wisp", rarity = "Uncommon", boost = 5, color = { 112, 42, 202 }, accent = { 232, 182, 255 }, ears = "none", glow = true, icon = "👻" },
-	NebulaSerpent = { name = "Nebula Serpent", rarity = "Rare", boost = 8, color = { 62, 22, 122 }, accent = { 255, 122, 222 }, ears = "none", horns = true, tail = true, glow = true, icon = "🐍" },
-	SingularitySpirit = { name = "Singularity Spirit", rarity = "Legendary", boost = 18, color = { 24, 24, 28 }, accent = { 255, 255, 255 }, ears = "none", wings = true, glow = true, icon = "✨" },
-	StarterPup = { name = "Starter Pup", rarity = "Exclusive", boost = 0.5, color = { 255, 202, 122 }, accent = { 255, 122, 82 }, ears = "round", tail = true, icon = "🐕" },
+	Mole = { style = "critter", variant = "mole", name = "Mole", rarity = "Common", boost = 0.05, color = { 150, 108, 78 }, accent = { 255, 170, 170 }, ears = "round", icon = "🐹" },
+	Bunny = { style = "bunny", name = "Bunny", rarity = "Uncommon", boost = 0.1, color = { 240, 238, 242 }, accent = { 255, 170, 195 }, ears = "long", icon = "🐰" },
+	PebblePup = { style = "critter", variant = "dog", name = "Pebble Pup", rarity = "Rare", boost = 0.2, color = { 150, 150, 162 }, accent = { 90, 90, 104 }, ears = "pointy", tail = true, icon = "🐶" },
+	GoldenMole = { style = "critter", variant = "mole", name = "Golden Mole", rarity = "Legendary", boost = 0.5, color = { 255, 200, 60 }, accent = { 255, 240, 170 }, ears = "round", glow = true, icon = "🌟" },
+	Bat = { style = "bat", name = "Cave Bat", rarity = "Common", boost = 0.25, color = { 84, 64, 112 }, accent = { 255, 140, 200 }, ears = "pointy", wings = true, icon = "🦇" },
+	Slime = { style = "slime", name = "Slime", rarity = "Uncommon", boost = 0.4, color = { 90, 222, 124 }, accent = { 40, 140, 70 }, ears = "none", jelly = true, icon = "🟢" },
+	RockGolem = { style = "golem", name = "Rock Golem", rarity = "Rare", boost = 0.7, color = { 124, 114, 104 }, accent = { 255, 170, 60 }, ears = "none", horns = true, icon = "🗿" },
+	LavaPup = { style = "fox", variant = "lava", name = "Lava Pup", rarity = "Legendary", boost = 1.5, color = { 255, 92, 32 }, accent = { 255, 222, 92 }, ears = "pointy", tail = true, glow = true, icon = "🔥" },
+	CrystalFox = { style = "fox", name = "Crystal Fox", rarity = "Common", boost = 1, color = { 140, 210, 255 }, accent = { 255, 255, 255 }, ears = "pointy", tail = true, icon = "🦊" },
+	GemOwl = { style = "owl", name = "Gem Owl", rarity = "Uncommon", boost = 1.5, color = { 170, 110, 255 }, accent = { 255, 222, 122 }, ears = "pointy", wings = true, icon = "🦉" },
+	PrismDragon = { style = "dragon", name = "Prism Dragon", rarity = "Rare", boost = 2.5, color = { 255, 122, 222 }, accent = { 122, 255, 240 }, ears = "none", horns = true, wings = true, tail = true, icon = "🐲" },
+	DiamondDragon = { style = "dragon", variant = "diamond", name = "Diamond Dragon", rarity = "Legendary", boost = 6, color = { 205, 245, 255 }, accent = { 120, 200, 255 }, ears = "none", horns = true, wings = true, tail = true, glow = true, icon = "💎" },
+	ShadowCat = { style = "fox", variant = "cat", name = "Shadow Cat", rarity = "Common", boost = 3, color = { 44, 34, 64 }, accent = { 182, 122, 255 }, ears = "pointy", tail = true, icon = "🐈‍⬛" },
+	VoidWisp = { style = "wisp", name = "Void Wisp", rarity = "Uncommon", boost = 5, color = { 112, 42, 202 }, accent = { 232, 182, 255 }, ears = "none", glow = true, icon = "👻" },
+	NebulaSerpent = { style = "serpent", name = "Nebula Serpent", rarity = "Rare", boost = 8, color = { 62, 22, 122 }, accent = { 255, 122, 222 }, ears = "none", horns = true, tail = true, glow = true, icon = "🐍" },
+	SingularitySpirit = { style = "wisp", variant = "spirit", name = "Singularity Spirit", rarity = "Legendary", boost = 18, color = { 24, 24, 28 }, accent = { 255, 255, 255 }, ears = "none", wings = true, glow = true, icon = "✨" },
+	StarterPup = { style = "critter", variant = "starter", name = "Starter Pup", rarity = "Exclusive", boost = 0.5, color = { 255, 202, 122 }, accent = { 255, 122, 82 }, ears = "round", tail = true, icon = "🐕" },
 }
 local RARITY_COLORS = { Common = { 200, 200, 210 }, Uncommon = { 110, 230, 130 }, Rare = { 80, 170, 255 }, Legendary = { 255, 200, 50 }, Exclusive = { 255, 110, 200 } }
 local EGGS = {
@@ -206,6 +206,20 @@ local SPIN = {
 	{ label = "Free Egg", icon = "🥚", weight = 2.5, egg = true, color = { 255, 120, 190 } },
 	{ label = "JACKPOT", icon = "💎", weight = 0.5, coinMinutes = 120, color = { 255, 80, 80 } },
 }
+-- Daily quests: 3 are picked per day (same for everyone), progress resets at midnight UTC.
+local QUEST_POOL = {
+	{ id = "mine", text = "Mine %d blocks", goal = 200 },
+	{ id = "ore", text = "Collect %d ores", goal = 25 },
+	{ id = "sell", text = "Sell your bag %d times", goal = 5 },
+	{ id = "hatch", text = "Hatch %d eggs", goal = 2 },
+	{ id = "play", text = "Play for %d minutes", goal = 15 },
+	{ id = "geode", text = "Break %d geode", goal = 1 },
+	{ id = "deep", text = "Dig %d new rows deeper", goal = 10 },
+}
+local QUEST_REWARD_MINUTES = 6
+local OFFLINE_RATE = 0.15 -- share of normal income earned while away
+local OFFLINE_CAP_MINUTES = 8 * 60
+
 -- Codes are case-insensitive. Post new ones in your group/social to bring players back.
 local CODES = {
 	RELEASE = { coinMinutes = 10 },
@@ -523,7 +537,7 @@ treasureFolder.Parent = ReplicatedStorage
 local remoteFolder = Instance.new("Folder")
 remoteFolder.Name = "DigRemotes"
 local Remotes = {}
-for _, name in { "Hit", "Surface", "Mined", "Treasure", "Geode", "Sold", "Notify", "Announce", "Bought", "Reward", "Action", "Hatched", "LevelUp", "SpinResult", "Purchased" } do
+for _, name in { "Hit", "Surface", "Mined", "Treasure", "Geode", "Sold", "Notify", "Announce", "Bought", "Reward", "Action", "Hatched", "LevelUp", "SpinResult", "Purchased", "Welcome" } do
 	local r = Instance.new("RemoteEvent")
 	r.Name = name
 	r.Parent = remoteFolder
@@ -537,7 +551,14 @@ do
 		layers = {}, ores = {}, picks = {}, bags = {}, treasures = {}, treasureOrder = {},
 		passes = PASSES, products = PRODUCTS, pets = PETS, eggs = EGGS, rarityColors = RARITY_COLORS,
 		petSlots = PET_SLOTS, maxPets = MAX_PETS, spin = SPIN, spinCooldown = SPIN_COOLDOWN, income = INCOME,
-		levelBonus = LEVEL_BONUS, ascendBonus = ASCEND_BONUS,
+		levelBonus = LEVEL_BONUS, ascendBonus = ASCEND_BONUS, questRewardMinutes = QUEST_REWARD_MINUTES,
+		petCount = (function()
+			local n = 0
+			for _ in PETS do
+				n += 1
+			end
+			return n
+		end)(),
 	}
 	for _, L in LAYERS do
 		table.insert(cfg.layers, { name = L.name, from = L.from, tint = L.tint, color = L.color })
@@ -965,6 +986,48 @@ local function buildWorld()
 		CollectionService:AddTag(altar, "Shrine")
 		billboard(altar, 9, { { "Title", "⭐ ASCENSION", 22, Color3.fromRGB(215, 175, 255) }, { "Sub", "Reach bedrock (" .. MAX_DEPTH .. "m) to unlock", 14, Color3.fromRGB(235, 235, 245) } }, 70)
 		prompt(altar, "Ascend", "Ascend", "Ascension Shrine", 2)
+	end
+
+	-- Top Miners leaderboard beside the spawn plaza, facing the spawn
+	do
+		local boardPos = W(27, 8, -124)
+		for _, dz in { -8.5, 8.5 } do
+			newPart({ Name = "BoardPost", Size = Vector3.new(0.9, 16, 0.9), Position = W(27.4, 8, -124 + dz), Color = darkWood, Material = Enum.Material.Wood }, town)
+		end
+		local board = newPart({ Name = "TopBoard", Size = Vector3.new(0.6, 13, 16), Position = boardPos, Color = Color3.fromRGB(40, 30, 70), Material = Enum.Material.SmoothPlastic }, town)
+		newPart({ Name = "TopBoardFrame", Size = Vector3.new(0.5, 13.8, 16.8), Position = boardPos + Vector3.new(0.12, 0, 0), Color = Color3.fromRGB(255, 196, 60), Material = Enum.Material.Foil }, town)
+		local sg = Instance.new("SurfaceGui")
+		sg.Name = "Board"
+		sg.Face = Enum.NormalId.Left
+		sg.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+		sg.PixelsPerStud = 40
+		sg.LightInfluence = 0
+		local list = Instance.new("UIListLayout")
+		list.SortOrder = Enum.SortOrder.LayoutOrder
+		list.HorizontalAlignment = Enum.HorizontalAlignment.Center
+		list.Parent = sg
+		local function line(name, order, text, size, color)
+			local l = Instance.new("TextLabel")
+			l.Name = name
+			l.LayoutOrder = order
+			l.BackgroundTransparency = 1
+			l.Size = UDim2.new(1, -40, 0, size + 14)
+			l.Font = Enum.Font.FredokaOne
+			l.TextSize = size
+			l.TextColor3 = color
+			l.Text = text
+			l.TextXAlignment = if order == 0 then Enum.TextXAlignment.Center else Enum.TextXAlignment.Left
+			local st = Instance.new("UIStroke")
+			st.Thickness = 3
+			st.Color = Color3.fromRGB(20, 14, 34)
+			st.Parent = l
+			l.Parent = sg
+		end
+		line("Title", 0, "🏆 TOP MINERS", 64, Color3.fromRGB(255, 214, 90))
+		for i = 1, 10 do
+			line("Row" .. i, i, "", 34, if i == 1 then Color3.fromRGB(255, 214, 90) elseif i <= 3 then Color3.fromRGB(230, 230, 245) else Color3.fromRGB(200, 200, 215))
+		end
+		sg.Parent = board
 	end
 
 	-- Pet shop: four egg stands (odds shown on each, like every simulator)
@@ -1531,6 +1594,7 @@ pcall(function()
 end)
 
 local sessions = {}
+local postScore -- defined with the leaderboard below
 
 local function newData()
 	return {
@@ -1538,7 +1602,8 @@ local function newData()
 		bagCount = 0, bagValue = 0, treasures = {},
 		streak = 0, lastDay = -1, earned = 0, tut = 0,
 		pets = {}, equipped = {}, petUid = 0, xp = 0, level = 1,
-		potions = {}, codes = {}, spinAt = 0, starter = false, firstJoin = 0, receipts = {},
+		potions = {}, codes = {}, spinAt = 0, starter = false, firstJoin = 0, receipts = {}, settings = {},
+		quests = {}, lastSeen = 0, petIndex = {}, sells = 0,
 	}
 end
 
@@ -1583,6 +1648,7 @@ local function saveData(player)
 	if not d or d._noSave or not store then
 		return
 	end
+	d.lastSeen = os.time()
 	local payload = {}
 	for k, v in d do
 		if string.sub(k, 1, 1) ~= "_" then
@@ -1743,6 +1809,64 @@ end
 
 local function notify(player, text, color)
 	Remotes.Notify:FireClient(player, text, color or Color3.fromRGB(255, 255, 255))
+end
+
+-- DAILY QUESTS ------------------------------------------------------------------
+local function questDef(id)
+	for _, q in QUEST_POOL do
+		if q.id == id then
+			return q
+		end
+	end
+	return QUEST_POOL[1]
+end
+
+local function todayQuests(d)
+	local day = math.floor(os.time() / 86400)
+	if type(d.quests) ~= "table" or d.quests.day ~= day then
+		local r = Random.new(day * 7919)
+		local pool = table.clone(QUEST_POOL)
+		local list = {}
+		for _ = 1, 3 do
+			local q = table.remove(pool, r:NextInteger(1, #pool))
+			table.insert(list, { id = q.id, goal = q.goal, progress = 0, claimed = false })
+		end
+		d.quests = { day = day, list = list, bonus = false }
+	end
+	return d.quests
+end
+
+local function syncQuests(player)
+	local d = sessions[player]
+	if not d then
+		return
+	end
+	local q = todayQuests(d)
+	local out = {}
+	for _, item in q.list do
+		table.insert(out, { text = string.format(questDef(item.id).text, item.goal), progress = math.min(item.progress, item.goal), goal = item.goal, claimed = item.claimed })
+	end
+	player:SetAttribute("Quests", HttpService:JSONEncode({ list = out, bonus = q.bonus, resets = (q.day + 1) * 86400 }))
+end
+
+local function questProgress(player, id, amount)
+	local d = sessions[player]
+	if not d then
+		return
+	end
+	local changed = false
+	for _, item in todayQuests(d).list do
+		if item.id == id and item.progress < item.goal then
+			item.progress = math.min(item.goal, item.progress + (amount or 1))
+			changed = true
+			if item.progress >= item.goal then
+				notify(player, "📜 Quest complete! Claim your reward in Quests", Color3.fromRGB(255, 214, 90))
+			end
+		end
+	end
+	if changed then
+		syncQuests(player)
+	end
 end
 
 --------------------------------------------------------------------------------
@@ -2023,7 +2147,9 @@ local function breakBlock(player, part, info)
 	local depth = info.y + 1
 	if depth > d.best then
 		d.best = depth
+		questProgress(player, "deep")
 	end
+	questProgress(player, "mine")
 	if d.tut == 0 and d.mined >= 5 then
 		d.tut = 1
 	end
@@ -2041,6 +2167,7 @@ local function breakBlock(player, part, info)
 				hd.coins += amount
 				hd.earned += amount
 				Remotes.Geode:FireClient(hitter, info.pos, amount, count)
+				questProgress(hitter, "geode")
 				sync(hitter)
 			end
 		end
@@ -2048,6 +2175,9 @@ local function breakBlock(player, part, info)
 		d.bagCount += 1
 		d.bagValue += info.value * valueMult(player)
 		collected = true
+		if info.kind ~= "" then
+			questProgress(player, "ore")
+		end
 	else
 		full = true
 	end
@@ -2137,6 +2267,8 @@ local function trySell(player)
 	d.earned += amount
 	d.bagCount = 0
 	d.bagValue = 0
+	d.sells = (d.sells or 0) + 1
+	questProgress(player, "sell")
 	if d.tut < 2 then
 		d.tut = 2
 	end
@@ -2183,6 +2315,13 @@ local function syncPets(player)
 	player:SetAttribute("Pets", HttpService:JSONEncode(list))
 	player:SetAttribute("PetsEquipped", HttpService:JSONEncode(equippedIds))
 	player:SetAttribute("PetSlots", petSlots(player))
+	local indexed = 0
+	for id in d.petIndex do
+		if PETS[id] then
+			indexed += 1
+		end
+	end
+	player:SetAttribute("PetIndex", indexed)
 end
 
 local function findPet(d, uid)
@@ -2272,6 +2411,8 @@ local function hatch(player, index, free)
 		end
 	end
 	givePet(player, chosen)
+	d.petIndex[chosen] = true
+	questProgress(player, "hatch")
 	syncPets(player)
 	sync(player)
 	Remotes.Hatched:FireClient(player, chosen, egg.id)
@@ -2400,6 +2541,7 @@ local function grantProduct(player, key)
 		if not d.starter then
 			d.starter = true
 			givePet(player, "StarterPup")
+			d.petIndex.StarterPup = true
 			syncPets(player)
 		end
 		for _, potion in { "Coins", "Luck", "Speed" } do
@@ -2516,6 +2658,53 @@ Remotes.Action.OnServerEvent:Connect(function(player, action, arg, arg2)
 			end
 			syncPets(player)
 			sync(player)
+		end
+	elseif action == "Settings" then
+		if type(arg) ~= "table" then
+			return
+		end
+		local clean = {}
+		for _, key in { "music", "sfx", "ambience", "otherPets", "shake" } do
+			if type(arg[key]) == "boolean" then
+				clean[key] = arg[key]
+			end
+		end
+		for _, key in { "musicVol", "sfxVol" } do
+			if type(arg[key]) == "number" and arg[key] == arg[key] then
+				clean[key] = math.clamp(arg[key], 0, 1)
+			end
+		end
+		d.settings = clean
+	elseif action == "ClaimQuest" then
+		local item = todayQuests(d).list[arg]
+		if item and not item.claimed and item.progress >= item.goal then
+			item.claimed = true
+			local amount = coinMinutes(player, QUEST_REWARD_MINUTES)
+			sync(player)
+			syncQuests(player)
+			Remotes.Sold:FireClient(player, amount)
+		end
+	elseif action == "ClaimQuestBonus" then
+		local q = todayQuests(d)
+		local all = true
+		for _, item in q.list do
+			all = all and item.claimed
+		end
+		if all and not q.bonus then
+			q.bonus = true
+			addPotion(player, "Luck", 10)
+			sync(player)
+			syncQuests(player)
+			hatch(player, bestUnlockedEgg(d), true)
+		end
+	elseif action == "CollectOffline" then
+		local amount = d._offline or 0
+		if amount > 0 then
+			d._offline = 0
+			d.coins += amount
+			d.earned += amount
+			sync(player)
+			Remotes.Sold:FireClient(player, amount)
 		end
 	elseif action == "Redeem" then
 		redeem(player, arg)
@@ -2732,6 +2921,28 @@ local function onJoin(player)
 	if d.firstJoin == 0 then
 		d.firstJoin = os.time()
 	end
+	player:SetAttribute("Settings", HttpService:JSONEncode(d.settings or {}))
+	d.petIndex = d.petIndex or {}
+	syncQuests(player)
+	-- Offline earnings and "welcome back" (the main reason to come back tomorrow)
+	do
+		local now = os.time()
+		local away = if (d.lastSeen or 0) > 0 then now - d.lastSeen else 0
+		local amount, minutes = 0, 0
+		if away >= 300 then
+			minutes = math.min(away / 60, OFFLINE_CAP_MINUTES)
+			amount = math.floor(INCOME[d.pick] * minutes * OFFLINE_RATE * (1 + (d.asc or 0) * ASCEND_BONUS))
+		end
+		d._offline = amount
+		local dailyReady = d.lastDay ~= math.floor(now / 86400)
+		if amount > 0 or dailyReady then
+			task.delay(3, function()
+				if player.Parent then
+					Remotes.Welcome:FireClient(player, amount, math.floor(minutes), dailyReady, d.streak)
+				end
+			end)
+		end
+	end
 	sync(player)
 	syncPets(player)
 	task.spawn(function()
@@ -2754,6 +2965,7 @@ for _, p in Players:GetPlayers() do
 end
 
 Players.PlayerRemoving:Connect(function(player)
+	postScore(player)
 	saveData(player)
 	sessions[player] = nil
 	lastHit[player] = nil
@@ -2789,6 +3001,98 @@ task.spawn(function()
 		task.wait(AUTOSAVE_EVERY)
 		for player in sessions do
 			task.spawn(saveData, player)
+		end
+	end
+end)
+
+--------------------------------------------------------------------------------
+-- TOP MINERS (global leaderboard) and play-time quests
+--------------------------------------------------------------------------------
+local rankStore = nil
+pcall(function()
+	rankStore = DataStoreService:GetOrderedDataStore("DigDeep_TopMiners")
+end)
+local nameCache = {}
+local function score(d)
+	return (d.asc or 0) * 10000 + d.best -- every Ascension outranks any depth
+end
+postScore = function(player)
+	local d = sessions[player]
+	if not d or not rankStore or d._noSave then
+		return
+	end
+	local sc = score(d)
+	if sc > (d._posted or 0) then
+		local ok = pcall(function()
+			rankStore:SetAsync("u" .. player.UserId, sc)
+		end)
+		if ok then
+			d._posted = sc
+		end
+	end
+end
+local function refreshBoard()
+	local board = town:FindFirstChild("TopBoard")
+	local gui = board and board:FindFirstChild("Board")
+	if not gui then
+		return
+	end
+	local rows = {}
+	local ok = rankStore ~= nil and pcall(function()
+		local page = rankStore:GetSortedAsync(false, 10):GetCurrentPage()
+		for _, entry in page do
+			local id = tonumber(string.sub(entry.key, 2))
+			local name = nameCache[id]
+			if not name and id then
+				local okName, result = pcall(function()
+					return Players:GetNameFromUserIdAsync(id)
+				end)
+				name = if okName then result else "Miner"
+				nameCache[id] = name
+			end
+			table.insert(rows, { name = name or "Miner", score = entry.value })
+		end
+	end)
+	if not ok or #rows == 0 then
+		-- no DataStore access (e.g. Studio without API access): rank this server instead
+		rows = {}
+		for p, d in sessions do
+			table.insert(rows, { name = p.DisplayName, score = score(d) })
+		end
+		table.sort(rows, function(a, b)
+			return a.score > b.score
+		end)
+	end
+	for i = 1, 10 do
+		local row = gui:FindFirstChild("Row" .. i)
+		local r = rows[i]
+		if row then
+			if r then
+				local asc = math.floor(r.score / 10000)
+				local depth = r.score % 10000
+				row.Text = `{i}. {r.name}   {if asc > 0 then "⭐" .. asc .. "  " else ""}{depth}m`
+			else
+				row.Text = ""
+			end
+		end
+	end
+end
+task.spawn(function()
+	task.wait(5)
+	while true do
+		for player in sessions do
+			task.spawn(postScore, player)
+		end
+		task.wait(3)
+		refreshBoard()
+		task.wait(117)
+	end
+end)
+task.spawn(function()
+	while true do
+		task.wait(60)
+		for player in sessions do
+			questProgress(player, "play")
 		end
 	end
 end)
