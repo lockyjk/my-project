@@ -266,7 +266,7 @@ local bagPill = create("Frame", {
 	Name = "Bag",
 	AnchorPoint = Vector2.new(0.5, 1),
 	Position = UDim2.new(0.5, 0, 1, -22),
-	Size = UDim2.fromOffset(240, 36),
+	Size = UDim2.fromOffset(290, 36),
 	BackgroundColor3 = Color3.fromRGB(20, 20, 26),
 	BackgroundTransparency = 0.3,
 	Parent = gui,
@@ -494,7 +494,11 @@ local function refreshBag()
 	local full = count >= max
 	tween(bagFill, 0.2, { Size = UDim2.fromScale(f, 1) })
 	bagFill.BackgroundColor3 = if full then RED else GOLD
-	bagLabel.Text = if full then "🎒 FULL · SURFACE TO SELL" else `🎒 {fmt(count)} / {fmt(max)}`
+	local worth = attr("BagValue", 0)
+	bagLabel.Text = if full
+		then "🎒 FULL · SURFACE TO SELL"
+		elseif worth > 0 then `🎒 {fmt(count)} / {fmt(max)}  ·  💰 {fmt(worth)}`
+		else `🎒 {fmt(count)} / {fmt(max)}`
 	bagLabel.TextSize = if full then 15 else 18
 	if count > lastBag then
 		pulse(bagScale, 1.06)
@@ -503,6 +507,7 @@ local function refreshBag()
 end
 player:GetAttributeChangedSignal("Bag"):Connect(refreshBag)
 player:GetAttributeChangedSignal("BagMax"):Connect(refreshBag)
+player:GetAttributeChangedSignal("BagValue"):Connect(refreshBag)
 refreshBag()
 
 local toastToken = 0
@@ -689,6 +694,9 @@ rayParams.FilterDescendantsInstances = { mineFolder }
 local mouseHeld = false
 local activeTouch = nil
 local touchPos = nil
+local touchStart = nil
+local touchDragged = false
+local DRAG_PIXELS = 14
 local lastSwing = 0
 local lastSurfaceRequest = 0
 
@@ -711,6 +719,8 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	elseif input.UserInputType == Enum.UserInputType.Touch then
 		activeTouch = input
 		touchPos = Vector2.new(input.Position.X, input.Position.Y)
+		touchStart = touchPos
+		touchDragged = false
 	elseif input.KeyCode == Enum.KeyCode.R and currentDepth() > 0 then
 		requestSurface()
 	end
@@ -719,6 +729,9 @@ end)
 UserInputService.InputChanged:Connect(function(input)
 	if input == activeTouch then
 		touchPos = Vector2.new(input.Position.X, input.Position.Y)
+		if touchStart and (touchPos - touchStart).Magnitude > DRAG_PIXELS then
+			touchDragged = true
+		end
 	end
 end)
 
@@ -728,6 +741,8 @@ UserInputService.InputEnded:Connect(function(input)
 	elseif input == activeTouch then
 		activeTouch = nil
 		touchPos = nil
+		touchStart = nil
+		touchDragged = false
 	end
 end)
 
@@ -781,7 +796,7 @@ end
 
 local function updateMining()
 	local hum = getHumanoid()
-	local holding = mouseHeld or activeTouch ~= nil
+	local holding = mouseHeld or (activeTouch ~= nil and not touchDragged)
 	local target, hitPos = nil, nil
 	if hum and hum.Health > 0 and (holding or not isTouch) then
 		target, hitPos = findTarget()
@@ -921,6 +936,13 @@ Remotes.Treasure.OnClientEvent:Connect(function(id, pos, reward, first)
 		return
 	end
 	local color = rgb(T.color)
+	if not first and reward < 25000 then
+		-- repeat finds of common treasures stay small so fast diggers aren't spammed
+		popup(pos, `🏆 {T.name}  + 💰 {fmt(reward)}`, color:Lerp(WHITE, 0.3), 26, 6, 1.6)
+		sparkle(pos, color, 25, 20)
+		playSound("Pickup", 0.7)
+		return
+	end
 	playSound("Treasure", 0.8)
 	task.delay(0.25, playSound, "Treasure", 1.2)
 	kick(0.8)
@@ -1117,6 +1139,20 @@ local function refreshStations()
 			end
 		end
 	end
+	for _, altar in CollectionService:GetTagged("Shrine") do
+		local info = altar:FindFirstChild("Info")
+		local sub = info and info:FindFirstChild("Sub")
+		if sub then
+			local asc = attr("Asc", 0)
+			if attr("Best", 0) >= CFG.maxDepth then
+				sub.Text = `Ready! Start over with x{string.format("%.1f", 1 + (asc + 1) * 0.5)} ore value`
+				sub.TextColor3 = if math.floor(now * 2) % 2 == 0 then Color3.fromRGB(215, 175, 255) else WHITE
+			else
+				sub.Text = (if asc > 0 then `Ascension {asc} · ` else "") .. `Reach bedrock ({CFG.maxDepth}m) to unlock`
+				sub.TextColor3 = Color3.fromRGB(220, 220, 230)
+			end
+		end
+	end
 	for _, platform in CollectionService:GetTagged("Elevator") do
 		local info = platform:FindFirstChild("Info")
 		local sub = info and info:FindFirstChild("Sub")
@@ -1230,6 +1266,36 @@ local baseOutdoor = Lighting.OutdoorAmbient
 local DEEP_AMBIENT = Color3.fromRGB(34, 32, 42)
 local DEEP_OUTDOOR = Color3.fromRGB(14, 14, 20)
 local dark = 0
+local skyOpen = true
+local skyParams = RaycastParams.new()
+skyParams.FilterType = Enum.RaycastFilterType.Include
+skyParams.FilterDescendantsInstances = { mineFolder }
+local function checkSky()
+	local root = getRoot()
+	if not root then
+		skyOpen = true
+		return
+	end
+	local hit = workspace:Raycast(root.Position + Vector3.new(0, 2, 0), Vector3.new(0, 600, 0), skyParams)
+	skyOpen = hit == nil
+end
+
+-- Tell the player when their coins plus the ore in their bag can pay for the next pickaxe.
+local announcedTier = attr("Pick", 1)
+local function checkAfford()
+	local owned = attr("Pick", 1)
+	if owned > announcedTier then
+		announcedTier = owned
+	end
+	local nextPick = CFG.picks[owned + 1]
+	if nextPick and owned + 1 > announcedTier and attr("Coins", 0) + attr("BagValue", 0) >= nextPick.price and attr("Tut", 0) >= 2 then
+		announcedTier = owned + 1
+		toast(if attr("Coins", 0) >= nextPick.price
+			then `⛏ You can buy the {nextPick.name}!`
+			else `⛏ Sell your bag to buy the {nextPick.name}!`, GOLD)
+		playSound("Buy", 1.3)
+	end
+end
 
 --------------------------------------------------------------------------------
 -- MAIN LOOP
@@ -1245,7 +1311,7 @@ RunService.RenderStepped:Connect(function(dt)
 	local t = os.clock()
 
 	-- Lighting
-	local target = math.clamp(depth / 8, 0, 1)
+	local target = if skyOpen then math.clamp((depth - 6) / 30, 0, 0.35) else math.clamp(depth / 8, 0, 1)
 	dark += (target - dark) * (1 - math.exp(-dt * 3))
 	Lighting.Ambient = baseAmbient:Lerp(DEEP_AMBIENT, dark)
 	Lighting.OutdoorAmbient = baseOutdoor:Lerp(DEEP_OUTDOOR, dark)
@@ -1284,7 +1350,7 @@ RunService.RenderStepped:Connect(function(dt)
 	end
 
 	-- Depth gauge + surface button
-	local underground = depth > 0
+	local underground = depth > 5 or (depth > 0 and not skyOpen)
 	if underground ~= gaugeShown then
 		gaugeShown = underground
 		gauge.Visible = underground
@@ -1311,6 +1377,8 @@ RunService.RenderStepped:Connect(function(dt)
 			eventLabel.Text = `Gold Rush in {clock(CFG.rushEvery - now % CFG.rushEvery)}`
 			eventLabel.TextColor3 = Color3.fromRGB(225, 225, 232)
 		end
+		checkSky()
+		checkAfford()
 		refreshStations()
 		updateTutorial(depth)
 	end

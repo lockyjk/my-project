@@ -14,6 +14,10 @@ local Lighting = game:GetService("Lighting")
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 
+pcall(function()
+	workspace.FallenPartsDestroyHeight = -4000
+end)
+
 -- Remove the template's baseplate and spawn first, before any character can land on them.
 for _, child in workspace:GetChildren() do
 	if child:IsA("SpawnLocation") or child.Name == "Baseplate" then
@@ -24,14 +28,14 @@ end
 --------------------------------------------------------------------------------
 -- TUNING
 --------------------------------------------------------------------------------
--- The surface sits high up and the mine digs down from it, so the bottom of the mine
--- stays above Workspace.FallenPartsDestroyHeight (-500 by default).
-local TOP = 1848
+-- Surface height. The mine digs down 3000 studs from here, so the place file sets
+-- Workspace.FallenPartsDestroyHeight to -4000 (the script also tries to, below).
+local TOP = 100
 local BLOCK = 6 -- studs per block
 local GRID = 24 -- the mine is GRID x GRID blocks wide
-local MAX_DEPTH = 300 -- rows; bedrock below
+local MAX_DEPTH = 500 -- rows; bedrock below
 local REACH = 20 -- studs from your root part to a block's centre
-local PART_CAP = 15000 -- an earthquake resets the mine once this many blocks exist
+local PART_CAP = 11000 -- an earthquake resets the mine once this many blocks exist
 local QUAKE_EVERY = 30 * 60
 local QUAKE_WARNING = 20
 local RUSH_EVERY = 12 * 60 -- a Gold Rush starts every 12 minutes on the UTC clock...
@@ -42,6 +46,7 @@ local GEODE_MIN_DEPTH = 20
 local ELEVATOR_STEP = 25
 local FRIEND_BONUS = 0.1
 local TREASURE_BONUS = 0.1 -- +10% ore value per unique treasure found
+local ASCEND_BONUS = 0.5 -- +50% ore value per Ascension
 local AUTOSAVE_EVERY = 90
 local DATA_STORE = "DigDeep_v1"
 
@@ -63,24 +68,27 @@ local ORES = {
 	Moonstone = { name = "Moonstone", value = 30000, hp = 3.2, color = { 225, 235, 255 }, material = "Neon", tier = 5, glow = true, announce = true },
 	Voidstone = { name = "Voidstone", value = 40000, hp = 2.6, color = { 110, 40, 185 }, material = "Neon", tier = 5, glow = true },
 	Starshard = { name = "Starshard", value = 150000, hp = 3.2, color = { 255, 235, 140 }, material = "Neon", tier = 6, glow = true, announce = true },
+	Corium = { name = "Corium", value = 90000, hp = 2.2, color = { 255, 84, 40 }, material = "Neon", tier = 5, glow = true },
 	Singularity = { name = "Singularity", value = 1500000, hp = 5, color = { 235, 70, 255 }, material = "Neon", tier = 6, glow = true, announce = true },
 }
 
 -- Layers, top to bottom. from = first row. hp = base block health. value = coins for a plain block.
 -- tint = colour grading while you are in this layer.
 local LAYERS = {
-	{ name = "Topsoil", alt = { material = "Mud", color = { 96, 68, 46 } }, from = 0, hp = 3, value = 1, color = { 118, 84, 56 }, material = "Ground", tint = { 255, 244, 228 },
+	{ name = "Topsoil", band = { 172, 108, 66 }, alt = { material = "Mud", color = { 96, 68, 46 } }, from = 0, hp = 3, value = 1, color = { 118, 84, 56 }, material = "Ground", tint = { 255, 244, 228 },
 		ores = { { id = "Coal", chance = 0.06 }, { id = "Copper", chance = 0.03 } } },
-	{ name = "Stone", alt = { material = "Rock", color = { 112, 112, 116 } }, from = 15, hp = 8, value = 2, color = { 125, 125, 130 }, material = "Slate", tint = { 236, 240, 255 },
+	{ name = "Stone", band = { 168, 156, 136 }, alt = { material = "Rock", color = { 112, 112, 116 } }, from = 20, hp = 8, value = 2, color = { 125, 125, 130 }, material = "Slate", tint = { 236, 240, 255 },
 		ores = { { id = "Coal", chance = 0.04 }, { id = "Copper", chance = 0.04 }, { id = "Iron", chance = 0.04 }, { id = "Silver", chance = 0.015 } } },
-	{ name = "Deepstone", alt = { material = "Slate", color = { 58, 60, 74 } }, from = 40, hp = 16, value = 5, color = { 72, 74, 88 }, material = "Basalt", tint = { 214, 224, 255 },
+	{ name = "Deepstone", band = { 92, 104, 138 }, alt = { material = "Slate", color = { 58, 60, 74 } }, from = 60, hp = 16, value = 5, color = { 72, 74, 88 }, material = "Basalt", tint = { 214, 224, 255 },
 		ores = { { id = "Iron", chance = 0.04 }, { id = "Silver", chance = 0.03 }, { id = "Gold", chance = 0.025 }, { id = "Ruby", chance = 0.008 }, { id = "Sapphire", chance = 0.008 } } },
-	{ name = "Magma Rock", alt = { material = "Basalt", color = { 50, 32, 28 } }, from = 80, hp = 50, value = 12, color = { 70, 40, 34 }, material = "CrackedLava", tint = { 255, 212, 186 },
+	{ name = "Magma Rock", band = { 150, 62, 30 }, alt = { material = "Basalt", color = { 50, 32, 28 } }, from = 120, hp = 50, value = 12, color = { 70, 40, 34 }, material = "CrackedLava", tint = { 255, 212, 186 },
 		ores = { { id = "Gold", chance = 0.03 }, { id = "Obsidian", chance = 0.03 }, { id = "Emerald", chance = 0.015 }, { id = "Firestone", chance = 0.007 } } },
-	{ name = "Crystal Caves", alt = { material = "Ice", color = { 110, 150, 205 } }, from = 130, hp = 160, value = 30, color = { 66, 86, 130 }, material = "Glacier", tint = { 206, 224, 255 },
+	{ name = "Crystal Caves", band = { 126, 148, 226 }, alt = { material = "Ice", color = { 110, 150, 205 } }, from = 200, hp = 160, value = 30, color = { 66, 86, 130 }, material = "Glacier", tint = { 206, 224, 255 },
 		ores = { { id = "Amethyst", chance = 0.03 }, { id = "Diamond", chance = 0.01 }, { id = "Moonstone", chance = 0.004 } } },
-	{ name = "The Void", alt = { material = "Basalt", color = { 22, 16, 34 } }, from = 200, hp = 520, value = 80, color = { 30, 22, 44 }, material = "Slate", tint = { 222, 196, 255 },
+	{ name = "The Void", band = { 76, 34, 110 }, alt = { material = "Basalt", color = { 22, 16, 34 } }, from = 300, hp = 520, value = 80, color = { 30, 22, 44 }, material = "Slate", tint = { 222, 196, 255 },
 		ores = { { id = "Voidstone", chance = 0.03 }, { id = "Starshard", chance = 0.008 }, { id = "Singularity", chance = 0.0008 } } },
+	{ name = "The Core", band = { 255, 120, 40 }, alt = { material = "CrackedLava", color = { 90, 30, 16 } }, from = 420, hp = 1500, value = 240, color = { 60, 20, 14 }, material = "Basalt", tint = { 255, 200, 170 },
+		ores = { { id = "Starshard", chance = 0.01 }, { id = "Corium", chance = 0.02 }, { id = "Singularity", chance = 0.002 } } },
 }
 
 local PICKS = {
@@ -88,38 +96,39 @@ local PICKS = {
 	{ name = "Stone Pick", dmg = 2, speed = 0.42, price = 40, color = { 140, 140, 144 }, material = "Slate" },
 	{ name = "Iron Pick", dmg = 4, speed = 0.40, price = 700, color = { 205, 205, 212 }, material = "Metal" },
 	{ name = "Golden Pick", dmg = 8, speed = 0.36, price = 8000, color = { 255, 200, 45 }, material = "Foil" },
-	{ name = "Diamond Pick", dmg = 16, speed = 0.33, price = 50000, color = { 150, 235, 255 }, material = "Glass", glow = true },
-	{ name = "Magma Pick", dmg = 34, speed = 0.30, price = 350000, color = { 255, 105, 25 }, material = "Neon", glow = true },
-	{ name = "Crystal Pick", dmg = 75, speed = 0.27, price = 2500000, color = { 175, 95, 255 }, material = "Glass", glow = true },
-	{ name = "Void Pick", dmg = 170, speed = 0.24, price = 20000000, color = { 80, 10, 140 }, material = "Neon", glow = true },
-	{ name = "Starforged Pick", dmg = 400, speed = 0.20, price = 150000000, color = { 255, 240, 165 }, material = "Neon", glow = true },
+	{ name = "Diamond Pick", dmg = 16, speed = 0.33, price = 22000, color = { 150, 235, 255 }, material = "Glass", glow = true },
+	{ name = "Magma Pick", dmg = 34, speed = 0.30, price = 150000, color = { 255, 105, 25 }, material = "Neon", glow = true },
+	{ name = "Crystal Pick", dmg = 75, speed = 0.27, price = 1000000, color = { 175, 95, 255 }, material = "Glass", glow = true },
+	{ name = "Void Pick", dmg = 170, speed = 0.24, price = 8000000, color = { 80, 10, 140 }, material = "Neon", glow = true },
+	{ name = "Starforged Pick", dmg = 400, speed = 0.20, price = 60000000, color = { 255, 240, 165 }, material = "Neon", glow = true },
+	{ name = "Core Breaker", dmg = 1100, speed = 0.18, price = 450000000, color = { 255, 90, 40 }, material = "Neon", glow = true },
 }
 
 local BAGS = {
 	{ name = "Pouch", capacity = 20, price = 0, color = { 165, 124, 84 } },
 	{ name = "Satchel", capacity = 50, price = 90, color = { 125, 82, 52 } },
 	{ name = "Rucksack", capacity = 120, price = 1500, color = { 74, 112, 64 } },
-	{ name = "Miner's Pack", capacity = 300, price = 15000, color = { 205, 145, 45 } },
-	{ name = "Ore Hauler", capacity = 750, price = 100000, color = { 92, 94, 112 } },
-	{ name = "Gem Vault", capacity = 2000, price = 750000, color = { 60, 160, 222 }, trim = { 160, 240, 255 } },
-	{ name = "Bottomless Bag", capacity = 6000, price = 5000000, color = { 122, 42, 165 }, trim = { 255, 120, 255 } },
-	{ name = "Pocket Dimension", capacity = 20000, price = 40000000, color = { 22, 20, 32 }, trim = { 140, 90, 255 } },
+	{ name = "Miner's Pack", capacity = 300, price = 9000, color = { 205, 145, 45 } },
+	{ name = "Ore Hauler", capacity = 750, price = 60000, color = { 92, 94, 112 } },
+	{ name = "Gem Vault", capacity = 2000, price = 400000, color = { 60, 160, 222 }, trim = { 160, 240, 255 } },
+	{ name = "Bottomless Bag", capacity = 6000, price = 3000000, color = { 122, 42, 165 }, trim = { 255, 120, 255 } },
+	{ name = "Pocket Dimension", capacity = 20000, price = 25000000, color = { 22, 20, 32 }, trim = { 140, 90, 255 } },
 }
 
 -- Treasures, in museum order. chance is per block broken at or below `depth` metres.
 local TREASURES = {
 	{ id = "OldBoot", name = "Old Boot", depth = 0, chance = 1 / 350, reward = 60, color = { 150, 100, 60 }, hint = "Somewhere near the top" },
-	{ id = "AncientCoin", name = "Ancient Coin", depth = 10, chance = 1 / 700, reward = 400, color = { 240, 190, 70 }, hint = "Deeper than 10m" },
-	{ id = "FossilSkull", name = "Fossil Skull", depth = 30, chance = 1 / 1400, reward = 3000, color = { 230, 220, 192 }, hint = "Deeper than 30m" },
-	{ id = "GoldenIdol", name = "Golden Idol", depth = 60, chance = 1 / 2400, reward = 30000, color = { 255, 200, 50 }, hint = "Deeper than 60m" },
-	{ id = "DragonEgg", name = "Dragon Egg", depth = 100, chance = 1 / 4000, reward = 300000, color = { 255, 90, 60 }, hint = "Deeper than 100m" },
-	{ id = "Meteorite", name = "Meteorite", depth = 150, chance = 1 / 6500, reward = 2500000, color = { 255, 140, 60 }, hint = "Deeper than 150m" },
-	{ id = "CrownOfTheDeep", name = "Crown of the Deep", depth = 220, chance = 1 / 12000, reward = 40000000, color = { 120, 200, 255 }, hint = "Deeper than 220m" },
+	{ id = "AncientCoin", name = "Ancient Coin", depth = 15, chance = 1 / 700, reward = 400, color = { 240, 190, 70 }, hint = "Deeper than 15m" },
+	{ id = "FossilSkull", name = "Fossil Skull", depth = 45, chance = 1 / 1400, reward = 3000, color = { 230, 220, 192 }, hint = "Deeper than 45m" },
+	{ id = "GoldenIdol", name = "Golden Idol", depth = 90, chance = 1 / 2400, reward = 30000, color = { 255, 200, 50 }, hint = "Deeper than 90m" },
+	{ id = "DragonEgg", name = "Dragon Egg", depth = 160, chance = 1 / 4000, reward = 300000, color = { 255, 90, 60 }, hint = "Deeper than 160m" },
+	{ id = "Meteorite", name = "Meteorite", depth = 250, chance = 1 / 6500, reward = 2500000, color = { 255, 140, 60 }, hint = "Deeper than 250m" },
+	{ id = "CrownOfTheDeep", name = "Crown of the Deep", depth = 360, chance = 1 / 12000, reward = 40000000, color = { 120, 200, 255 }, hint = "Deeper than 360m" },
 	{ id = "RubberDuck", name = "Rubber Duck", depth = 0, chance = 1 / 40000, reward = 1000000, color = { 255, 220, 40 }, hint = "Anywhere... if you're lucky" },
 }
 
 -- Daily chest base reward by pickaxe tier, so it stays useful as you progress.
-local DAILY = { 100, 300, 1500, 8000, 40000, 250000, 1600000, 12000000, 80000000 }
+local DAILY = { 100, 300, 1500, 8000, 25000, 120000, 700000, 5000000, 35000000, 250000000 }
 
 --------------------------------------------------------------------------------
 -- HELPERS
@@ -567,10 +576,12 @@ local function buildWorld()
 	ground(0, PIT + 4, PIT * 2 + 8, 8, Enum.Material.Ground)
 	ground(-PIT - 4, 0, 8, PIT * 2, Enum.Material.Ground)
 	ground(PIT + 4, 0, 8, PIT * 2, Enum.Material.Ground)
-	ground(0, -92, 256, 16, Enum.Material.Cobblestone)
-	ground(0, -124, 12, 44, Enum.Material.Cobblestone)
-	ground(0, -122, 24, 20, Enum.Material.Cobblestone)
-	ground(0, -148, 104, 12, Enum.Material.Cobblestone)
+	ground(0, -113, 264, 12, Enum.Material.Cobblestone)
+	ground(0, -104, 16, 40, Enum.Material.Cobblestone)
+	ground(0, -90, 120, 12, Enum.Material.Cobblestone)
+	ground(0, -130, 36, 20, Enum.Material.Cobblestone)
+	ground(0, -142, 20, 8, Enum.Material.Cobblestone)
+	ground(78, -131, 10, 26, Enum.Material.Cobblestone)
 
 	-- Lake with a sandy shore
 	local lake = W(176, 0, 150)
@@ -645,8 +656,8 @@ local function buildWorld()
 	end
 
 	-- Street lamps along the main path
-	for _, x in { -110, -70, -30, 30, 70, 110 } do
-		local base = W(x, 0, -90)
+	for _, x in { -118, -70, -22, 22, 70, 118 } do
+		local base = W(x, 0, -118)
 		newPart({ Name = "StreetLampPole", Size = Vector3.new(0.6, 11, 0.6), Position = base + Vector3.new(0, 5.5, 0), Color = Color3.fromRGB(44, 44, 48), Material = Enum.Material.Metal }, town)
 		newPart({ Name = "StreetLampBase", Size = Vector3.new(1.4, 1, 1.4), Position = base + Vector3.new(0, 0.5, 0), Color = Color3.fromRGB(44, 44, 48), Material = Enum.Material.Metal }, town)
 		local bulb = newPart({ Name = "StreetLamp", Shape = Enum.PartType.Ball, Size = Vector3.new(1.6, 1.6, 1.6), Position = base + Vector3.new(0, 11.4, 0), Color = Color3.fromRGB(255, 226, 170), Material = Enum.Material.Neon, CanCollide = false }, town)
@@ -679,6 +690,33 @@ local function buildWorld()
 	CollectionService:AddTag(pad, "SellPad")
 	addLight(pad, Color3.fromRGB(255, 200, 90), 14, 0.8)
 	billboard(pad, 7, { { "Title", "💰 SELL", 30, Color3.fromRGB(255, 214, 90) }, { "Sub", "Step on the pad to sell your ore", 15, Color3.fromRGB(240, 240, 240) } }, 90)
+	do
+		local k = SELL_POS + Vector3.new(-13, 0, 0)
+		local plank = Color3.fromRGB(140, 98, 60)
+		newPart({ Name = "KioskFloor", Size = Vector3.new(7, 0.4, 7), Position = k + Vector3.new(0, 0.2, 0), Color = plank, Material = Enum.Material.WoodPlanks }, town)
+		for _, dx in { -3.2, 3.2 } do
+			for _, dz in { -3.2, 3.2 } do
+				newPart({ Name = "KioskPost", Size = Vector3.new(0.6, 8, 0.6), Position = k + Vector3.new(dx, 4, dz), Color = darkWood, Material = Enum.Material.Wood }, town)
+			end
+		end
+		newPart({ Name = "KioskCounter", Size = Vector3.new(0.9, 3.4, 6.4), Position = k + Vector3.new(3.1, 1.7, 0), Color = plank, Material = Enum.Material.WoodPlanks }, town)
+		newPart({ Name = "KioskCounterTop", Size = Vector3.new(1.6, 0.3, 7), Position = k + Vector3.new(3.1, 3.5, 0), Color = darkWood, Material = Enum.Material.Wood }, town)
+		newPart({ Name = "KioskRoof", Size = Vector3.new(8.4, 0.5, 8.4), CFrame = CFrame.new(k + Vector3.new(0.4, 8.4, 0)) * CFrame.Angles(0, 0, math.rad(-10)), Color = Color3.fromRGB(196, 150, 50), Material = Enum.Material.Fabric }, town)
+		-- balance scale on the counter
+		local scaleBase = k + Vector3.new(3.1, 3.65, 1.5)
+		newPart({ Name = "ScalePost", Size = Vector3.new(0.25, 1.8, 0.25), Position = scaleBase + Vector3.new(0, 0.9, 0), Color = Color3.fromRGB(230, 180, 70), Material = Enum.Material.Foil }, town)
+		newPart({ Name = "ScaleBeam", Size = Vector3.new(0.2, 0.2, 2.4), Position = scaleBase + Vector3.new(0, 1.8, 0), Color = Color3.fromRGB(230, 180, 70), Material = Enum.Material.Foil }, town)
+		for _, dz in { -1.1, 1.1 } do
+			newPart({ Name = "ScalePan", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.15, 1, 1), CFrame = CFrame.new(scaleBase + Vector3.new(0, 1.1, dz)) * CFrame.Angles(0, 0, math.rad(90)), Color = Color3.fromRGB(230, 180, 70), Material = Enum.Material.Foil }, town)
+		end
+		for i = 1, 5 do
+			newPart({ Name = "CoinStack", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.18, 0.7, 0.7), CFrame = CFrame.new(k + Vector3.new(3.1, 3.7 + i * 0.18, -1.6)) * CFrame.Angles(0, 0, math.rad(90)), Color = Color3.fromRGB(255, 200, 60), Material = Enum.Material.Foil }, town)
+		end
+		local board = newPart({ Name = "KioskSign", Size = Vector3.new(0.4, 2, 7.4), Position = k + Vector3.new(3.4, 6.7, 0), Color = darkWood, Material = Enum.Material.WoodPlanks }, town)
+		signText(board, Enum.NormalId.Right, "ORE EXCHANGE", Color3.fromRGB(255, 220, 120))
+		local lamp = newPart({ Name = "KioskLamp", Size = Vector3.new(0.8, 0.8, 0.8), Position = k + Vector3.new(0, 7.4, 0), Color = Color3.fromRGB(255, 210, 140), Material = Enum.Material.Neon, CanCollide = false }, town)
+		addLight(lamp, Color3.fromRGB(255, 200, 130), 14, 1)
+	end
 	local cartPos = SELL_POS + Vector3.new(12, 0, 0)
 	newPart({ Name = "Cart", Size = Vector3.new(6, 2.6, 4), Position = cartPos + Vector3.new(0, 2.2, 0), Color = darkWood, Material = Enum.Material.WoodPlanks }, town)
 	newPart({ Name = "CartRim", Size = Vector3.new(6.4, 0.4, 4.4), Position = cartPos + Vector3.new(0, 3.6, 0), Color = Color3.fromRGB(80, 80, 88), Material = Enum.Material.Metal }, town)
@@ -694,24 +732,34 @@ local function buildWorld()
 	end
 
 	-- Market stalls: pickaxes on the left of the path, backpacks on the right.
+	-- Market stalls face the spawn plaza, with their back walls towards the quarry.
 	local function stall(centerX, count, roofA, title)
 		local length = count * 12 + 4
-		newPart({ Name = "StallWall", Size = Vector3.new(length, 9, 1), Position = W(centerX, 4.5, -111), Color = wood, Material = Enum.Material.WoodPlanks }, town)
+		newPart({ Name = "StallWall", Size = Vector3.new(length, 10.4, 1), Position = W(centerX, 5.2, -97.5), Color = wood, Material = Enum.Material.WoodPlanks }, town)
+		newPart({ Name = "StallTrim", Size = Vector3.new(length + 0.4, 0.6, 1.4), Position = W(centerX, 10.5, -97.5), Color = darkWood, Material = Enum.Material.Wood }, town)
+		newPart({ Name = "StallFloor", Size = Vector3.new(length, 0.4, 10), Position = W(centerX, 0.2, -102.5), Color = Color3.fromRGB(150, 110, 72), Material = Enum.Material.WoodPlanks }, town)
 		for i = 1, count do
 			local x = centerX - length / 2 + 2 + (i - 0.5) * 12
 			local color = if i % 2 == 0 then roofA else Color3.fromRGB(245, 236, 216)
-			newPart({ Name = "Awning", Size = Vector3.new(12, 0.6, 9), CFrame = CFrame.new(W(x, 9.4, -107)) * CFrame.Angles(math.rad(-14), 0, 0), Color = color, Material = Enum.Material.Fabric }, town)
+			newPart({ Name = "Awning", Size = Vector3.new(12, 0.5, 10), CFrame = CFrame.new(W(x, 11, -102.4)) * CFrame.Angles(math.rad(-16), 0, 0), Color = color, Material = Enum.Material.Fabric }, town)
+			-- scalloped valance along the front edge
+			newPart({ Name = "Valance", Size = Vector3.new(12, 1.1, 0.25), Position = W(x, 9, -107.2), Color = color, Material = Enum.Material.Fabric, CanCollide = false }, town)
 		end
-		for _, dx in { -length / 2, length / 2 } do
-			newPart({ Name = "StallPost", Size = Vector3.new(0.8, 10, 0.8), Position = W(centerX + dx, 5, -103), Color = darkWood, Material = Enum.Material.Wood }, town)
+		for j = 0, count do
+			local x = centerX - length / 2 + 2 + j * 12
+			newPart({ Name = "StallPost", Size = Vector3.new(0.7, 9.8, 0.7), Position = W(x, 4.9, -107), Color = darkWood, Material = Enum.Material.Wood }, town)
 		end
-		local board = newPart({ Name = "StallSign", Size = Vector3.new(26, 5, 0.6), Position = W(centerX, 12.4, -110.5), Color = darkWood, Material = Enum.Material.WoodPlanks }, town)
-		signText(board, Enum.NormalId.Back, title, Color3.fromRGB(255, 230, 160))
+		local board = newPart({ Name = "StallSign", Size = Vector3.new(26, 4.6, 0.6), Position = W(centerX, 14.2, -97.2), Color = darkWood, Material = Enum.Material.WoodPlanks }, town)
+		newPart({ Name = "StallSignFrame", Size = Vector3.new(27, 5.4, 0.4), Position = W(centerX, 14.2, -96.9), Color = Color3.fromRGB(60, 40, 26), Material = Enum.Material.Wood }, town)
+		signText(board, Enum.NormalId.Front, title, Color3.fromRGB(255, 230, 160))
 	end
 
 	local function pedestal(x, z, kind, tier, name, stats, price)
-		local base = newPart({ Name = "Pedestal", Size = Vector3.new(6, 3, 6), Position = W(x, 1.5, z), Color = stone, Material = Enum.Material.Slate }, town)
-		newPart({ Name = "PedestalTop", Size = Vector3.new(6.6, 0.4, 6.6), Position = W(x, 3.2, z), Color = Color3.fromRGB(110, 110, 118), Material = Enum.Material.Slate }, town)
+		local cloth = if kind == "Pick" then Color3.fromRGB(150, 32, 40) else Color3.fromRGB(34, 64, 140)
+		local base = newPart({ Name = "Pedestal", Size = Vector3.new(5.4, 3, 5.4), Position = W(x, 1.9, z), Color = Color3.fromRGB(128, 88, 54), Material = Enum.Material.WoodPlanks }, town)
+		newPart({ Name = "PedestalCloth", Size = Vector3.new(6, 0.3, 6), Position = W(x, 3.5, z), Color = cloth, Material = Enum.Material.Fabric }, town)
+		newPart({ Name = "PedestalDrape", Size = Vector3.new(6, 1.4, 0.2), Position = W(x, 2.8, z - 3), Color = cloth, Material = Enum.Material.Fabric, CanCollide = false }, town)
+		newPart({ Name = "PedestalTrim", Size = Vector3.new(6.1, 0.18, 0.25), Position = W(x, 2.1, z - 3.02), Color = Color3.fromRGB(230, 180, 70), Material = Enum.Material.Foil, CanCollide = false }, town)
 		billboard(base, 8.5, {
 			{ "Title", name, 20, Color3.fromRGB(255, 255, 255) },
 			{ "Stats", stats, 14, Color3.fromRGB(205, 210, 220) },
@@ -728,7 +776,7 @@ local function buildWorld()
 		local x = pickStart - (i - 1) * 12
 		pedestal(x, -104, "Pick", i, P.name, `⛏ {fmt(P.dmg)} power · {string.format("%.1f", 1 / P.speed)} swings/s`, P.price)
 		local model = buildPick(i)
-		model:PivotTo(CFrame.new(W(x, 7, -104)) * CFrame.Angles(math.rad(-90), 0, 0) * CFrame.Angles(0, math.rad(25), 0))
+		model:PivotTo(CFrame.new(W(x, 5.9, -104)) * CFrame.Angles(math.rad(-90), 0, 0) * CFrame.Angles(0, math.rad(20), 0))
 		model.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
 		CollectionService:AddTag(model, "Spin")
 		model.Parent = town
@@ -740,7 +788,7 @@ local function buildWorld()
 		local x = bagStart + (i - 1) * 12
 		pedestal(x, -104, "Bag", i, B.name, `🎒 holds {fmt(B.capacity)} blocks`, B.price)
 		local model = buildBag(i, 1.1)
-		model:PivotTo(CFrame.new(W(x, 6.3, -104)))
+		model:PivotTo(CFrame.new(W(x, 5.6, -104)))
 		model.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
 		CollectionService:AddTag(model, "Spin")
 		model.Parent = town
@@ -773,6 +821,63 @@ local function buildWorld()
 	CollectionService:AddTag(chest, "DailyChest")
 	billboard(chest, 5, { { "Title", "🎁 DAILY CHEST", 20, Color3.fromRGB(255, 214, 90) }, { "Sub", "", 15, Color3.fromRGB(240, 240, 240) } }, 60)
 	prompt(chest, "Daily", "Open", "Daily Chest", 0.3)
+
+	-- Fountain in the town square behind spawn
+	do
+		local f = W(0, 0, -137)
+		local stoneCol = Color3.fromRGB(176, 170, 160)
+		newPart({ Name = "FountainBasin", Shape = Enum.PartType.Cylinder, Size = Vector3.new(1.6, 13, 13), CFrame = CFrame.new(f + Vector3.new(0, 0.8, 0)) * CFrame.Angles(0, 0, math.rad(90)), Color = stoneCol, Material = Enum.Material.Cobblestone }, town)
+		newPart({ Name = "FountainWater", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.3, 11.6, 11.6), CFrame = CFrame.new(f + Vector3.new(0, 1.55, 0)) * CFrame.Angles(0, 0, math.rad(90)), Color = Color3.fromRGB(70, 160, 200), Material = Enum.Material.Glass, Transparency = 0.25, Reflectance = 0.3, CanCollide = false }, town)
+		newPart({ Name = "FountainPillar", Shape = Enum.PartType.Cylinder, Size = Vector3.new(5, 1.6, 1.6), CFrame = CFrame.new(f + Vector3.new(0, 3.5, 0)) * CFrame.Angles(0, 0, math.rad(90)), Color = stoneCol, Material = Enum.Material.Marble }, town)
+		newPart({ Name = "FountainBowl", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.8, 5, 5), CFrame = CFrame.new(f + Vector3.new(0, 6, 0)) * CFrame.Angles(0, 0, math.rad(90)), Color = stoneCol, Material = Enum.Material.Marble }, town)
+		local gem = newPart({ Name = "FountainGem", Shape = Enum.PartType.Ball, Size = Vector3.new(1.6, 1.6, 1.6), Position = f + Vector3.new(0, 7.3, 0), Color = Color3.fromRGB(120, 220, 255), Material = Enum.Material.Neon, CanCollide = false }, town)
+		addLight(gem, Color3.fromRGB(120, 210, 255), 16, 1)
+		local spray = Instance.new("ParticleEmitter")
+		spray.Color = ColorSequence.new(Color3.fromRGB(200, 235, 255))
+		spray.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(1, 1) })
+		spray.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.4), NumberSequenceKeypoint.new(1, 0.9) })
+		spray.Lifetime = NumberRange.new(0.8, 1.1)
+		spray.Speed = NumberRange.new(9, 11)
+		spray.SpreadAngle = Vector2.new(18, 18)
+		spray.Acceleration = Vector3.new(0, -30, 0)
+		spray.Rate = 60
+		spray.EmissionDirection = Enum.NormalId.Top
+		spray.Parent = gem
+		for k = 0, 3 do
+			local ang = math.pi / 4 + k * math.pi / 2
+			newPart({ Name = "Bench", Size = Vector3.new(4.5, 0.5, 1.4), CFrame = CFrame.new(f + Vector3.new(math.cos(ang) * 11, 1.3, math.sin(ang) * 11)) * CFrame.Angles(0, -ang + math.pi / 2, 0), Color = Color3.fromRGB(128, 88, 54), Material = Enum.Material.WoodPlanks }, town)
+			newPart({ Name = "BenchLegs", Size = Vector3.new(3.6, 1.1, 0.8), CFrame = CFrame.new(f + Vector3.new(math.cos(ang) * 11, 0.55, math.sin(ang) * 11)) * CFrame.Angles(0, -ang + math.pi / 2, 0), Color = Color3.fromRGB(70, 70, 74), Material = Enum.Material.Metal }, town)
+		end
+	end
+
+	-- Ascension shrine: dark obsidian platform with a floating star crystal
+	do
+		local c = W(78, 0, -150)
+		newPart({ Name = "ShrineBase", Shape = Enum.PartType.Cylinder, Size = Vector3.new(1.2, 16, 16), CFrame = CFrame.new(c + Vector3.new(0, 0.6, 0)) * CFrame.Angles(0, 0, math.rad(90)), Color = Color3.fromRGB(34, 26, 46), Material = Enum.Material.Basalt }, town)
+		newPart({ Name = "ShrineRing", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.3, 12, 12), CFrame = CFrame.new(c + Vector3.new(0, 1.3, 0)) * CFrame.Angles(0, 0, math.rad(90)), Color = Color3.fromRGB(170, 110, 255), Material = Enum.Material.Neon, CanCollide = false }, town)
+		local altar = newPart({ Name = "ShrineAltar", Size = Vector3.new(4, 3.2, 4), Position = c + Vector3.new(0, 2.8, 0), Color = Color3.fromRGB(44, 34, 60), Material = Enum.Material.Basalt }, town)
+		newPart({ Name = "ShrineAltarStep", Size = Vector3.new(5.6, 0.8, 5.6), Position = c + Vector3.new(0, 1.6, 0), Color = Color3.fromRGB(56, 44, 74), Material = Enum.Material.Basalt }, town)
+		newPart({ Name = "ShrineAltarTop", Size = Vector3.new(4.6, 0.4, 4.6), Position = c + Vector3.new(0, 4.6, 0), Color = Color3.fromRGB(170, 110, 255), Material = Enum.Material.Neon, CanCollide = false }, town)
+		for i = 1, 4 do
+			local ang = i / 4 * math.pi * 2 + math.pi / 4
+			newPart({ Name = "ShrineSpire", Size = Vector3.new(0.9, 9, 0.9), CFrame = CFrame.new(c + Vector3.new(math.cos(ang) * 6.5, 4.5, math.sin(ang) * 6.5)) * CFrame.Angles(0, ang, 0), Color = Color3.fromRGB(40, 30, 56), Material = Enum.Material.Basalt }, town)
+			local tip = newPart({ Name = "ShrineSpireTip", Shape = Enum.PartType.Ball, Size = Vector3.new(1.1, 1.1, 1.1), Position = c + Vector3.new(math.cos(ang) * 6.5, 9.2, math.sin(ang) * 6.5), Color = Color3.fromRGB(190, 130, 255), Material = Enum.Material.Neon, CanCollide = false }, town)
+			tip.CanQuery = false
+		end
+		local star = Instance.new("Model")
+		star.Name = "ShrineStar"
+		local core = piece(star, { Size = Vector3.new(1.6, 3.2, 1.6), CFrame = CFrame.new(), Color = Color3.fromRGB(215, 170, 255), Material = Enum.Material.Neon })
+		piece(star, { Size = Vector3.new(3.2, 1.6, 1.6), CFrame = CFrame.Angles(0, 0, math.rad(45)), Color = Color3.fromRGB(190, 140, 255), Material = Enum.Material.Glass, Transparency = 0.2 })
+		piece(star, { Size = Vector3.new(1.6, 1.6, 3.2), CFrame = CFrame.Angles(math.rad(45), 0, 0), Color = Color3.fromRGB(190, 140, 255), Material = Enum.Material.Glass, Transparency = 0.2 })
+		addLight(core, Color3.fromRGB(190, 130, 255), 22, 2)
+		star.PrimaryPart = core
+		star:PivotTo(CFrame.new(c + Vector3.new(0, 7.5, 0)))
+		CollectionService:AddTag(star, "Spin")
+		star.Parent = town
+		CollectionService:AddTag(altar, "Shrine")
+		billboard(altar, 9, { { "Title", "⭐ ASCENSION", 22, Color3.fromRGB(215, 175, 255) }, { "Sub", "Reach bedrock (" .. MAX_DEPTH .. "m) to unlock", 14, Color3.fromRGB(235, 235, 245) } }, 70)
+		prompt(altar, "Ascend", "Ascend", "Ascension Shrine", 2)
+	end
 
 	-- Museum: a small marble temple with steps, columns, a frieze and a pediment
 	local mz = -164
@@ -832,17 +937,27 @@ local function buildWorld()
 
 	-- Scenery: terrain mountains ring the world, rolling hills, trees, bushes, rocks and flowers.
 	local sr = Random.new(42)
-	for i = 1, 22 do
-		local a = (i / 22) * math.pi * 2 + sr:NextNumber(-0.06, 0.06)
-		local dist = sr:NextNumber(320, 360)
-		local r = sr:NextNumber(70, 115)
-		local c = W(math.cos(a) * dist, -r * 0.45, math.sin(a) * dist)
+	for i = 1, 20 do
+		local a = (i / 20) * math.pi * 2 + sr:NextNumber(-0.08, 0.08)
+		local dist = sr:NextNumber(315, 370)
+		local r = sr:NextNumber(62, 100)
+		local dir = Vector3.new(math.cos(a), 0, math.sin(a))
+		local side = Vector3.new(-dir.Z, 0, dir.X)
+		local c = W(dir.X * dist, -r * 0.5, dir.Z * dist)
 		terrain:FillBall(c, r, Enum.Material.Rock)
-		terrain:FillBall(c - Vector3.new(0, r * 0.12, 0), r * 0.96, Enum.Material.Grass)
-		terrain:FillBall(c + Vector3.new(0, r * 0.12, 0), r * 0.9, Enum.Material.Rock)
-		if r > 92 then
-			local rs = r * 0.42
-			terrain:FillBall(c + Vector3.new(0, r - rs * 0.75, 0), rs, Enum.Material.Snow)
+		terrain:FillBall(c - Vector3.new(0, r * 0.25, 0) - dir * r * 0.25, r * 0.9, Enum.Material.Grass)
+		-- a ridge of smaller peaks gives each mountain a jagged silhouette
+		local peak = c
+		for k = 1, 3 do
+			local rk = r * (0.62 - k * 0.1)
+			local p2 = c + side * sr:NextNumber(-r * 0.6, r * 0.6) + dir * sr:NextNumber(0, r * 0.3) + Vector3.new(0, r * (0.35 + k * 0.17), 0)
+			terrain:FillBall(p2, rk, Enum.Material.Rock)
+			if p2.Y + rk > peak.Y then
+				peak = p2 + Vector3.new(0, rk, 0)
+			end
+		end
+		if peak.Y - TOP > 55 then
+			terrain:FillBall(peak - Vector3.new(0, 7, 0), 11, Enum.Material.Snow)
 		end
 	end
 	local function blocked(x, z, pad)
@@ -865,22 +980,62 @@ local function buildWorld()
 			terrain:FillBall(W(x, -r * 0.78, z), r, Enum.Material.Grass)
 		end
 	end
-	local placed = 0
-	local tries = 0
-	while placed < 55 and tries < 2000 do
+	local function oak(x, z)
+		local h = sr:NextNumber(9, 15)
+		local lean = CFrame.Angles(sr:NextNumber(-0.06, 0.06), 0, sr:NextNumber(-0.06, 0.06))
+		newPart({ Name = "Trunk", Shape = Enum.PartType.Cylinder, Size = Vector3.new(h + 2, 1.8, 1.8), CFrame = CFrame.new(W(x, h / 2 - 1, z)) * lean * CFrame.Angles(0, 0, math.rad(90)), Color = Color3.fromRGB(98, 70, 48), Material = Enum.Material.Wood }, town)
+		local crown = W(x, h + 2, z)
+		local size = sr:NextNumber(5.5, 8)
+		terrain:FillBall(crown, size, Enum.Material.LeafyGrass)
+		for _ = 1, 3 do
+			terrain:FillBall(crown + Vector3.new(sr:NextNumber(-4, 4), sr:NextNumber(-2, 3), sr:NextNumber(-4, 4)), size * sr:NextNumber(0.55, 0.75), Enum.Material.LeafyGrass)
+		end
+	end
+	local function pine(x, z)
+		local h = sr:NextNumber(14, 22)
+		newPart({ Name = "PineTrunk", Shape = Enum.PartType.Cylinder, Size = Vector3.new(h, 1.4, 1.4), CFrame = CFrame.new(W(x, h / 2 - 1, z)) * CFrame.Angles(0, 0, math.rad(90)), Color = Color3.fromRGB(86, 60, 42), Material = Enum.Material.Wood }, town)
+		local r = sr:NextNumber(5, 6.5)
+		local y = 5
+		while r > 1.4 do
+			terrain:FillBall(W(x, y, z), r, Enum.Material.Grass)
+			y += r * 0.9
+			r *= 0.72
+		end
+	end
+	local placed, tries = 0, 0
+	while placed < 11 and tries < 2000 do
+		tries += 1
+		local gx, gz = sr:NextNumber(-250, 250), sr:NextNumber(-250, 250)
+		if not blocked(gx, gz, 20) then
+			placed += 1
+			local pines = sr:NextNumber() < 0.5
+			for _ = 1, sr:NextInteger(5, 9) do
+				local x, z = gx + sr:NextNumber(-24, 24), gz + sr:NextNumber(-24, 24)
+				if not blocked(x, z, 4) then
+					if pines == (sr:NextNumber() < 0.8) then
+						pine(x, z)
+					else
+						oak(x, z)
+					end
+				end
+			end
+		end
+	end
+	placed, tries = 0, 0
+	while placed < 16 and tries < 2000 do
 		tries += 1
 		local x, z = sr:NextNumber(-270, 270), sr:NextNumber(-270, 270)
 		if not blocked(x, z, 4) then
 			placed += 1
-			local h = sr:NextNumber(9, 16)
-			local lean = CFrame.Angles(sr:NextNumber(-0.06, 0.06), 0, sr:NextNumber(-0.06, 0.06))
-			newPart({ Name = "Trunk", Shape = Enum.PartType.Cylinder, Size = Vector3.new(h + 2, 1.8, 1.8), CFrame = CFrame.new(W(x, h / 2 - 1, z)) * lean * CFrame.Angles(0, 0, math.rad(90)), Color = Color3.fromRGB(98, 70, 48), Material = Enum.Material.Wood }, town)
-			local crown = W(x, h + 2, z)
-			local size = sr:NextNumber(5.5, 8)
-			terrain:FillBall(crown, size, Enum.Material.LeafyGrass)
-			for _ = 1, 3 do
-				terrain:FillBall(crown + Vector3.new(sr:NextNumber(-4, 4), sr:NextNumber(-2, 3), sr:NextNumber(-4, 4)), size * sr:NextNumber(0.55, 0.75), Enum.Material.LeafyGrass)
-			end
+			oak(x, z)
+		end
+	end
+	-- Patchy ground: lusher grass and bare earth break up the flat green.
+	for _ = 1, 60 do
+		local x, z = sr:NextNumber(-280, 280), sr:NextNumber(-280, 280)
+		if not blocked(x, z, 6) then
+			local r = sr:NextNumber(8, 20)
+			terrain:FillBall(W(x, -r + 1.5, z), r, if sr:NextNumber() < 0.8 then Enum.Material.LeafyGrass else Enum.Material.Ground)
 		end
 	end
 	placed, tries = 0, 0
@@ -988,37 +1143,54 @@ end
 -- Ore and geode blocks are stone with nuggets or crystals growing out of every face.
 local FACE_NORMALS = { Vector3.xAxis, -Vector3.xAxis, Vector3.yAxis, -Vector3.yAxis, Vector3.zAxis, -Vector3.zAxis }
 
+local function orePiece(block, color, mat)
+	local piece = Instance.new("Part")
+	piece.Name = "Nugget"
+	piece.Anchored = true
+	piece.CanCollide = false
+	piece.CanQuery = false
+	piece.CanTouch = false
+	piece.CastShadow = false
+	piece.Color = color:Lerp(Color3.new(1, 1, 1), rng:NextNumber() * 0.18)
+	piece.Material = mat
+	piece.TopSurface = Enum.SurfaceType.Smooth
+	piece.BottomSurface = Enum.SurfaceType.Smooth
+	piece.Parent = block
+	return piece
+end
+
+-- Ore shows as chunky lumps set into the rock (walls and ceilings) and low inlays on floors,
+-- so nothing looks like loose litter. Gems also grow crystal clusters from the sides and ceiling.
 local function decorate(block, color, mat, crystal, count)
 	local center = block.Position
-	for _ = 1, count do
-		local n = FACE_NORMALS[rng:NextInteger(1, 6)]
+	for _, n in FACE_NORMALS do
 		local t1 = if math.abs(n.Y) > 0.5 then Vector3.xAxis else Vector3.yAxis
 		local t2 = n:Cross(t1)
-		local spot = center + n * (BLOCK / 2) + t1 * rng:NextNumber(-2, 2) + t2 * rng:NextNumber(-2, 2)
-		local piece = Instance.new("Part")
-		piece.Name = "Nugget"
-		piece.Anchored = true
-		piece.CanCollide = false
-		piece.CanQuery = false
-		piece.CanTouch = false
-		piece.CastShadow = false
-		piece.Color = color:Lerp(Color3.new(1, 1, 1), rng:NextNumber() * 0.2)
-		piece.Material = mat
-		piece.TopSurface = Enum.SurfaceType.Smooth
-		piece.BottomSurface = Enum.SurfaceType.Smooth
-		if crystal then
-			local len = rng:NextNumber(1.6, 3)
-			piece.Size = Vector3.new(0.7, len, 0.7)
-			-- point the long (Y) axis out of the face, with a little random tilt
-			piece.CFrame = CFrame.lookAt(spot, spot + n, t1) * CFrame.Angles(-math.pi / 2, 0, 0)
-				* CFrame.Angles(rng:NextNumber(-0.45, 0.45), rng:NextNumber(0, math.pi), rng:NextNumber(-0.45, 0.45))
-				* CFrame.new(0, len * 0.3, 0)
-		else
-			local sz = rng:NextNumber(0.9, 1.6)
-			piece.Size = Vector3.new(sz, sz * rng:NextNumber(0.6, 1), sz)
-			piece.CFrame = CFrame.new(spot) * CFrame.Angles(rng:NextNumber(0, 6), rng:NextNumber(0, 6), rng:NextNumber(0, 6))
+		local floorFace = n.Y > 0.5
+		for _ = 1, math.max(2, math.floor(count / 3)) do
+			local spot = center + n * (BLOCK / 2) + t1 * rng:NextNumber(-1.8, 1.8) + t2 * rng:NextNumber(-1.8, 1.8)
+			local lump = orePiece(block, color, mat)
+			if floorFace then
+				lump.Size = Vector3.new(rng:NextNumber(1, 1.9), rng:NextNumber(0.8, 1.5), 0.1)
+				lump.CFrame = CFrame.lookAt(spot + n * 0.03, spot + n, t1) * CFrame.Angles(0, 0, rng:NextNumber(0, math.pi))
+			else
+				local sz = rng:NextNumber(0.9, 1.5)
+				lump.Size = Vector3.new(sz, sz * rng:NextNumber(0.7, 1), sz * rng:NextNumber(0.7, 1))
+				-- mostly buried: only a corner or edge breaks the surface
+				lump.CFrame = CFrame.new(spot + n * (sz * 0.12)) * CFrame.Angles(rng:NextNumber(0, 6), rng:NextNumber(0, 6), rng:NextNumber(0, 6))
+			end
 		end
-		piece.Parent = block
+		if crystal and not floorFace and rng:NextNumber() < 0.7 then
+			local base = center + n * (BLOCK / 2) + t1 * rng:NextNumber(-1.2, 1.2) + t2 * rng:NextNumber(-1.2, 1.2)
+			for _ = 1, rng:NextInteger(2, 4) do
+				local len = rng:NextNumber(1.2, 2.6)
+				local spike = orePiece(block, color, mat)
+				spike.Size = Vector3.new(0.5, len, 0.5)
+				spike.CFrame = CFrame.lookAt(base, base + n, t1) * CFrame.Angles(-math.pi / 2, 0, 0)
+					* CFrame.Angles(rng:NextNumber(-0.5, 0.5), rng:NextNumber(0, math.pi), rng:NextNumber(-0.5, 0.5))
+					* CFrame.new(0, len * 0.35, 0)
+			end
+		end
 	end
 end
 
@@ -1052,11 +1224,14 @@ local function spawnBlock(x, y, z)
 	local useAlt = look.alt and rng:NextNumber() < 0.28
 	local fillColor = if useAlt then rgb(look.alt.color) else rgb(look.color)
 	local fillMaterial = material(if useAlt then look.alt.material else look.material)
+	-- Rock strata: every two rows the rock shifts towards the layer's accent colour, so walls show bands.
+	local STRATA = { 0, 0.4, 0.12, 0.55, 0.25, 0.05, 0.45, 0.18 }
+	fillColor = fillColor:Lerp(rgb(look.band), STRATA[math.floor(y / 2) % #STRATA + 1])
 	if y == 0 then
 		fillColor = Color3.fromRGB(128, 94, 62)
 		fillMaterial = Enum.Material.Ground
 	end
-	fillColor = fillColor:Lerp(Color3.new(0, 0, 0), rng:NextNumber() * 0.1)
+	fillColor = fillColor:Lerp(Color3.new(0, 0, 0), rng:NextNumber() * 0.08)
 
 	if outside or y >= MAX_DEPTH then
 		-- Unbreakable walls keep the look of the layer they are in, only darker.
@@ -1072,7 +1247,7 @@ local function spawnBlock(x, y, z)
 			p.Name = "Geode"
 			p.Color = Color3.fromRGB(58, 44, 72)
 			p.Material = Enum.Material.Basalt
-			decorate(p, GEODE_COLOR, Enum.Material.Neon, true, 9)
+			decorate(p, GEODE_COLOR, Enum.Material.Neon, true, 6)
 			addLight(p, GEODE_COLOR, 14, 1.6)
 			hp = L.hp * 14
 			info.value = math.floor(layerAverage(L) * 60)
@@ -1083,9 +1258,9 @@ local function spawnBlock(x, y, z)
 			local oreColor = rgb(O.color)
 			local crystal = O.material == "Glass" or O.material == "Neon"
 			p.Name = O.name
-			p.Color = fillColor:Lerp(oreColor, 0.22)
+			p.Color = fillColor:Lerp(oreColor, 0.12)
 			p.Material = fillMaterial
-			decorate(p, oreColor, material(O.material), crystal, if crystal then rng:NextInteger(6, 9) else rng:NextInteger(7, 11))
+			decorate(p, oreColor, material(O.material), crystal, rng:NextInteger(6, 9))
 			if O.glow then
 				addLight(p, oreColor, 11, 1.1)
 			end
@@ -1177,10 +1352,33 @@ local function clearCell(x, y, z)
 	end
 end
 
+-- The mine starts as a terraced open-pit quarry: each ring is one block (one jump) lower than the last.
+local function quarryDepth(x, z)
+	local c = (GRID - 1) / 2
+	local d = math.max(math.abs(x - c), math.abs(z - c))
+	if d > 9.5 then
+		return 0
+	elseif d > 7.5 then
+		return 1
+	elseif d > 5.5 then
+		return 2
+	elseif d > 3.5 then
+		return 3
+	end
+	return 4
+end
+
 local function buildMineTop()
 	for x = 0, GRID - 1 do
 		for z = 0, GRID - 1 do
 			spawnBlock(x, 0, z)
+		end
+	end
+	for x = 0, GRID - 1 do
+		for z = 0, GRID - 1 do
+			for y = 0, quarryDepth(x, z) - 1 do
+				clearCell(x, y, z)
+			end
 		end
 	end
 end
@@ -1199,7 +1397,7 @@ local sessions = {}
 
 local function newData()
 	return {
-		coins = 0, pick = 1, bag = 1, best = 0, mined = 0,
+		coins = 0, pick = 1, bag = 1, best = 0, mined = 0, asc = 0,
 		bagCount = 0, bagValue = 0, treasures = {},
 		streak = 0, lastDay = -1, earned = 0, tut = 0,
 	}
@@ -1270,7 +1468,7 @@ end
 
 local function valueMult(player)
 	local d = sessions[player]
-	local m = 1 + uniqueTreasures(d) * TREASURE_BONUS
+	local m = (1 + uniqueTreasures(d) * TREASURE_BONUS) * (1 + (d.asc or 0) * ASCEND_BONUS)
 	if player:GetAttribute("FriendBonus") then
 		m *= 1 + FRIEND_BONUS
 	end
@@ -1295,10 +1493,12 @@ local function sync(player)
 	player:SetAttribute("Tut", d.tut)
 	player:SetAttribute("Treasures", HttpService:JSONEncode(d.treasures))
 	player:SetAttribute("Mult", valueMult(player))
+	player:SetAttribute("Asc", d.asc or 0)
 	local stats = player:FindFirstChild("leaderstats")
 	if stats then
 		stats.Depth.Value = d.best
 		stats.Coins.Value = d.coins
+		stats.Ascensions.Value = d.asc or 0
 	end
 end
 
@@ -1513,7 +1713,9 @@ local function awardTreasure(player, T, pos, depth)
 	d.coins += reward
 	d.earned += reward
 	Remotes.Treasure:FireClient(player, T.id, pos, reward, first)
-	announce(`🏆 {player.DisplayName} found {article(T.name)} {T.name} at {depth}m!`, rgb(T.color))
+	if first or T.reward >= 25000 then
+		announce(`🏆 {player.DisplayName} found {article(T.name)} {T.name} at {depth}m!`, rgb(T.color))
+	end
 end
 
 local function breakBlock(player, part, info)
@@ -1696,6 +1898,29 @@ local function buy(player, kind, tier)
 	Remotes.Bought:FireClient(player, kind, tier)
 end
 
+local function ascend(player)
+	local d = sessions[player]
+	if not d then
+		return
+	end
+	if d.best < MAX_DEPTH then
+		notify(player, `Reach bedrock ({MAX_DEPTH}m) to Ascend. Deepest so far: {d.best}m`, Color3.fromRGB(200, 170, 255))
+		return
+	end
+	d.asc = (d.asc or 0) + 1
+	d.coins = 0
+	d.pick = 1
+	d.bag = 1
+	d.best = 0
+	d.bagCount = 0
+	d.bagValue = 0
+	teleportTo(player, spawnPoint())
+	givePick(player)
+	attachBag(player)
+	sync(player)
+	announce(`⭐ {player.DisplayName} ASCENDED! (Ascension {d.asc}: ore worth x{string.format("%.1f", 1 + d.asc * ASCEND_BONUS)})`, Color3.fromRGB(200, 160, 255))
+end
+
 local function descend(player)
 	local d = sessions[player]
 	local char = player.Character
@@ -1756,6 +1981,8 @@ ProximityPromptService.PromptTriggered:Connect(function(p, player)
 		descend(player)
 	elseif kind == "Daily" then
 		claimDaily(player)
+	elseif kind == "Ascend" then
+		ascend(player)
 	end
 end)
 
@@ -1805,6 +2032,9 @@ local function onJoin(player)
 	local coins = Instance.new("NumberValue")
 	coins.Name = "Coins"
 	coins.Parent = stats
+	local asc = Instance.new("IntValue")
+	asc.Name = "Ascensions"
+	asc.Parent = stats
 	stats.Parent = player
 
 	local d = loadData(player)
