@@ -14,6 +14,29 @@ local SettingsUI = {}
 local C = Theme.Colors
 
 function SettingsUI.start()
+	-- Background music (Config.Sounds.Music; skipped when empty)
+	local music: Sound? = nil
+	if Config.Sounds.Music ~= "" then
+		local m = Instance.new("Sound")
+		m.Name = "Music"
+		m.SoundId = Config.Sounds.Music
+		m.Looped = true
+		m.Volume = 0.3
+		m.Parent = game:GetService("SoundService")
+		music = m
+	end
+	ClientState.observe("Settings", function(settings)
+		UIKit.sfxEnabled = settings.Sfx ~= false
+		if music then
+			if settings.Music ~= false then
+				if not music.IsPlaying then
+					music:Play()
+				end
+			else
+				music:Stop()
+			end
+		end
+	end)
 	Windows.register("Settings", {
 		title = "Settings",
 		icon = "Settings",

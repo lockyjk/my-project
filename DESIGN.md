@@ -181,7 +181,10 @@ These are ethical and follow the Roblox rules. Most of the audience is under 13.
   - Sells check the player is standing on their own converter.
   - Every remote has a per-player rate limit.
 - **Networking:** `Net.luau` declares every remote with a runtime payload schema and a rate limit. Invalid payloads are dropped and logged.
-- **Services:** `DataService`, `CurrencyService`, `UpgradeService`, `ZoneService` (spirits), `PetService` (eggs, equip, fusion), `WeatherEventService` (storms + live events), `QuestService` (quests, daily, gifts, achievements, index), `ShopService` (passes, products, receipts, policy), `TradeService`, `RebirthService`, `LeaderboardService`, `IslandService`, `StormPassService`, `AnalyticsService`, `SocialService` (friends, group, premium).
+- **Services:**
+  - From the brief: `DataService`, `CurrencyService`, `PetService` (eggs, equip, fusion), `ZoneService` (spirits, catches, sells, gates, teleports), `WeatherEventService` (storms + live events), `QuestService` (quests, achievements, index), `ShopService` (passes, products, receipts, policy), `TradeService`, `RebirthService` (Ascension, token tree, size growth), `LeaderboardService`.
+  - Added: `StatsService` (the one place derived stats are computed), `UpgradeService`, `IslandService`, `RewardService` (grants any reward table, and potions), `RetentionService` (streak, gifts, offline earnings, Premium, group, friends), `StormPassService`, `AnalyticsService`, `TutorialService`, `DevService`.
+  - Services talk to each other through a `GameEvents` bus, which avoids circular requires.
 - **Performance:**
   - Spirits are logical server entities and replicate only as id + position + type.
   - Clients render them from a model pool, and pets are rendered on the client.
@@ -202,11 +205,17 @@ See `src/shared/Theme.luau`. Every placeholder part carries the `Placeholder` Co
   - Each main button has its own saturated colour with a top-light gradient.
   - FredokaOne font with stroked text.
   - Buttons squash to 90% when pressed and bounce back.
-  - Mobile first: the main bar has 76px buttons at the bottom, and `UIScale` adapts from 0.55× to 1.35×.
+  - Mobile first: designed at 1100×620 with a `UIScale` of 0.55× to 1.35×, and main buttons are 72px.
+  - Nothing sits in the phone thumbstick area (lower left) or the jump-button area (lower right).
 - **HUD:**
-  - Currencies at top left and the storm banner with a real countdown at top centre.
-  - The quest tracker and gift timer on the right.
-  - The jar bar above the main bar, with active boosts beside it.
+  - Top left: Charge, Tokens and the current multiplier, with a 4×3 menu grid below (Upgrades, Pets, Shop, Quests, Pass, Build, Index, Trade, Ascend, Settings).
+  - Top centre: the storm banner with a real countdown, plus any live event and its end time.
+  - Top right: the streak flame, the gift timer and leaderboards, with the daily quest tracker and the Premium button below them.
+  - Right middle: HOME, BACK and ZONES. On touch and gamepad devices there is also a large CATCH button above the jump button.
+  - Bottom centre: the jar bar, active boosts and the gate unlock prompt.
+- **Art overrides:** see README.
+  - `ServerStorage.ArtOverrides.<EggStand|Converter>` replaces those world pieces.
+  - `ReplicatedStorage.Art.Creatures.<id>` replaces a spirit or Stormling model.
 
 ## 10. Analytics
 

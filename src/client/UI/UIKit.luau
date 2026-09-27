@@ -107,7 +107,11 @@ function UIKit.tween(inst: Instance, time: number, goal: Props, style: Enum.Easi
 end
 
 local sounds: { [string]: Sound } = {}
+UIKit.sfxEnabled = true -- kept in sync with the Sfx setting by SettingsUI
 function UIKit.sound(name: string, volume: number?)
+	if not UIKit.sfxEnabled then
+		return
+	end
 	local id = (Config.Sounds :: any)[name]
 	if not id or id == "" then
 		return

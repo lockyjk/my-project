@@ -424,7 +424,7 @@ local function questsWindow()
 						if done and not q.claimed then
 							call("ClaimQuest", which, index)
 						else
-							Effects.toast(RetentionUI.describe(template.reward):gsub("\n", ", "), C.Panel, 2.5)
+							Effects.toast((RetentionUI.describe(template.reward):gsub("\n", ", ")), C.Panel, 2.5)
 						end
 					end,
 				})

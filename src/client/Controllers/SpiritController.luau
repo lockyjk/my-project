@@ -73,7 +73,7 @@ local function release(s: Spirit)
 	end
 end
 
-local function add(entry: { any })
+local function add(entry: { any }, pop: boolean)
 	local id: number, defId: string = entry[1], entry[2]
 	if spirits[id] or not Defs.Spirit[defId] then
 		return
@@ -84,9 +84,9 @@ local function add(entry: { any })
 	model.Parent = folder
 	local ext = model:GetExtentsSize()
 	spirits[id] = { id = id, def = defId, pos = pos, model = model, phase = math.random() * math.pi * 2, size = ext.Y }
-	-- spawn pop
+	-- spawn pop (not for whole-zone snapshots)
 	local body = model.PrimaryPart
-	if body then
+	if pop and body then
 		Effects.burst(pos, (body :: BasePart).Color, 6, 0.6)
 	end
 end
@@ -328,11 +328,11 @@ function SpiritController.start()
 				end
 			end
 			for _, entry in payload do
-				add(entry)
+				add(entry, false)
 			end
 		elseif op == "spawn" and zoneId == currentZone then
 			for _, entry in payload do
-				add(entry)
+				add(entry, true)
 			end
 		elseif op == "despawn" and zoneId == currentZone then
 			for _, id in payload do
