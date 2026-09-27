@@ -3,15 +3,33 @@
   "tree": {
     "$className": "DataModel",
     "ServerScriptService": {
-      "DigDeepServer": { "$path": "DigDeepServer.server.luau" }
+      "DigDeepServer": {
+        "$path": "DigDeepServer.server.luau"
+      }
     },
     "StarterPlayer": {
       "StarterPlayerScripts": {
-        "DigDeepClient": { "$path": "DigDeepClient.client.luau" }
+        "DigDeepClient": {
+          "$path": "DigDeepClient.client.luau"
+        }
       }
     },
     "Workspace": {
-      "$properties": { "FallenPartsDestroyHeight": -500 }
+      "$properties": {
+        "FallenPartsDestroyHeight": -500,
+        "StreamingEnabled": false
+      }
+    },
+    "Lighting": {
+      "$properties": {
+        "Technology": "Future",
+        "Brightness": 2.8,
+        "ClockTime": 14.4,
+        "GlobalShadows": true,
+        "EnvironmentDiffuseScale": 1,
+        "EnvironmentSpecularScale": 1,
+        "ShadowSoftness": 0.25
+      }
     }
   }
 }

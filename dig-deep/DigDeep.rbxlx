@@ -1,9 +1,21 @@
 <roblox version="4">
-  <Item class="ServerScriptService" referent="0">
+  <Item class="Lighting" referent="0">
+    <Properties>
+      <string name="Name">Lighting</string>
+      <float name="Brightness">2.8</float>
+      <float name="ClockTime">14.4</float>
+      <float name="EnvironmentDiffuseScale">1</float>
+      <float name="EnvironmentSpecularScale">1</float>
+      <bool name="GlobalShadows">true</bool>
+      <float name="ShadowSoftness">0.25</float>
+      <token name="Technology">4</token>
+    </Properties>
+  </Item>
+  <Item class="ServerScriptService" referent="1">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Script" referent="1">
+    <Item class="Script" referent="2">
       <Properties>
         <string name="Name">DigDeepServer</string>
         <token name="RunContext">0</token>
@@ -35,7 +47,7 @@ end
 --------------------------------------------------------------------------------
 -- The surface sits high up and the mine digs down from it, so the bottom of the mine
 -- stays above Workspace.FallenPartsDestroyHeight (-500 by default).
-local TOP = 1850
+local TOP = 1848
 local BLOCK = 6 -- studs per block
 local GRID = 24 -- the mine is GRID x GRID blocks wide
 local MAX_DEPTH = 300 -- rows; bedrock below
@@ -78,17 +90,17 @@ local ORES = {
 -- Layers, top to bottom. from = first row. hp = base block health. value = coins for a plain block.
 -- tint = colour grading while you are in this layer.
 local LAYERS = {
-	{ name = "Topsoil", from = 0, hp = 3, value = 1, color = { 118, 84, 56 }, material = "Ground", tint = { 255, 244, 228 },
+	{ name = "Topsoil", alt = { material = "Mud", color = { 96, 68, 46 } }, from = 0, hp = 3, value = 1, color = { 118, 84, 56 }, material = "Ground", tint = { 255, 244, 228 },
 		ores = { { id = "Coal", chance = 0.06 }, { id = "Copper", chance = 0.03 } } },
-	{ name = "Stone", from = 15, hp = 8, value = 2, color = { 125, 125, 130 }, material = "Slate", tint = { 236, 240, 255 },
+	{ name = "Stone", alt = { material = "Rock", color = { 112, 112, 116 } }, from = 15, hp = 8, value = 2, color = { 125, 125, 130 }, material = "Slate", tint = { 236, 240, 255 },
 		ores = { { id = "Coal", chance = 0.04 }, { id = "Copper", chance = 0.04 }, { id = "Iron", chance = 0.04 }, { id = "Silver", chance = 0.015 } } },
-	{ name = "Deepstone", from = 40, hp = 16, value = 5, color = { 72, 74, 88 }, material = "Basalt", tint = { 214, 224, 255 },
+	{ name = "Deepstone", alt = { material = "Slate", color = { 58, 60, 74 } }, from = 40, hp = 16, value = 5, color = { 72, 74, 88 }, material = "Basalt", tint = { 214, 224, 255 },
 		ores = { { id = "Iron", chance = 0.04 }, { id = "Silver", chance = 0.03 }, { id = "Gold", chance = 0.025 }, { id = "Ruby", chance = 0.008 }, { id = "Sapphire", chance = 0.008 } } },
-	{ name = "Magma Rock", from = 80, hp = 50, value = 12, color = { 70, 40, 34 }, material = "CrackedLava", tint = { 255, 212, 186 },
+	{ name = "Magma Rock", alt = { material = "Basalt", color = { 50, 32, 28 } }, from = 80, hp = 50, value = 12, color = { 70, 40, 34 }, material = "CrackedLava", tint = { 255, 212, 186 },
 		ores = { { id = "Gold", chance = 0.03 }, { id = "Obsidian", chance = 0.03 }, { id = "Emerald", chance = 0.015 }, { id = "Firestone", chance = 0.007 } } },
-	{ name = "Crystal Caves", from = 130, hp = 160, value = 30, color = { 66, 86, 130 }, material = "Glacier", tint = { 206, 224, 255 },
+	{ name = "Crystal Caves", alt = { material = "Ice", color = { 110, 150, 205 } }, from = 130, hp = 160, value = 30, color = { 66, 86, 130 }, material = "Glacier", tint = { 206, 224, 255 },
 		ores = { { id = "Amethyst", chance = 0.03 }, { id = "Diamond", chance = 0.01 }, { id = "Moonstone", chance = 0.004 } } },
-	{ name = "The Void", from = 200, hp = 520, value = 80, color = { 30, 22, 44 }, material = "Slate", tint = { 222, 196, 255 },
+	{ name = "The Void", alt = { material = "Basalt", color = { 22, 16, 34 } }, from = 200, hp = 520, value = 80, color = { 30, 22, 44 }, material = "Slate", tint = { 222, 196, 255 },
 		ores = { { id = "Voidstone", chance = 0.03 }, { id = "Starshard", chance = 0.008 }, { id = "Singularity", chance = 0.0008 } } },
 }
 
@@ -488,66 +500,178 @@ town.Name = "Town"
 town.Parent = workspace
 
 local function buildWorld()
-	local grass = Color3.fromRGB(96, 158, 76)
 	local wood = Color3.fromRGB(122, 84, 54)
 	local darkWood = Color3.fromRGB(84, 58, 40)
 	local stone = Color3.fromRGB(150, 150, 156)
 
-	-- Lighting
-	Lighting.ClockTime = 15.2
-	Lighting.Brightness = 3
-	Lighting.Ambient = Color3.fromRGB(88, 86, 96)
-	Lighting.OutdoorAmbient = Color3.fromRGB(140, 140, 150)
+	-- Lighting. Technology = Future is set in the place file (scripts can't change it).
+	Lighting.ClockTime = 14.4
+	Lighting.GeographicLatitude = 38
+	Lighting.Brightness = 2.8
+	Lighting.Ambient = Color3.fromRGB(86, 84, 96)
+	Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 142)
+	Lighting.ColorShift_Top = Color3.fromRGB(255, 236, 206)
+	Lighting.ExposureCompensation = 0.15
 	Lighting.GlobalShadows = true
-	Lighting.EnvironmentDiffuseScale = 0.5
-	Lighting.EnvironmentSpecularScale = 0.6
-	if not Lighting:FindFirstChildOfClass("Atmosphere") then
-		local atmo = Instance.new("Atmosphere")
-		atmo.Density = 0.28
-		atmo.Offset = 0.15
-		atmo.Color = Color3.fromRGB(200, 215, 235)
-		atmo.Decay = Color3.fromRGB(120, 130, 160)
-		atmo.Glare = 0.2
-		atmo.Haze = 1.2
-		atmo.Parent = Lighting
+	Lighting.ShadowSoftness = 0.25
+	Lighting.EnvironmentDiffuseScale = 1
+	Lighting.EnvironmentSpecularScale = 1
+	for _, c in Lighting:GetChildren() do
+		if c:IsA("PostEffect") or c:IsA("Atmosphere") or c:IsA("Sky") then
+			c:Destroy()
+		end
 	end
+	local atmo = Instance.new("Atmosphere")
+	atmo.Density = 0.3
+	atmo.Offset = 0.22
+	atmo.Color = Color3.fromRGB(199, 214, 234)
+	atmo.Decay = Color3.fromRGB(104, 118, 150)
+	atmo.Glare = 0.35
+	atmo.Haze = 1.4
+	atmo.Parent = Lighting
+	local sky = Instance.new("Sky")
+	sky.SunAngularSize = 14
+	sky.MoonAngularSize = 9
+	sky.StarCount = 3000
+	sky.Parent = Lighting
 	local bloom = Instance.new("BloomEffect")
-	bloom.Intensity = 0.5
-	bloom.Size = 22
-	bloom.Threshold = 1.4
+	bloom.Intensity = 0.55
+	bloom.Size = 30
+	bloom.Threshold = 1.15
 	bloom.Parent = Lighting
 	local rays = Instance.new("SunRaysEffect")
-	rays.Intensity = 0.05
-	rays.Spread = 0.6
+	rays.Intensity = 0.07
+	rays.Spread = 0.55
 	rays.Parent = Lighting
+	local grade = Instance.new("ColorCorrectionEffect")
+	grade.Name = "WorldGrade"
+	grade.Saturation = 0.12
+	grade.Contrast = 0.06
+	grade.TintColor = Color3.fromRGB(255, 251, 244)
+	grade.Parent = Lighting
 
-	-- Ground: four slabs around the mine. Their thickness is exactly one block,
-	-- so row 0 of the mine sits flush with the grass.
-	local function slab(cx, cz, sx, sz)
-		newPart({ Name = "Ground", Size = Vector3.new(sx, BLOCK, sz), Position = W(cx, -BLOCK / 2, cz), Color = grass, Material = Enum.Material.Grass }, town)
+	-- Terrain: real grass (with swaying blades), paths, a lake, hills and mountains.
+	local terrain = workspace.Terrain
+	terrain:Clear()
+	pcall(function()
+		terrain.Decoration = true
+	end)
+	terrain.WaterColor = Color3.fromRGB(38, 120, 140)
+	terrain.WaterTransparency = 0.6
+	terrain.WaterReflectance = 0.6
+	terrain.WaterWaveSize = 0.12
+	terrain.WaterWaveSpeed = 8
+	terrain:SetMaterialColor(Enum.Material.Grass, Color3.fromRGB(104, 158, 72))
+	terrain:SetMaterialColor(Enum.Material.LeafyGrass, Color3.fromRGB(84, 138, 62))
+	terrain:SetMaterialColor(Enum.Material.Rock, Color3.fromRGB(118, 116, 112))
+	terrain:SetMaterialColor(Enum.Material.Cobblestone, Color3.fromRGB(146, 138, 124))
+	terrain:SetMaterialColor(Enum.Material.Ground, Color3.fromRGB(122, 94, 66))
+	terrain:SetMaterialColor(Enum.Material.Sand, Color3.fromRGB(214, 196, 148))
+	terrain:SetMaterialColor(Enum.Material.Snow, Color3.fromRGB(240, 244, 250))
+	local clouds = Instance.new("Clouds")
+	clouds.Cover = 0.55
+	clouds.Density = 0.65
+	clouds.Color = Color3.fromRGB(255, 255, 255)
+	clouds.Parent = terrain
+
+	-- Ground surrounds the mine. It is 8 studs thick (2 voxels) so the mine's top row sits flush with the grass.
+	local function ground(cx, cz, sx, sz, mat)
+		terrain:FillBlock(CFrame.new(W(cx, -4, cz)), Vector3.new(sx, 8, sz), mat)
 	end
-	slab(0, (PIT + EDGE) / 2, EDGE * 2, EDGE - PIT)
-	slab(0, -(PIT + EDGE) / 2, EDGE * 2, EDGE - PIT)
-	slab(-(PIT + EDGE) / 2, 0, EDGE - PIT, PIT * 2)
-	slab((PIT + EDGE) / 2, 0, EDGE - PIT, PIT * 2)
+	ground(0, (PIT + EDGE) / 2, EDGE * 2, EDGE - PIT, Enum.Material.Grass)
+	ground(0, -(PIT + EDGE) / 2, EDGE * 2, EDGE - PIT, Enum.Material.Grass)
+	ground(-(PIT + EDGE) / 2, 0, EDGE - PIT, PIT * 2, Enum.Material.Grass)
+	ground((PIT + EDGE) / 2, 0, EDGE - PIT, PIT * 2, Enum.Material.Grass)
 
-	-- Paths
-	local path = Color3.fromRGB(176, 142, 100)
-	newPart({ Name = "Path", Size = Vector3.new(12, 0.2, 60), Position = W(0, 0.1, -105), Color = path, Material = Enum.Material.Ground, CanCollide = false }, town)
-	newPart({ Name = "Path", Size = Vector3.new(250, 0.2, 10), Position = W(0, 0.1, -95), Color = path, Material = Enum.Material.Ground, CanCollide = false }, town)
-	newPart({ Name = "Path", Size = Vector3.new(12, 0.2, 30), Position = W(0, 0.1, -142), Color = path, Material = Enum.Material.Ground, CanCollide = false }, town)
+	-- Cobblestone paths through town, and a dirt apron around the dig site
+	ground(0, -PIT - 4, PIT * 2 + 8, 8, Enum.Material.Ground)
+	ground(0, PIT + 4, PIT * 2 + 8, 8, Enum.Material.Ground)
+	ground(-PIT - 4, 0, 8, PIT * 2, Enum.Material.Ground)
+	ground(PIT + 4, 0, 8, PIT * 2, Enum.Material.Ground)
+	ground(0, -92, 256, 16, Enum.Material.Cobblestone)
+	ground(0, -124, 12, 44, Enum.Material.Cobblestone)
+	ground(0, -122, 24, 20, Enum.Material.Cobblestone)
+	ground(0, -148, 104, 12, Enum.Material.Cobblestone)
 
-	-- Pit rim: a low wooden frame so you can see where the mine is.
-	newPart({ Name = "Rim", Size = Vector3.new(PIT * 2 + 3, 0.6, 1.5), Position = W(0, 0.3, PIT + 0.75), Color = darkWood, Material = Enum.Material.WoodPlanks }, town)
-	newPart({ Name = "Rim", Size = Vector3.new(PIT * 2 + 3, 0.6, 1.5), Position = W(0, 0.3, -PIT - 0.75), Color = darkWood, Material = Enum.Material.WoodPlanks }, town)
-	newPart({ Name = "Rim", Size = Vector3.new(1.5, 0.6, PIT * 2), Position = W(PIT + 0.75, 0.3, 0), Color = darkWood, Material = Enum.Material.WoodPlanks }, town)
-	newPart({ Name = "Rim", Size = Vector3.new(1.5, 0.6, PIT * 2), Position = W(-PIT - 0.75, 0.3, 0), Color = darkWood, Material = Enum.Material.WoodPlanks }, town)
-	local e = PIT + 2
+	-- Lake with a sandy shore
+	local lake = W(176, 0, 150)
+	terrain:FillBall(lake - Vector3.new(0, 10, 0), 44, Enum.Material.Sand)
+	terrain:FillBlock(CFrame.new(lake + Vector3.new(0, 12, 0)), Vector3.new(120, 24, 120), Enum.Material.Air)
+	terrain:FillBall(lake - Vector3.new(0, 12, 0), 38, Enum.Material.Water)
+	terrain:FillBlock(CFrame.new(lake + Vector3.new(0, 12, 0)), Vector3.new(120, 24, 120), Enum.Material.Air)
+
+	-- Pit rim: log border so the dig site reads clearly
+	local logColor = Color3.fromRGB(104, 72, 46)
+	local function log(cf, length)
+		newPart({ Name = "RimLog", Shape = Enum.PartType.Cylinder, Size = Vector3.new(length, 1.6, 1.6), CFrame = cf, Color = logColor, Material = Enum.Material.Wood }, town)
+	end
+	log(CFrame.new(W(0, 0.5, PIT + 1)), PIT * 2 + 4)
+	log(CFrame.new(W(0, 0.5, -PIT - 1)), PIT * 2 + 4)
+	log(CFrame.new(W(PIT + 1, 0.5, 0)) * CFrame.Angles(0, math.rad(90), 0), PIT * 2 + 4)
+	log(CFrame.new(W(-PIT - 1, 0.5, 0)) * CFrame.Angles(0, math.rad(90), 0), PIT * 2 + 4)
+
+	-- Hanging lanterns around the pit
+	local e = PIT + 3
 	for _, c in { { -e, -e }, { e, -e }, { -e, e }, { e, e }, { 0, e }, { -e, 0 }, { e, 0 }, { 30, -e }, { -30, -e } } do
-		newPart({ Name = "LanternPost", Size = Vector3.new(0.7, 8, 0.7), Position = W(c[1], 4, c[2]), Color = darkWood, Material = Enum.Material.Wood }, town)
-		newPart({ Name = "LanternArm", Size = Vector3.new(0.4, 0.4, 2), Position = W(c[1], 7.8, c[2] + (if c[2] > 0 then -1 else 1)), Color = darkWood, Material = Enum.Material.Wood }, town)
-		local lamp = newPart({ Name = "Lantern", Size = Vector3.new(1.1, 1.3, 1.1), Position = W(c[1], 7, c[2] + (if c[2] > 0 then -1.8 else 1.8)), Color = Color3.fromRGB(255, 200, 110), Material = Enum.Material.Neon, CanCollide = false }, town)
-		addLight(lamp, Color3.fromRGB(255, 190, 110), 20, 1.2)
+		local inward = Vector3.new(-math.sign(c[1]), 0, -math.sign(c[2]))
+		if inward.Magnitude > 0 then
+			inward = inward.Unit
+		end
+		local base = W(c[1], 0, c[2])
+		newPart({ Name = "LanternPost", Size = Vector3.new(0.8, 10, 0.8), Position = base + Vector3.new(0, 5, 0), Color = darkWood, Material = Enum.Material.Wood }, town)
+		newPart({ Name = "LanternArm", Size = Vector3.new(0.45, 0.45, 2.6), CFrame = CFrame.lookAt(base + Vector3.new(0, 9.6, 0) + inward * 1.2, base + Vector3.new(0, 9.6, 0) + inward * 3), Color = darkWood, Material = Enum.Material.Wood }, town)
+		local hang = base + Vector3.new(0, 8, 0) + inward * 2.3
+		newPart({ Name = "LanternChain", Size = Vector3.new(0.12, 1.2, 0.12), Position = hang + Vector3.new(0, 1.1, 0), Color = Color3.fromRGB(40, 40, 44), Material = Enum.Material.Metal, CanCollide = false }, town)
+		newPart({ Name = "LanternCap", Size = Vector3.new(1.3, 0.3, 1.3), Position = hang + Vector3.new(0, 0.55, 0), Color = Color3.fromRGB(40, 40, 44), Material = Enum.Material.Metal, CanCollide = false }, town)
+		local lamp = newPart({ Name = "Lantern", Size = Vector3.new(1, 1, 1), Position = hang, Color = Color3.fromRGB(255, 196, 110), Material = Enum.Material.Neon, CanCollide = false }, town)
+		newPart({ Name = "LanternBase", Size = Vector3.new(1.2, 0.25, 1.2), Position = hang - Vector3.new(0, 0.6, 0), Color = Color3.fromRGB(40, 40, 44), Material = Enum.Material.Metal, CanCollide = false }, town)
+		addLight(lamp, Color3.fromRGB(255, 184, 104), 22, 1.3)
+	end
+
+	-- Mine headframe: an A-frame tower with a big wheel over the pit, the landmark you see from spawn.
+	do
+		local hx, hz = PIT + 12, -30
+		local top = W(hx, 34, hz)
+		local timber = Color3.fromRGB(92, 64, 42)
+		local function beam(a, b, thick)
+			local len = (b - a).Magnitude
+			newPart({ Name = "HeadframeBeam", Size = Vector3.new(thick, thick, len), CFrame = CFrame.lookAt((a + b) / 2, b), Color = timber, Material = Enum.Material.Wood }, town)
+		end
+		local feet = { W(hx - 7, 0, hz - 7), W(hx + 7, 0, hz - 7), W(hx - 7, 0, hz + 7), W(hx + 7, 0, hz + 7) }
+		for _, f in feet do
+			beam(f, top + (f - W(hx, 0, hz)) * 0.18 + Vector3.new(0, -1, 0), 1.3)
+			newPart({ Name = "Footing", Size = Vector3.new(2.6, 1, 2.6), Position = f + Vector3.new(0, 0.5, 0), Color = Color3.fromRGB(120, 118, 114), Material = Enum.Material.Cobblestone }, town)
+		end
+		for _, hgt in { 10, 22 } do
+			local k = 1 - hgt / 34 * 0.82
+			local corners = {}
+			for i, f in feet do
+				local flat = W(hx, 0, hz) + (f - W(hx, 0, hz)) * k
+				corners[i] = Vector3.new(flat.X, TOP + hgt, flat.Z)
+			end
+			beam(corners[1], corners[2], 0.9)
+			beam(corners[3], corners[4], 0.9)
+			beam(corners[1], corners[3], 0.9)
+			beam(corners[2], corners[4], 0.9)
+		end
+		newPart({ Name = "HeadframeDeck", Size = Vector3.new(6, 0.8, 6), Position = top - Vector3.new(0, 1.2, 0), Color = timber, Material = Enum.Material.WoodPlanks }, town)
+		local wheelCF = CFrame.new(top + Vector3.new(0, 3.4, 0))
+		newPart({ Name = "Wheel", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.6, 8, 8), CFrame = wheelCF * CFrame.Angles(0, math.rad(45), 0), Color = Color3.fromRGB(64, 60, 58), Material = Enum.Material.Metal }, town)
+		newPart({ Name = "WheelHub", Shape = Enum.PartType.Cylinder, Size = Vector3.new(1.2, 1.6, 1.6), CFrame = wheelCF * CFrame.Angles(0, math.rad(45), 0), Color = Color3.fromRGB(180, 140, 70), Material = Enum.Material.Metal }, town)
+		for i = 0, 3 do
+			newPart({ Name = "Spoke", Size = Vector3.new(0.3, 7.4, 0.3), CFrame = wheelCF * CFrame.Angles(0, math.rad(45), 0) * CFrame.Angles(math.rad(i * 45), 0, 0), Color = Color3.fromRGB(90, 86, 82), Material = Enum.Material.Metal }, town)
+		end
+		newPart({ Name = "Rope", Size = Vector3.new(0.2, 36, 0.2), Position = top + Vector3.new(-2.6, -16, 2.6), Color = Color3.fromRGB(150, 120, 80), Material = Enum.Material.Fabric, CanCollide = false }, town)
+		newPart({ Name = "Bucket", Size = Vector3.new(2.2, 2, 2.2), Position = top + Vector3.new(-2.6, -34.5, 2.6), Color = Color3.fromRGB(110, 76, 48), Material = Enum.Material.WoodPlanks, CanCollide = false }, town)
+	end
+
+	-- Street lamps along the main path
+	for _, x in { -110, -70, -30, 30, 70, 110 } do
+		local base = W(x, 0, -90)
+		newPart({ Name = "StreetLampPole", Size = Vector3.new(0.6, 11, 0.6), Position = base + Vector3.new(0, 5.5, 0), Color = Color3.fromRGB(44, 44, 48), Material = Enum.Material.Metal }, town)
+		newPart({ Name = "StreetLampBase", Size = Vector3.new(1.4, 1, 1.4), Position = base + Vector3.new(0, 0.5, 0), Color = Color3.fromRGB(44, 44, 48), Material = Enum.Material.Metal }, town)
+		local bulb = newPart({ Name = "StreetLamp", Shape = Enum.PartType.Ball, Size = Vector3.new(1.6, 1.6, 1.6), Position = base + Vector3.new(0, 11.4, 0), Color = Color3.fromRGB(255, 226, 170), Material = Enum.Material.Neon, CanCollide = false }, town)
+		addLight(bulb, Color3.fromRGB(255, 214, 160), 26, 1)
 	end
 
 	-- Pit sign
@@ -584,10 +708,10 @@ local function buildWorld()
 			newPart({ Name = "Wheel", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.4, 1.8, 1.8), CFrame = CFrame.new(cartPos + Vector3.new(wx, 0.9, wz)) * CFrame.Angles(0, math.rad(90), 0), Color = Color3.fromRGB(50, 50, 55), Material = Enum.Material.Metal }, town)
 		end
 	end
-	local r = Random.new(3)
+	local cartRng = Random.new(3)
 	for _ = 1, 9 do
-		local o = ORES[({ "Coal", "Copper", "Iron", "Gold", "Ruby", "Emerald" })[r:NextInteger(1, 6)]]
-		newPart({ Name = "Ore", Shape = Enum.PartType.Ball, Size = Vector3.one * r:NextNumber(1, 1.6), Position = cartPos + Vector3.new(r:NextNumber(-2, 2), 3.9, r:NextNumber(-1.2, 1.2)), Color = rgb(o.color), Material = material(o.material), CanCollide = false }, town)
+		local o = ORES[({ "Coal", "Copper", "Iron", "Gold", "Ruby", "Emerald" })[cartRng:NextInteger(1, 6)]]
+		newPart({ Name = "Ore", Shape = Enum.PartType.Ball, Size = Vector3.one * cartRng:NextNumber(1, 1.6), Position = cartPos + Vector3.new(cartRng:NextNumber(-2, 2), 3.9, cartRng:NextNumber(-1.2, 1.2)), Color = rgb(o.color), Material = material(o.material), CanCollide = false }, town)
 	end
 
 	-- Market stalls: pickaxes on the left of the path, backpacks on the right.
@@ -671,16 +795,41 @@ local function buildWorld()
 	billboard(chest, 5, { { "Title", "🎁 DAILY CHEST", 20, Color3.fromRGB(255, 214, 90) }, { "Sub", "", 15, Color3.fromRGB(240, 240, 240) } }, 60)
 	prompt(chest, "Daily", "Open", "Daily Chest", 0.3)
 
-	-- Museum
+	-- Museum: a small marble temple with steps, columns, a frieze and a pediment
 	local mz = -164
-	newPart({ Name = "MuseumFloor", Size = Vector3.new(106, 1, 30), Position = W(0, 0.5, mz), Color = Color3.fromRGB(236, 232, 222), Material = Enum.Material.Marble }, town)
-	newPart({ Name = "MuseumWall", Size = Vector3.new(106, 15, 1.5), Position = W(0, 8.5, mz - 14.5), Color = Color3.fromRGB(210, 200, 185), Material = Enum.Material.Marble }, town)
-	newPart({ Name = "MuseumRoof", Size = Vector3.new(110, 1.4, 34), Position = W(0, 16.6, mz - 1), Color = Color3.fromRGB(150, 60, 50), Material = Enum.Material.ClayRoofTiles }, town)
-	for _, x in { -52, -26, 26, 52 } do
-		newPart({ Name = "Pillar", Shape = Enum.PartType.Cylinder, Size = Vector3.new(15, 2.2, 2.2), CFrame = CFrame.new(W(x, 8.5, mz + 13)) * CFrame.Angles(0, 0, math.rad(90)), Color = Color3.fromRGB(240, 236, 228), Material = Enum.Material.Marble }, town)
+	local marble = Color3.fromRGB(238, 234, 226)
+	newPart({ Name = "MuseumFloor", Size = Vector3.new(106, 1, 30), Position = W(0, 0.5, mz), Color = marble, Material = Enum.Material.Marble }, town)
+	newPart({ Name = "MuseumStep", Size = Vector3.new(106, 0.5, 2.5), Position = W(0, 0.25, mz + 16.2), Color = marble, Material = Enum.Material.Marble }, town)
+	newPart({ Name = "MuseumWall", Size = Vector3.new(106, 18.6, 1.5), Position = W(0, 10.3, mz - 14.5), Color = Color3.fromRGB(214, 204, 190), Material = Enum.Material.Marble }, town)
+	for _, x in { -53, 53 } do
+		newPart({ Name = "MuseumSideWall", Size = Vector3.new(1.5, 18.6, 29), Position = W(x, 10.3, mz), Color = Color3.fromRGB(214, 204, 190), Material = Enum.Material.Marble }, town)
 	end
-	local mSign = newPart({ Name = "MuseumSign", Size = Vector3.new(44, 5, 0.6), Position = W(0, 20, mz + 14), Color = Color3.fromRGB(60, 40, 30), Material = Enum.Material.WoodPlanks }, town)
-	signText(mSign, Enum.NormalId.Back, "🏛 MUSEUM OF THE DEEP", Color3.fromRGB(255, 225, 150))
+	for _, x in { -48, -32, -16, 16, 32, 48 } do
+		newPart({ Name = "PillarBase", Size = Vector3.new(3.2, 0.8, 3.2), Position = W(x, 1.4, mz + 13), Color = marble, Material = Enum.Material.Marble }, town)
+		newPart({ Name = "Pillar", Shape = Enum.PartType.Cylinder, Size = Vector3.new(14.2, 2.4, 2.4), CFrame = CFrame.new(W(x, 8.9, mz + 13)) * CFrame.Angles(0, 0, math.rad(90)), Color = marble, Material = Enum.Material.Marble }, town)
+		newPart({ Name = "PillarCap", Size = Vector3.new(3.2, 0.8, 3.2), Position = W(x, 16.4, mz + 13), Color = marble, Material = Enum.Material.Marble }, town)
+	end
+	local frieze = newPart({ Name = "MuseumFrieze", Size = Vector3.new(110, 3, 2.4), Position = W(0, 18.3, mz + 13.4), Color = marble, Material = Enum.Material.Marble }, town)
+	signText(frieze, Enum.NormalId.Back, "MUSEUM OF THE DEEP", Color3.fromRGB(120, 90, 50))
+	newPart({ Name = "MuseumRoof", Size = Vector3.new(112, 1.2, 34), Position = W(0, 20.4, mz - 0.6), Color = marble, Material = Enum.Material.Marble }, town)
+	for side = -1, 1, 2 do
+		local wedge = Instance.new("WedgePart")
+		wedge.Name = "Pediment"
+		wedge.Anchored = true
+		wedge.Size = Vector3.new(2.4, 8, 56)
+		wedge.CFrame = CFrame.new(W(side * 28, 25, mz + 13.4)) * CFrame.Angles(0, math.rad(-90 * side), 0)
+		wedge.Color = marble
+		wedge.Material = Enum.Material.Marble
+		wedge.Parent = town
+		local slope = Instance.new("WedgePart")
+		slope.Name = "RoofSlope"
+		slope.Anchored = true
+		slope.Size = Vector3.new(30, 8, 56)
+		slope.CFrame = CFrame.new(W(side * 28, 25, mz - 2.6)) * CFrame.Angles(0, math.rad(-90 * side), 0)
+		slope.Color = Color3.fromRGB(170, 74, 58)
+		slope.Material = Enum.Material.ClayRoofTiles
+		slope.Parent = town
+	end
 	local progress = newPart({ Name = "MuseumProgress", Size = Vector3.new(1, 1, 1), Position = W(0, 3, mz + 12), Transparency = 1, CanCollide = false }, town)
 	progress.CanQuery = false
 	CollectionService:AddTag(progress, "MuseumSign")
@@ -702,60 +851,91 @@ local function buildWorld()
 		display.Parent = town
 	end
 
-	-- Scenery: a ring of mountains hides the world edge, then trees and rocks.
+	-- Scenery: terrain mountains ring the world, rolling hills, trees, bushes, rocks and flowers.
 	local sr = Random.new(42)
-	for i = 1, 28 do
-		local a = (i / 28) * math.pi * 2 + sr:NextNumber(-0.05, 0.05)
-		local dist = sr:NextNumber(275, 295)
-		local h = sr:NextNumber(60, 150)
-		local w = sr:NextNumber(55, 95)
-		newPart({
-			Name = "Mountain",
-			Size = Vector3.new(w, h, w),
-			CFrame = CFrame.new(W(math.cos(a) * dist, h / 2 - 12, math.sin(a) * dist)) * CFrame.Angles(sr:NextNumber(-0.15, 0.15), sr:NextNumber(0, math.pi), sr:NextNumber(-0.15, 0.15)),
-			Color = Color3.fromRGB(110, 118, 110):Lerp(Color3.fromRGB(90, 130, 80), sr:NextNumber()),
-			Material = Enum.Material.Rock,
-		}, town)
+	for i = 1, 22 do
+		local a = (i / 22) * math.pi * 2 + sr:NextNumber(-0.06, 0.06)
+		local dist = sr:NextNumber(320, 360)
+		local r = sr:NextNumber(70, 115)
+		local c = W(math.cos(a) * dist, -r * 0.45, math.sin(a) * dist)
+		terrain:FillBall(c, r, Enum.Material.Rock)
+		terrain:FillBall(c - Vector3.new(0, r * 0.12, 0), r * 0.96, Enum.Material.Grass)
+		terrain:FillBall(c + Vector3.new(0, r * 0.12, 0), r * 0.9, Enum.Material.Rock)
+		if r > 92 then
+			local rs = r * 0.42
+			terrain:FillBall(c + Vector3.new(0, r - rs * 0.75, 0), rs, Enum.Material.Snow)
+		end
 	end
-	local function blocked(x, z)
-		if math.abs(x) < PIT + 16 and math.abs(z) < PIT + 16 then
+	local function blocked(x, z, pad)
+		pad = pad or 0
+		if math.abs(x) < PIT + 16 + pad and math.abs(z) < PIT + 16 + pad then
 			return true
 		end
-		return x > -140 and x < 140 and z > -190 and z < -70
+		if (Vector2.new(x, z) - Vector2.new(176, 150)).Magnitude < 52 + pad then
+			return true
+		end
+		if x > PIT and x < PIT + 26 and z > -46 and z < -14 then
+			return true
+		end
+		return x > -145 - pad and x < 145 + pad and z > -195 - pad and z < -70 + pad
+	end
+	for _ = 1, 16 do
+		local x, z = sr:NextNumber(-250, 250), sr:NextNumber(-250, 250)
+		local r = sr:NextNumber(24, 42)
+		if not blocked(x, z, r) then
+			terrain:FillBall(W(x, -r * 0.78, z), r, Enum.Material.Grass)
+		end
 	end
 	local placed = 0
-	while placed < 46 do
-		local x, z = sr:NextNumber(-255, 255), sr:NextNumber(-255, 255)
-		if not blocked(x, z) then
+	local tries = 0
+	while placed < 55 and tries < 2000 do
+		tries += 1
+		local x, z = sr:NextNumber(-270, 270), sr:NextNumber(-270, 270)
+		if not blocked(x, z, 4) then
 			placed += 1
-			local h = sr:NextNumber(7, 13)
-			newPart({ Name = "Trunk", Size = Vector3.new(1.6, h, 1.6), Position = W(x, h / 2, z), Color = Color3.fromRGB(105, 74, 50), Material = Enum.Material.Wood }, town)
-			for j = 1, 3 do
-				local s = sr:NextNumber(5, 8) - j
-				newPart({
-					Name = "Leaves",
-					Shape = Enum.PartType.Ball,
-					Size = Vector3.one * s,
-					Position = W(x + sr:NextNumber(-1.5, 1.5), h + j * 1.8 - 1, z + sr:NextNumber(-1.5, 1.5)),
-					Color = Color3.fromRGB(70, 140, 60):Lerp(Color3.fromRGB(120, 175, 70), sr:NextNumber()),
-					Material = Enum.Material.Grass,
-				}, town)
+			local h = sr:NextNumber(9, 16)
+			local lean = CFrame.Angles(sr:NextNumber(-0.06, 0.06), 0, sr:NextNumber(-0.06, 0.06))
+			newPart({ Name = "Trunk", Shape = Enum.PartType.Cylinder, Size = Vector3.new(h + 2, 1.8, 1.8), CFrame = CFrame.new(W(x, h / 2 - 1, z)) * lean * CFrame.Angles(0, 0, math.rad(90)), Color = Color3.fromRGB(98, 70, 48), Material = Enum.Material.Wood }, town)
+			local crown = W(x, h + 2, z)
+			local size = sr:NextNumber(5.5, 8)
+			terrain:FillBall(crown, size, Enum.Material.LeafyGrass)
+			for _ = 1, 3 do
+				terrain:FillBall(crown + Vector3.new(sr:NextNumber(-4, 4), sr:NextNumber(-2, 3), sr:NextNumber(-4, 4)), size * sr:NextNumber(0.55, 0.75), Enum.Material.LeafyGrass)
 			end
 		end
 	end
-	placed = 0
-	while placed < 30 do
-		local x, z = sr:NextNumber(-260, 260), sr:NextNumber(-260, 260)
+	placed, tries = 0, 0
+	while placed < 45 and tries < 2000 do
+		tries += 1
+		local x, z = sr:NextNumber(-270, 270), sr:NextNumber(-270, 270)
 		if not blocked(x, z) then
 			placed += 1
-			local s = sr:NextNumber(2, 6)
-			newPart({
-				Name = "Rock",
-				Size = Vector3.new(s * sr:NextNumber(1, 1.6), s, s * sr:NextNumber(1, 1.4)),
-				CFrame = CFrame.new(W(x, s * 0.3, z)) * CFrame.Angles(sr:NextNumber(-0.3, 0.3), sr:NextNumber(0, 6), sr:NextNumber(-0.3, 0.3)),
-				Color = Color3.fromRGB(128, 128, 134),
-				Material = Enum.Material.Rock,
-			}, town)
+			local r = sr:NextNumber(2.5, 4.5)
+			terrain:FillBall(W(x, -r * 0.2, z), r, if placed % 3 == 0 then Enum.Material.Rock else Enum.Material.LeafyGrass)
+		end
+	end
+	-- Bushes and rocks right around town so it doesn't look bare
+	for _, spot in { { -140, -80 }, { 140, -80 }, { -60, -190 }, { 60, -190 }, { -150, -150 }, { 150, -150 }, { -88, -70 }, { 88, -70 } } do
+		terrain:FillBall(W(spot[1], -1, spot[2]), sr:NextNumber(3, 4.5), Enum.Material.LeafyGrass)
+		terrain:FillBall(W(spot[1] + 4, -1, spot[2] + 2), sr:NextNumber(2, 3), Enum.Material.LeafyGrass)
+	end
+	local flowerColors = { Color3.fromRGB(255, 120, 160), Color3.fromRGB(255, 220, 80), Color3.fromRGB(255, 255, 255), Color3.fromRGB(180, 130, 255), Color3.fromRGB(255, 150, 70) }
+	placed, tries = 0, 0
+	while placed < 50 and tries < 2000 do
+		tries += 1
+		local x, z = sr:NextNumber(-260, 260), sr:NextNumber(-260, 260)
+		if not blocked(x, z) or (math.abs(x) > 60 and z > -85 and z < -75) then
+			placed += 1
+			local color = flowerColors[sr:NextInteger(1, #flowerColors)]
+			for _ = 1, 6 do
+				local fx, fz = x + sr:NextNumber(-3, 3), z + sr:NextNumber(-3, 3)
+				local stem = newPart({ Name = "FlowerStem", Size = Vector3.new(0.12, 0.9, 0.12), Position = W(fx, 0.45, fz), Color = Color3.fromRGB(70, 130, 50), Material = Enum.Material.SmoothPlastic, CanCollide = false }, town)
+				stem.CastShadow = false
+				stem.CanQuery = false
+				local head = newPart({ Name = "Flower", Shape = Enum.PartType.Ball, Size = Vector3.new(0.55, 0.55, 0.55), Position = W(fx, 1, fz), Color = color, Material = Enum.Material.SmoothPlastic, CanCollide = false }, town)
+				head.CastShadow = false
+				head.CanQuery = false
+			end
 		end
 	end
 
@@ -778,8 +958,6 @@ local cells = {}
 local blockInfo = {}
 local partCount = 0
 local DIRS = { { 1, 0, 0 }, { -1, 0, 0 }, { 0, 1, 0 }, { 0, -1, 0 }, { 0, 0, 1 }, { 0, 0, -1 } }
-local BEDROCK = Color3.fromRGB(26, 26, 30)
-local GRASS_TOP = Color3.fromRGB(96, 158, 76)
 local GEODE_COLOR = Color3.fromRGB(170, 95, 255)
 
 local function cellKey(x, y, z)
@@ -828,6 +1006,43 @@ local function rollKind(y, L)
 	return ""
 end
 
+-- Ore and geode blocks are stone with nuggets or crystals growing out of every face.
+local FACE_NORMALS = { Vector3.xAxis, -Vector3.xAxis, Vector3.yAxis, -Vector3.yAxis, Vector3.zAxis, -Vector3.zAxis }
+
+local function decorate(block, color, mat, crystal, count)
+	local center = block.Position
+	for _ = 1, count do
+		local n = FACE_NORMALS[rng:NextInteger(1, 6)]
+		local t1 = if math.abs(n.Y) > 0.5 then Vector3.xAxis else Vector3.yAxis
+		local t2 = n:Cross(t1)
+		local spot = center + n * (BLOCK / 2) + t1 * rng:NextNumber(-2, 2) + t2 * rng:NextNumber(-2, 2)
+		local piece = Instance.new("Part")
+		piece.Name = "Nugget"
+		piece.Anchored = true
+		piece.CanCollide = false
+		piece.CanQuery = false
+		piece.CanTouch = false
+		piece.CastShadow = false
+		piece.Color = color:Lerp(Color3.new(1, 1, 1), rng:NextNumber() * 0.2)
+		piece.Material = mat
+		piece.TopSurface = Enum.SurfaceType.Smooth
+		piece.BottomSurface = Enum.SurfaceType.Smooth
+		if crystal then
+			local len = rng:NextNumber(1.6, 3)
+			piece.Size = Vector3.new(0.7, len, 0.7)
+			-- point the long (Y) axis out of the face, with a little random tilt
+			piece.CFrame = CFrame.lookAt(spot, spot + n, t1) * CFrame.Angles(-math.pi / 2, 0, 0)
+				* CFrame.Angles(rng:NextNumber(-0.45, 0.45), rng:NextNumber(0, math.pi), rng:NextNumber(-0.45, 0.45))
+				* CFrame.new(0, len * 0.3, 0)
+		else
+			local sz = rng:NextNumber(0.9, 1.6)
+			piece.Size = Vector3.new(sz, sz * rng:NextNumber(0.6, 1), sz)
+			piece.CFrame = CFrame.new(spot) * CFrame.Angles(rng:NextNumber(0, 6), rng:NextNumber(0, 6), rng:NextNumber(0, 6))
+		end
+		piece.Parent = block
+	end
+end
+
 local function spawnBlock(x, y, z)
 	if y < 0 then
 		return
@@ -838,7 +1053,7 @@ local function spawnBlock(x, y, z)
 	end
 	local outside = x < 0 or x >= GRID or z < 0 or z >= GRID
 	if outside and y == 0 then
-		cells[k] = true -- the grass slab already fills this spot
+		cells[k] = true -- the terrain ground already fills this spot
 		return
 	end
 	local p = Instance.new("Part")
@@ -847,45 +1062,61 @@ local function spawnBlock(x, y, z)
 	p.CFrame = CFrame.new(cellPos(x, y, z))
 	p.TopSurface = Enum.SurfaceType.Smooth
 	p.BottomSurface = Enum.SurfaceType.Smooth
+
+	-- The look of a block: its own layer, blending into the next layer near a boundary.
+	local L = layerAt(math.min(y, MAX_DEPTH - 1))
+	local look = L
+	local nextLayer = LAYERS[(table.find(LAYERS, L) or #LAYERS) + 1]
+	if nextLayer and y >= nextLayer.from - 4 and rng:NextNumber() < (y - (nextLayer.from - 5)) / 6 then
+		look = nextLayer
+	end
+	local useAlt = look.alt and rng:NextNumber() < 0.28
+	local fillColor = if useAlt then rgb(look.alt.color) else rgb(look.color)
+	local fillMaterial = material(if useAlt then look.alt.material else look.material)
+	if y == 0 then
+		fillColor = Color3.fromRGB(128, 94, 62)
+		fillMaterial = Enum.Material.Ground
+	end
+	fillColor = fillColor:Lerp(Color3.new(0, 0, 0), rng:NextNumber() * 0.1)
+
 	if outside or y >= MAX_DEPTH then
+		-- Unbreakable walls keep the look of the layer they are in, only darker.
 		p.Name = "Bedrock"
-		p.Color = BEDROCK
-		p.Material = Enum.Material.Slate
+		p.Color = if y >= MAX_DEPTH then Color3.fromRGB(18, 16, 22) else fillColor:Lerp(Color3.new(0, 0, 0), 0.35)
+		p.Material = if y >= MAX_DEPTH then Enum.Material.Basalt else fillMaterial
 		p:SetAttribute("Bedrock", true)
 	else
-		local L = layerAt(y)
 		local kind = rollKind(y, L)
 		local info = { x = x, y = y, z = z, kind = kind, pos = p.Position }
 		local hp
 		if kind == "Geode" then
 			p.Name = "Geode"
-			p.Color = GEODE_COLOR
-			p.Material = Enum.Material.Glass
-			p.Reflectance = 0.15
-			addLight(p, GEODE_COLOR, 12, 1.4)
+			p.Color = Color3.fromRGB(58, 44, 72)
+			p.Material = Enum.Material.Basalt
+			decorate(p, GEODE_COLOR, Enum.Material.Neon, true, 9)
+			addLight(p, GEODE_COLOR, 14, 1.6)
 			hp = L.hp * 14
 			info.value = math.floor(layerAverage(L) * 60)
 			info.hitters = {}
 			p:SetAttribute("Geode", true)
 		elseif kind ~= "" then
 			local O = ORES[kind]
+			local oreColor = rgb(O.color)
+			local crystal = O.material == "Glass" or O.material == "Neon"
 			p.Name = O.name
-			p.Color = rgb(O.color)
-			p.Material = material(O.material)
-			if O.material == "Glass" then
-				p.Reflectance = 0.12
-			end
+			p.Color = fillColor:Lerp(oreColor, 0.22)
+			p.Material = fillMaterial
+			decorate(p, oreColor, material(O.material), crystal, if crystal then rng:NextInteger(6, 9) else rng:NextInteger(7, 11))
 			if O.glow then
-				addLight(p, rgb(O.color), 9, 0.9)
+				addLight(p, oreColor, 11, 1.1)
 			end
 			hp = L.hp * O.hp
 			info.value = O.value
 			p:SetAttribute("Ore", kind)
 		else
 			p.Name = L.name
-			local base = if y == 0 then GRASS_TOP else rgb(L.color)
-			p.Color = base:Lerp(Color3.new(0, 0, 0), rng:NextNumber() * 0.09)
-			p.Material = if y == 0 then Enum.Material.Grass else material(L.material)
+			p.Color = fillColor
+			p.Material = fillMaterial
 			hp = L.hp
 			info.value = L.value
 		end
@@ -900,6 +1131,51 @@ local function spawnBlock(x, y, z)
 	p.Parent = mineFolder
 	cells[k] = p
 	partCount += 1
+end
+
+-- A wall torch on the block at (x, y, z), on the face that looks at `facing`.
+local function placeTorch(x, y, z, facing)
+	local block = cells[cellKey(x, y, z)]
+	if typeof(block) ~= "Instance" or not block:IsA("BasePart") or block:FindFirstChild("Torch") then
+		return
+	end
+	local base = block.Position + facing * (BLOCK / 2) + Vector3.new(0, 0.6, 0)
+	local tilt = CFrame.fromAxisAngle(facing:Cross(Vector3.yAxis), -0.45)
+	local stick = Instance.new("Part")
+	stick.Name = "Torch"
+	stick.Anchored = true
+	stick.CanCollide = false
+	stick.CanQuery = false
+	stick.CanTouch = false
+	stick.Size = Vector3.new(0.3, 1.8, 0.3)
+	stick.CFrame = CFrame.new(base + facing * 0.35) * tilt
+	stick.Color = Color3.fromRGB(96, 66, 40)
+	stick.Material = Enum.Material.Wood
+	local flame = Instance.new("Part")
+	flame.Name = "Flame"
+	flame.Anchored = true
+	flame.CanCollide = false
+	flame.CanQuery = false
+	flame.CanTouch = false
+	flame.CastShadow = false
+	flame.Size = Vector3.new(0.45, 0.45, 0.45)
+	flame.CFrame = CFrame.new(base + facing * 0.75 + Vector3.new(0, 0.85, 0))
+	flame.Color = Color3.fromRGB(255, 170, 60)
+	flame.Material = Enum.Material.Neon
+	local fire = Instance.new("Fire")
+	fire.Size = 1.6
+	fire.Heat = 4
+	fire.Color = Color3.fromRGB(255, 140, 40)
+	fire.SecondaryColor = Color3.fromRGB(255, 220, 120)
+	fire.Parent = flame
+	local light = Instance.new("PointLight")
+	light.Color = Color3.fromRGB(255, 168, 90)
+	light.Range = 20
+	light.Brightness = 1.4
+	light.Shadows = true
+	light.Parent = flame
+	flame.Parent = stick
+	stick.Parent = block
 end
 
 local function clearCell(x, y, z)
@@ -1264,6 +1540,13 @@ end
 local function breakBlock(player, part, info)
 	local d = sessions[player]
 	clearCell(info.x, info.y, info.z)
+	-- Now and then a torch appears on a wall of the fresh hole, so tunnels feel lived-in.
+	if info.y >= 2 and rng:NextNumber() < 1 / 12 then
+		local dir = DIRS[rng:NextInteger(1, 6)]
+		if dir[2] == 0 then
+			placeTorch(info.x + dir[1], info.y, info.z + dir[3], Vector3.new(-dir[1], 0, -dir[3]))
+		end
+	end
 	d.mined += 1
 	local depth = info.y + 1
 	if depth > d.best then
@@ -1453,6 +1736,8 @@ local function descend(player)
 		end
 	end
 	clearCell(cx, row - 1, cz)
+	placeTorch(cx + 2, row, cz, Vector3.new(-1, 0, 0))
+	placeTorch(cx - 2, row, cz, Vector3.new(1, 0, 0))
 	local floorY = TOP - (row + 1) * BLOCK
 	teleportTo(player, Vector3.new(cellPos(cx, row, cz).X, floorY + 3.5, cellPos(cx, row, cz).Z))
 	notify(player, `⬇ {stop}m`, Color3.fromRGB(255, 214, 90))
@@ -1656,15 +1941,15 @@ print("[DigDeep] Server ready.")
       </Properties>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="2">
+  <Item class="StarterPlayer" referent="3">
     <Properties>
       <string name="Name">StarterPlayer</string>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="3">
+    <Item class="StarterPlayerScripts" referent="4">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="LocalScript" referent="4">
+      <Item class="LocalScript" referent="5">
         <Properties>
           <string name="Name">DigDeepClient</string>
           <string name="Source"><![CDATA[--[[
@@ -2992,11 +3277,12 @@ refreshMuseum()
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="5">
+  <Item class="Workspace" referent="6">
     <Properties>
       <string name="Name">Workspace</string>
       <float name="FallenPartsDestroyHeight">-500</float>
       <bool name="NeedsPivotMigration">false</bool>
+      <bool name="StreamingEnabled">false</bool>
     </Properties>
   </Item>
 </roblox>
