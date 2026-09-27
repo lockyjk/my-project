@@ -252,7 +252,7 @@ export type ProfileData = {
 	IndexRewards: { [string]: boolean },
 	Achievements: { [string]: boolean },
 	Stats: { [string]: number },
-	Daily: { Streak: number, LastClaimDay: number },
+	Daily: { Streak: number, LastClaimDay: number, PremiumDay: number },
 	Quests: {
 		DailyDay: number,
 		Daily: { QuestState },

@@ -44,7 +44,7 @@ function DataTemplate.new(): Types.ProfileData
 			BestPetScore = 0,
 			IndexCount = 0,
 		},
-		Daily = { Streak = 0, LastClaimDay = -1 },
+		Daily = { Streak = 0, LastClaimDay = -1, PremiumDay = -1 },
 		Quests = { DailyDay = -1, Daily = {}, WeeklyWeek = -1, Weekly = {} },
 		Pass = { Season = "", XP = 0, Premium = false, ClaimedFree = {}, ClaimedPremium = {} },
 		Boosts = {},

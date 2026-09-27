@@ -177,16 +177,16 @@ local function buildTopLeft()
 end
 
 local function buildMenu()
+	-- 4 x 3 grid in the upper-left, clear of the mobile thumbstick zone (lower-left)
+	local size = Theme.UI.MainButton
 	local grid = UIKit.new("Frame", {
 		Name = "Menu",
 		BackgroundTransparency = 1,
-		Size = UDim2.fromOffset(170, 420),
-		Position = UDim2.new(0, 14, 0.5, 30),
-		AnchorPoint = Vector2.new(0, 0.5),
+		Size = UDim2.fromOffset(size * 4 + 30, size * 3 + 20),
+		Position = UDim2.fromOffset(14, 164),
 		Parent = root,
 	})
-	UIKit.grid(grid, Vector2.new(Theme.UI.MainButton, Theme.UI.MainButton), 10).HorizontalAlignment =
-		Enum.HorizontalAlignment.Left
+	UIKit.grid(grid, Vector2.new(size, size), 10).HorizontalAlignment = Enum.HorizontalAlignment.Left
 	for i, entry in HUD.Menu do
 		buttons[entry.name] = UIKit.button({
 			Name = entry.name,
@@ -265,7 +265,7 @@ local function buildTravel()
 		Text = "CATCH",
 		Color = C.Static,
 		Size = UDim2.fromOffset(110, 110),
-		Position = UDim2.new(1, -120, 1, -250),
+		Position = UDim2.new(1, -130, 1, -160),
 		AnchorPoint = Vector2.new(1, 1),
 		Corner = 55,
 		MaxTextSize = 30,

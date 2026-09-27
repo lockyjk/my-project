@@ -47,7 +47,7 @@ Theme.UI = {
 	Stroke = 4, -- thick outline on everything
 	TextStroke = 3, -- via UIStroke on text labels
 	-- Big touch targets: main bar buttons are at least this many px on phones (Apple/Google guidance ~44pt)
-	MainButton = 76,
+	MainButton = 72,
 	SmallButton = 52,
 	PanelWidth = 720,
 	PanelHeight = 520,

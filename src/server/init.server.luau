@@ -17,6 +17,11 @@ local order = {
 	"PetService",
 	"RewardService",
 	"RebirthService",
+	"QuestService",
+	"RetentionService",
+	"StormPassService",
+	"LeaderboardService",
+	"TradeService",
 	"TutorialService",
 }
 

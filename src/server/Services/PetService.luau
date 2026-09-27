@@ -100,7 +100,7 @@ function PetService.givePet(player: Player, petId: string, source: string, tier:
 
 	local def = Defs.Pet[petId]
 	local rarity = Defs.Rarity[def.rarity]
-	if rarity and rarity.announce then
+	if rarity and rarity.announce and source ~= "Trade" then
 		local tierName = if pet.tier > 1 then Config.Fusion.Tiers[pet.tier].name .. " " else ""
 		Net.Server.fireAll("Announce", `{player.DisplayName} got a {rarity.name} {tierName}{def.name}!`, def.rarity)
 	end
