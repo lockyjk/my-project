@@ -33,6 +33,7 @@ local CollectionService = game:GetService("CollectionService")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local Lighting = game:GetService("Lighting")
 local HttpService = game:GetService("HttpService")
+local MarketplaceService = game:GetService("MarketplaceService")
 local RunService = game:GetService("RunService")
 
 pcall(function()
@@ -150,6 +151,89 @@ local TREASURES = {
 
 -- Daily chest base reward by pickaxe tier, so it stays useful as you progress.
 local DAILY = { 100, 300, 1500, 8000, 25000, 120000, 700000, 5000000, 35000000, 250000000 }
+
+-- Rough coins per minute of digging for each pickaxe tier. Coin packs, codes and the spin wheel
+-- pay "N minutes of digging", so rewards stay useful at every stage of the game.
+local INCOME = { 30, 90, 300, 1100, 3500, 14000, 60000, 350000, 2000000, 12000000 }
+
+--------------------------------------------------------------------------------
+-- MONETIZATION
+-- Create each pass / product on the Creator Dashboard and paste its id here.
+-- While an id is 0: in a live game the item shows "Coming soon"; in Studio, buying it
+-- grants it for free (this session only) so you can test everything.
+--------------------------------------------------------------------------------
+local PASSES = {
+	{ key = "VIP", id = 0, price = 399, name = "VIP", icon = "👑", desc = "+25% ore value, a VIP tag and a sparkling VIP pickaxe" },
+	{ key = "DoubleCoins", id = 0, price = 349, name = "2x Coins", icon = "💰", desc = "Everything you sell is worth double" },
+	{ key = "AutoMine", id = 0, price = 299, name = "Auto Mine", icon = "🤖", desc = "Dig without clicking. Toggle it any time" },
+	{ key = "SellAnywhere", id = 0, price = 249, name = "Sell Anywhere", icon = "🛒", desc = "Sell your bag from anywhere with one tap" },
+	{ key = "Lucky", id = 0, price = 299, name = "Lucky Miner", icon = "🍀", desc = "2x treasure luck and better egg odds" },
+	{ key = "FastMine", id = 0, price = 249, name = "Fast Swings", icon = "⚡", desc = "Swing your pickaxe 25% faster" },
+	{ key = "InfiniteBag", id = 0, price = 799, name = "Infinite Backpack", icon = "♾️", desc = "Your backpack never fills up" },
+	{ key = "MorePets", id = 0, price = 349, name = "+2 Pet Slots", icon = "🐾", desc = "Equip 5 pets instead of 3" },
+}
+local PRODUCTS = {
+	{ key = "Starter", id = 0, price = 99, name = "Starter Pack", icon = "🎁", desc = "Starter Pup pet, 15 min of every potion and a coin bundle", starter = true },
+	{ key = "CoinsS", id = 0, price = 49, name = "Pile of Coins", icon = "🪙", coinMinutes = 20 },
+	{ key = "CoinsM", id = 0, price = 199, name = "Sack of Coins", icon = "💰", coinMinutes = 120 },
+	{ key = "CoinsL", id = 0, price = 599, name = "Vault of Coins", icon = "🏦", coinMinutes = 480 },
+	{ key = "PotionCoins", id = 0, price = 39, name = "2x Coins Potion", icon = "🧪", potion = "Coins", minutes = 15 },
+	{ key = "PotionLuck", id = 0, price = 39, name = "Luck Potion", icon = "🍀", potion = "Luck", minutes = 15 },
+	{ key = "PotionSpeed", id = 0, price = 39, name = "Speed Potion", icon = "⚡", potion = "Speed", minutes = 15 },
+	{ key = "NextPick", id = 0, price = 149, name = "Instant Pickaxe", icon = "⛏", desc = "Skip straight to your next pickaxe" },
+}
+
+--------------------------------------------------------------------------------
+-- PETS, EGGS, LEVELS, SPIN WHEEL, CODES
+-- Eggs cost coins only (never Robux), so there are no paid random items.
+--------------------------------------------------------------------------------
+local PETS = {
+	Mole = { name = "Mole", rarity = "Common", boost = 0.05, color = { 150, 108, 78 }, accent = { 255, 170, 170 }, ears = "round", icon = "🐹" },
+	Bunny = { name = "Bunny", rarity = "Uncommon", boost = 0.1, color = { 240, 238, 242 }, accent = { 255, 170, 195 }, ears = "long", icon = "🐰" },
+	PebblePup = { name = "Pebble Pup", rarity = "Rare", boost = 0.2, color = { 150, 150, 162 }, accent = { 90, 90, 104 }, ears = "pointy", tail = true, icon = "🐶" },
+	GoldenMole = { name = "Golden Mole", rarity = "Legendary", boost = 0.5, color = { 255, 200, 60 }, accent = { 255, 240, 170 }, ears = "round", glow = true, icon = "🌟" },
+	Bat = { name = "Cave Bat", rarity = "Common", boost = 0.25, color = { 84, 64, 112 }, accent = { 255, 140, 200 }, ears = "pointy", wings = true, icon = "🦇" },
+	Slime = { name = "Slime", rarity = "Uncommon", boost = 0.4, color = { 90, 222, 124 }, accent = { 40, 140, 70 }, ears = "none", jelly = true, icon = "🟢" },
+	RockGolem = { name = "Rock Golem", rarity = "Rare", boost = 0.7, color = { 124, 114, 104 }, accent = { 255, 170, 60 }, ears = "none", horns = true, icon = "🗿" },
+	LavaPup = { name = "Lava Pup", rarity = "Legendary", boost = 1.5, color = { 255, 92, 32 }, accent = { 255, 222, 92 }, ears = "pointy", tail = true, glow = true, icon = "🔥" },
+	CrystalFox = { name = "Crystal Fox", rarity = "Common", boost = 1, color = { 140, 210, 255 }, accent = { 255, 255, 255 }, ears = "pointy", tail = true, icon = "🦊" },
+	GemOwl = { name = "Gem Owl", rarity = "Uncommon", boost = 1.5, color = { 170, 110, 255 }, accent = { 255, 222, 122 }, ears = "pointy", wings = true, icon = "🦉" },
+	PrismDragon = { name = "Prism Dragon", rarity = "Rare", boost = 2.5, color = { 255, 122, 222 }, accent = { 122, 255, 240 }, ears = "none", horns = true, wings = true, tail = true, icon = "🐲" },
+	DiamondDragon = { name = "Diamond Dragon", rarity = "Legendary", boost = 6, color = { 205, 245, 255 }, accent = { 120, 200, 255 }, ears = "none", horns = true, wings = true, tail = true, glow = true, icon = "💎" },
+	ShadowCat = { name = "Shadow Cat", rarity = "Common", boost = 3, color = { 44, 34, 64 }, accent = { 182, 122, 255 }, ears = "pointy", tail = true, icon = "🐈‍⬛" },
+	VoidWisp = { name = "Void Wisp", rarity = "Uncommon", boost = 5, color = { 112, 42, 202 }, accent = { 232, 182, 255 }, ears = "none", glow = true, icon = "👻" },
+	NebulaSerpent = { name = "Nebula Serpent", rarity = "Rare", boost = 8, color = { 62, 22, 122 }, accent = { 255, 122, 222 }, ears = "none", horns = true, tail = true, glow = true, icon = "🐍" },
+	SingularitySpirit = { name = "Singularity Spirit", rarity = "Legendary", boost = 18, color = { 24, 24, 28 }, accent = { 255, 255, 255 }, ears = "none", wings = true, glow = true, icon = "✨" },
+	StarterPup = { name = "Starter Pup", rarity = "Exclusive", boost = 0.5, color = { 255, 202, 122 }, accent = { 255, 122, 82 }, ears = "round", tail = true, icon = "🐕" },
+}
+local RARITY_COLORS = { Common = { 200, 200, 210 }, Uncommon = { 110, 230, 130 }, Rare = { 80, 170, 255 }, Legendary = { 255, 200, 50 }, Exclusive = { 255, 110, 200 } }
+local EGGS = {
+	{ id = "DirtEgg", name = "Dirt Egg", price = 250, depth = 0, color = { 176, 124, 82 }, spots = { 120, 80, 50 }, pets = { { "Mole", 60 }, { "Bunny", 28 }, { "PebblePup", 10 }, { "GoldenMole", 2 } } },
+	{ id = "CaveEgg", name = "Cave Egg", price = 6000, depth = 60, color = { 92, 92, 112 }, spots = { 255, 140, 60 }, pets = { { "Bat", 60 }, { "Slime", 28 }, { "RockGolem", 10 }, { "LavaPup", 2 } } },
+	{ id = "CrystalEgg", name = "Crystal Egg", price = 250000, depth = 200, color = { 152, 202, 255 }, spots = { 255, 140, 230 }, pets = { { "CrystalFox", 60 }, { "GemOwl", 28 }, { "PrismDragon", 10 }, { "DiamondDragon", 2 } } },
+	{ id = "VoidEgg", name = "Void Egg", price = 25000000, depth = 300, color = { 44, 22, 74 }, spots = { 202, 142, 255 }, pets = { { "ShadowCat", 60 }, { "VoidWisp", 28 }, { "NebulaSerpent", 10 }, { "SingularitySpirit", 2 } } },
+}
+local PET_SLOTS = 3
+local MAX_PETS = 50
+local LEVEL_BONUS = 0.01 -- +1% ore value per level
+local SPIN_COOLDOWN = 20 * 60
+local SPIN = {
+	{ label = "Coins", icon = "🪙", weight = 30, coinMinutes = 3, color = { 255, 206, 70 } },
+	{ label = "2x Coins", icon = "🧪", weight = 14, potion = "Coins", minutes = 10, color = { 255, 150, 60 } },
+	{ label = "Big Coins", icon = "💰", weight = 18, coinMinutes = 8, color = { 110, 220, 110 } },
+	{ label = "Luck", icon = "🍀", weight = 14, potion = "Luck", minutes = 10, color = { 80, 200, 150 } },
+	{ label = "Huge Coins", icon = "🏦", weight = 7, coinMinutes = 25, color = { 80, 160, 255 } },
+	{ label = "Speed", icon = "⚡", weight = 14, potion = "Speed", minutes = 10, color = { 170, 110, 255 } },
+	{ label = "Free Egg", icon = "🥚", weight = 2.5, egg = true, color = { 255, 120, 190 } },
+	{ label = "JACKPOT", icon = "💎", weight = 0.5, coinMinutes = 120, color = { 255, 80, 80 } },
+}
+-- Codes are case-insensitive. Post new ones in your group/social to bring players back.
+local CODES = {
+	RELEASE = { coinMinutes = 10 },
+	DIGDEEP = { potion = "Luck", minutes = 15 },
+	GOLDRUSH = { potion = "Coins", minutes = 15 },
+	THANKYOU = { coinMinutes = 30 },
+}
 
 --------------------------------------------------------------------------------
 -- HELPERS
@@ -460,7 +544,7 @@ treasureFolder.Parent = ReplicatedStorage
 local remoteFolder = Instance.new("Folder")
 remoteFolder.Name = "DigRemotes"
 local Remotes = {}
-for _, name in { "Hit", "Surface", "Mined", "Treasure", "Geode", "Sold", "Notify", "Announce", "Bought", "Reward" } do
+for _, name in { "Hit", "Surface", "Mined", "Treasure", "Geode", "Sold", "Notify", "Announce", "Bought", "Reward", "Action", "Hatched", "LevelUp", "SpinResult", "Purchased" } do
 	local r = Instance.new("RemoteEvent")
 	r.Name = name
 	r.Parent = remoteFolder
@@ -472,6 +556,9 @@ do
 		top = TOP, block = BLOCK, grid = GRID, maxDepth = MAX_DEPTH, reach = REACH,
 		rushEvery = RUSH_EVERY, rushLength = RUSH_LENGTH, elevatorStep = ELEVATOR_STEP, treasureBonus = TREASURE_BONUS,
 		layers = {}, ores = {}, picks = {}, bags = {}, treasures = {}, treasureOrder = {},
+		passes = PASSES, products = PRODUCTS, pets = PETS, eggs = EGGS, rarityColors = RARITY_COLORS,
+		petSlots = PET_SLOTS, maxPets = MAX_PETS, spin = SPIN, spinCooldown = SPIN_COOLDOWN, income = INCOME,
+		levelBonus = LEVEL_BONUS, ascendBonus = ASCEND_BONUS,
 	}
 	for _, L in LAYERS do
 		table.insert(cfg.layers, { name = L.name, from = L.from, tint = L.tint, color = L.color })
@@ -603,6 +690,7 @@ local function buildWorld()
 	ground(0, -130, 36, 20, Enum.Material.Cobblestone)
 	ground(0, -142, 20, 8, Enum.Material.Cobblestone)
 	ground(78, -131, 10, 26, Enum.Material.Cobblestone)
+	ground(-83, -131, 10, 26, Enum.Material.Cobblestone)
 
 	-- Lake with a sandy shore
 	local lake = W(176, 0, 150)
@@ -898,6 +986,55 @@ local function buildWorld()
 		CollectionService:AddTag(altar, "Shrine")
 		billboard(altar, 9, { { "Title", "⭐ ASCENSION", 22, Color3.fromRGB(215, 175, 255) }, { "Sub", "Reach bedrock (" .. MAX_DEPTH .. "m) to unlock", 14, Color3.fromRGB(235, 235, 245) } }, 70)
 		prompt(altar, "Ascend", "Ascend", "Ascension Shrine", 2)
+	end
+
+	-- Pet shop: four egg stands (odds shown on each, like every simulator)
+	do
+		local plank = Color3.fromRGB(140, 98, 60)
+		newPart({ Name = "PetShopFloor", Size = Vector3.new(64, 0.4, 18), Position = W(-83, 0.2, -150), Color = Color3.fromRGB(236, 214, 170), Material = Enum.Material.WoodPlanks }, town)
+		newPart({ Name = "PetShopBack", Size = Vector3.new(64, 12, 1), Position = W(-83, 6, -159.5), Color = Color3.fromRGB(255, 200, 220), Material = Enum.Material.WoodPlanks }, town)
+		local board = newPart({ Name = "PetShopSign", Size = Vector3.new(26, 5, 0.6), Position = W(-83, 14.6, -159.2), Color = Color3.fromRGB(120, 60, 90), Material = Enum.Material.WoodPlanks }, town)
+		signText(board, Enum.NormalId.Front, "🥚 PET SHOP", Color3.fromRGB(255, 230, 245))
+		for i = 0, 5 do
+			newPart({ Name = "PetShopAwning", Size = Vector3.new(64 / 6, 0.5, 8), CFrame = CFrame.new(W(-83 - 32 + (i + 0.5) * 64 / 6, 12.4, -156)) * CFrame.Angles(math.rad(-18), 0, 0), Color = if i % 2 == 0 then Color3.fromRGB(255, 120, 170) else Color3.fromRGB(255, 244, 250), Material = Enum.Material.Fabric }, town)
+		end
+		for i, egg in EGGS do
+			local x = -104 + (i - 1) * 14
+			local base = newPart({ Name = "EggStand", Shape = Enum.PartType.Cylinder, Size = Vector3.new(2.4, 7, 7), CFrame = CFrame.new(W(x, 1.6, -150)) * CFrame.Angles(0, 0, math.rad(90)), Color = plank, Material = Enum.Material.WoodPlanks }, town)
+			local eggRing = newPart({ Name = "EggRing", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.3, 7.4, 7.4), CFrame = CFrame.new(W(x, 2.9, -150)) * CFrame.Angles(0, 0, math.rad(90)), Color = rgb(egg.spots), Material = Enum.Material.Neon, CanCollide = false }, town)
+			eggRing.CanQuery = false
+			local model = Instance.new("Model")
+			model.Name = egg.id
+			local shell = piece(model, { Size = Vector3.new(4.6, 6, 4.6), CFrame = CFrame.new(), Color = rgb(egg.color), Material = Enum.Material.SmoothPlastic, Reflectance = 0.05 })
+			local mesh = Instance.new("SpecialMesh")
+			mesh.MeshType = Enum.MeshType.Sphere
+			mesh.Parent = shell
+			local er = Random.new(i * 17)
+			for _ = 1, 7 do
+				local a, h = er:NextNumber(0, math.pi * 2), er:NextNumber(-0.7, 0.8)
+				local r = math.sqrt(1 - h * h)
+				piece(model, { Shape = Enum.PartType.Ball, Size = Vector3.one * er:NextNumber(0.8, 1.3), CFrame = CFrame.new(math.cos(a) * r * 2.2, h * 2.9, math.sin(a) * r * 2.2), Color = rgb(egg.spots), Material = Enum.Material.SmoothPlastic })
+			end
+			addLight(shell, rgb(egg.spots), 10, 0.8)
+			model.PrimaryPart = shell
+			model:PivotTo(CFrame.new(W(x, 6.6, -150)))
+			CollectionService:AddTag(model, "Spin")
+			model.Parent = town
+			local odds = {}
+			for _, entry in egg.pets do
+				table.insert(odds, `{PETS[entry[1]].name} {entry[2]}%`)
+			end
+			base:SetAttribute("Egg", i)
+			CollectionService:AddTag(base, "EggStand")
+			billboard(base, 9.5, {
+				{ "Title", egg.name, 20, Color3.fromRGB(255, 255, 255) },
+				{ "Price", "💰 " .. fmt(egg.price), 18, Color3.fromRGB(255, 214, 90) },
+				{ "Odds1", odds[1] .. " · " .. odds[2], 12, Color3.fromRGB(215, 215, 225) },
+				{ "Odds2", odds[3] .. " · " .. odds[4], 12, rgb(RARITY_COLORS.Legendary) },
+			}, 45)
+			local pr = prompt(base, "Egg", "Hatch", egg.name, 0.3)
+			pr:SetAttribute("Egg", i)
+		end
 	end
 
 	-- Museum: a small marble temple with steps, columns, a frieze and a pediment
@@ -1421,6 +1558,8 @@ local function newData()
 		coins = 0, pick = 1, bag = 1, best = 0, mined = 0, asc = 0,
 		bagCount = 0, bagValue = 0, treasures = {},
 		streak = 0, lastDay = -1, earned = 0, tut = 0,
+		pets = {}, equipped = {}, petUid = 0, xp = 0, level = 1,
+		potions = {}, codes = {}, spinAt = 0, starter = false, firstJoin = 0, receipts = {},
 	}
 end
 
@@ -1479,6 +1618,82 @@ local function saveData(player)
 	end
 end
 
+local PASS_BY_KEY, PASS_BY_ID, PRODUCT_BY_KEY, PRODUCT_BY_ID = {}, {}, {}, {}
+for _, pass in PASSES do
+	PASS_BY_KEY[pass.key] = pass
+	if pass.id ~= 0 then
+		PASS_BY_ID[pass.id] = pass
+	end
+end
+for _, product in PRODUCTS do
+	PRODUCT_BY_KEY[product.key] = product
+	if product.id ~= 0 then
+		PRODUCT_BY_ID[product.id] = product
+	end
+end
+
+-- Pass ownership lives in the session (checked with Roblox on join), never in the save.
+local function owns(player, key)
+	local d = sessions[player]
+	return d ~= nil and d._passes ~= nil and d._passes[key] == true
+end
+
+local function potionActive(player, name)
+	local d = sessions[player]
+	return d ~= nil and (d.potions[name] or 0) > os.time()
+end
+
+local function petSlots(player)
+	return PET_SLOTS + (if owns(player, "MorePets") then 2 else 0)
+end
+
+local function petBoost(d)
+	local total = 0
+	for _, uid in d.equipped do
+		for _, pet in d.pets do
+			if pet.uid == uid and PETS[pet.id] then
+				total += PETS[pet.id].boost
+			end
+		end
+	end
+	return total
+end
+
+local function capacity(player)
+	local d = sessions[player]
+	if owns(player, "InfiniteBag") then
+		return 1e9
+	end
+	return BAGS[d.bag].capacity
+end
+
+-- Multiplier on the time between swings (lower is faster).
+local function swingMult(player)
+	local m = 1
+	if owns(player, "FastMine") then
+		m *= 0.8
+	end
+	if potionActive(player, "Speed") then
+		m *= 0.75
+	end
+	return m
+end
+
+local function luckMult(player)
+	local m = 1
+	if owns(player, "Lucky") then
+		m *= 2
+	end
+	if potionActive(player, "Luck") then
+		m *= 2
+	end
+	return m
+end
+
+local function xpForLevel(level)
+	return math.floor(30 * level ^ 1.5)
+end
+
 local function uniqueTreasures(d)
 	local n = 0
 	for _ in d.treasures do
@@ -1490,8 +1705,19 @@ end
 local function valueMult(player)
 	local d = sessions[player]
 	local m = (1 + uniqueTreasures(d) * TREASURE_BONUS) * (1 + (d.asc or 0) * ASCEND_BONUS)
+	m *= 1 + (d.level - 1) * LEVEL_BONUS
+	m *= 1 + petBoost(d)
 	if player:GetAttribute("FriendBonus") then
 		m *= 1 + FRIEND_BONUS
+	end
+	if owns(player, "VIP") then
+		m *= 1.25
+	end
+	if owns(player, "DoubleCoins") then
+		m *= 2
+	end
+	if potionActive(player, "Coins") then
+		m *= 2
 	end
 	return m
 end
@@ -1503,7 +1729,7 @@ local function sync(player)
 	end
 	player:SetAttribute("Coins", d.coins)
 	player:SetAttribute("Bag", d.bagCount)
-	player:SetAttribute("BagMax", BAGS[d.bag].capacity)
+	player:SetAttribute("BagMax", capacity(player))
 	player:SetAttribute("BagValue", math.floor(d.bagValue))
 	player:SetAttribute("Pick", d.pick)
 	player:SetAttribute("Pack", d.bag)
@@ -1515,6 +1741,19 @@ local function sync(player)
 	player:SetAttribute("Treasures", HttpService:JSONEncode(d.treasures))
 	player:SetAttribute("Mult", valueMult(player))
 	player:SetAttribute("Asc", d.asc or 0)
+	player:SetAttribute("Level", d.level)
+	player:SetAttribute("XP", d.xp)
+	player:SetAttribute("XPNeed", xpForLevel(d.level))
+	player:SetAttribute("SwingMult", swingMult(player))
+	player:SetAttribute("SpinAt", d.spinAt)
+	player:SetAttribute("Starter", d.starter)
+	player:SetAttribute("FirstJoin", d.firstJoin)
+	for name, expiry in d.potions do
+		player:SetAttribute("Potion_" .. name, expiry)
+	end
+	for _, pass in PASSES do
+		player:SetAttribute("Pass_" .. pass.key, owns(player, pass.key))
+	end
 	local stats = player:FindFirstChild("leaderstats")
 	if stats then
 		stats.Depth.Value = d.best
@@ -1530,6 +1769,8 @@ end
 --------------------------------------------------------------------------------
 -- CHARACTER: pickaxe tool, backpack on your back, headlamp
 --------------------------------------------------------------------------------
+local updateNameplate
+
 local function givePick(player)
 	local d = sessions[player]
 	local char = player.Character
@@ -1571,6 +1812,14 @@ local function givePick(player)
 		end
 	end
 	model:Destroy()
+	if owns(player, "VIP") then
+		local head = tool:FindFirstChild("Head")
+		if head then
+			local sparkle = Instance.new("Sparkles")
+			sparkle.SparkleColor = Color3.fromRGB(255, 214, 90)
+			sparkle.Parent = head
+		end
+	end
 	tool.Parent = char -- parenting to the character equips it
 end
 
@@ -1587,7 +1836,7 @@ local function updateBagFill(player)
 		return
 	end
 	local s = bag:GetAttribute("Scale") or 1
-	local f = math.clamp(d.bagCount / BAGS[d.bag].capacity, 0, 1)
+	local f = math.clamp(d.bagCount / capacity(player), 0, 1)
 	local h = math.max(0.05, f * 1.1 * s)
 	fill.Transparency = if f <= 0 then 1 else 0
 	fill.Size = Vector3.new(1.7 * s, h, 0.85 * s)
@@ -1671,6 +1920,47 @@ local function addHeadlamp(char)
 	glow.Parent = head
 end
 
+-- Level / VIP / Ascension tag over the player's head, like every simulator has.
+updateNameplate = function(player)
+	local d = sessions[player]
+	local char = player.Character
+	local head = char and char:FindFirstChild("Head")
+	if not d or not head then
+		return
+	end
+	local gui = head:FindFirstChild("DigNameplate")
+	if not gui then
+		gui = Instance.new("BillboardGui")
+		gui.Name = "DigNameplate"
+		gui.Size = UDim2.fromOffset(220, 30)
+		gui.StudsOffset = Vector3.new(0, 2.7, 0)
+		gui.MaxDistance = 90
+		gui.LightInfluence = 0
+		local label = Instance.new("TextLabel")
+		label.Name = "Text"
+		label.BackgroundTransparency = 1
+		label.Size = UDim2.fromScale(1, 1)
+		label.Font = Enum.Font.FredokaOne
+		label.TextSize = 20
+		label.RichText = true
+		label.TextColor3 = Color3.new(1, 1, 1)
+		local stroke = Instance.new("UIStroke")
+		stroke.Thickness = 2.5
+		stroke.Color = Color3.fromRGB(20, 18, 26)
+		stroke.Parent = label
+		label.Parent = gui
+		gui.Parent = head
+	end
+	local parts = { `<font color="#FFD24A">Lv {d.level}</font>` }
+	if owns(player, "VIP") then
+		table.insert(parts, `<font color="#FFC83C">👑 VIP</font>`)
+	end
+	if (d.asc or 0) > 0 then
+		table.insert(parts, `<font color="#D7AFFF">⭐{d.asc}</font>`)
+	end
+	gui.Text.Text = table.concat(parts, "  ")
+end
+
 local function teleportTo(player, position)
 	local char = player.Character
 	if not char then
@@ -1702,6 +1992,7 @@ local function onCharacter(player, char)
 	givePick(player)
 	attachBag(player)
 	addHeadlamp(char)
+	updateNameplate(player)
 end
 
 --------------------------------------------------------------------------------
@@ -1774,7 +2065,7 @@ local function breakBlock(player, part, info)
 				sync(hitter)
 			end
 		end
-	elseif d.bagCount < BAGS[d.bag].capacity then
+	elseif d.bagCount < capacity(player) then
 		d.bagCount += 1
 		d.bagValue += info.value * valueMult(player)
 		collected = true
@@ -1790,10 +2081,21 @@ local function breakBlock(player, part, info)
 	end
 
 	for _, T in TREASURE_ROLL do
-		if depth >= T.depth and rng:NextNumber() < T.chance then
+		if depth >= T.depth and rng:NextNumber() < T.chance * luckMult(player) then
 			awardTreasure(player, T, info.pos, depth)
 			break
 		end
+	end
+
+	-- XP: deeper layers are worth more
+	d.xp += table.find(LAYERS, layerAt(info.y)) or 1
+	while d.xp >= xpForLevel(d.level) do
+		d.xp -= xpForLevel(d.level)
+		d.level += 1
+		local reward = math.floor(INCOME[d.pick] * 2 * (1 + (d.asc or 0) * ASCEND_BONUS))
+		d.coins += reward
+		Remotes.LevelUp:FireClient(player, d.level, reward)
+		updateNameplate(player)
 	end
 
 	sync(player)
@@ -1811,7 +2113,7 @@ Remotes.Hit.OnServerEvent:Connect(function(player, part)
 	end
 	local pick = PICKS[d.pick]
 	local now = os.clock()
-	if now - (lastHit[player] or 0) < pick.speed * 0.75 then
+	if now - (lastHit[player] or 0) < pick.speed * swingMult(player) * 0.75 then
 		return
 	end
 	local char = player.Character
@@ -1869,6 +2171,388 @@ sellPad.Touched:Connect(function(hit)
 	local player = model and Players:GetPlayerFromCharacter(model)
 	if player then
 		trySell(player)
+	end
+end)
+
+--------------------------------------------------------------------------------
+-- SIM FEATURES: pets, eggs, potions, codes, spin wheel, passes and products
+--------------------------------------------------------------------------------
+local function coinMinutes(player, minutes)
+	local d = sessions[player]
+	local amount = math.floor(INCOME[d.pick] * minutes * (1 + (d.asc or 0) * ASCEND_BONUS))
+	d.coins += amount
+	d.earned += amount
+	return amount
+end
+
+local function addPotion(player, name, minutes)
+	local d = sessions[player]
+	local now = os.time()
+	d.potions[name] = math.min(math.max(now, d.potions[name] or 0) + minutes * 60, now + 3 * 3600)
+end
+
+local function syncPets(player)
+	local d = sessions[player]
+	local list, equippedIds = {}, {}
+	for _, pet in d.pets do
+		local on = table.find(d.equipped, pet.uid) ~= nil
+		table.insert(list, { u = pet.uid, id = pet.id, e = on })
+		if on then
+			table.insert(equippedIds, pet.id)
+		end
+	end
+	player:SetAttribute("Pets", HttpService:JSONEncode(list))
+	player:SetAttribute("PetsEquipped", HttpService:JSONEncode(equippedIds))
+	player:SetAttribute("PetSlots", petSlots(player))
+end
+
+local function findPet(d, uid)
+	for i, pet in d.pets do
+		if pet.uid == uid then
+			return pet, i
+		end
+	end
+	return nil, nil
+end
+
+local function equipBest(player)
+	local d = sessions[player]
+	local sorted = table.clone(d.pets)
+	table.sort(sorted, function(a, b)
+		return (PETS[a.id] and PETS[a.id].boost or 0) > (PETS[b.id] and PETS[b.id].boost or 0)
+	end)
+	d.equipped = {}
+	for i = 1, math.min(petSlots(player), #sorted) do
+		table.insert(d.equipped, sorted[i].uid)
+	end
+end
+
+local function givePet(player, id)
+	local d = sessions[player]
+	d.petUid += 1
+	table.insert(d.pets, { uid = d.petUid, id = id })
+	-- New players shouldn't have to manage pets: a better pet slots itself in.
+	if #d.equipped < petSlots(player) then
+		table.insert(d.equipped, d.petUid)
+	else
+		local weakest, weakestBoost = nil, math.huge
+		for i, uid in d.equipped do
+			local pet = findPet(d, uid)
+			local b = pet and PETS[pet.id] and PETS[pet.id].boost or 0
+			if b < weakestBoost then
+				weakest, weakestBoost = i, b
+			end
+		end
+		if weakest and PETS[id].boost > weakestBoost then
+			d.equipped[weakest] = d.petUid
+		end
+	end
+	return d.petUid
+end
+
+local lastHatch = {}
+local function hatch(player, index, free)
+	local d = sessions[player]
+	local egg = EGGS[index]
+	if not d or not egg then
+		return
+	end
+	if not free then
+		if os.clock() - (lastHatch[player] or 0) < 1.2 then
+			return
+		end
+		if d.best < egg.depth then
+			notify(player, `Reach {egg.depth}m to unlock the {egg.name}`, Color3.fromRGB(255, 180, 120))
+			return
+		end
+		if d.coins < egg.price then
+			notify(player, `You need 💰 {fmt(egg.price - d.coins)} more`, Color3.fromRGB(255, 130, 110))
+			return
+		end
+	end
+	if #d.pets >= MAX_PETS then
+		notify(player, "Your pet inventory is full! Delete some pets first.", Color3.fromRGB(255, 130, 110))
+		return
+	end
+	lastHatch[player] = os.clock()
+	if not free then
+		d.coins -= egg.price
+	end
+	local luck = luckMult(player)
+	local total = 0
+	for i, entry in egg.pets do
+		total += entry[2] * (if i > 1 then luck else 1)
+	end
+	local roll = rng:NextNumber() * total
+	local chosen = egg.pets[1][1]
+	for i, entry in egg.pets do
+		roll -= entry[2] * (if i > 1 then luck else 1)
+		if roll <= 0 then
+			chosen = entry[1]
+			break
+		end
+	end
+	givePet(player, chosen)
+	syncPets(player)
+	sync(player)
+	Remotes.Hatched:FireClient(player, chosen, egg.id)
+	if PETS[chosen].rarity == "Legendary" then
+		announce(`🐾 {player.DisplayName} hatched a LEGENDARY {PETS[chosen].name}!`, rgb(RARITY_COLORS.Legendary))
+	end
+end
+
+local function pickSpin()
+	local total = 0
+	for _, seg in SPIN do
+		total += seg.weight
+	end
+	local roll = rng:NextNumber() * total
+	for i, seg in SPIN do
+		roll -= seg.weight
+		if roll <= 0 then
+			return i
+		end
+	end
+	return 1
+end
+
+local function bestUnlockedEgg(d)
+	local best = 1
+	for i, egg in EGGS do
+		if d.best >= egg.depth then
+			best = i
+		end
+	end
+	return best
+end
+
+local function spin(player)
+	local d = sessions[player]
+	if not d then
+		return
+	end
+	if os.time() < d.spinAt then
+		notify(player, "The wheel is still recharging", Color3.fromRGB(220, 220, 230))
+		return
+	end
+	d.spinAt = os.time() + SPIN_COOLDOWN
+	local index = pickSpin()
+	local seg = SPIN[index]
+	local text
+	if seg.coinMinutes then
+		text = "+ 💰 " .. fmt(coinMinutes(player, seg.coinMinutes))
+	elseif seg.potion then
+		addPotion(player, seg.potion, seg.minutes)
+		text = `{seg.label} potion · {seg.minutes} min`
+	else
+		text = "A free egg!"
+	end
+	sync(player)
+	Remotes.SpinResult:FireClient(player, index, text)
+	if seg.egg then
+		-- hatch after the wheel animation has had time to land
+		task.delay(4.5, function()
+			if sessions[player] then
+				hatch(player, bestUnlockedEgg(d), true)
+			end
+		end)
+	end
+	if seg.label == "JACKPOT" then
+		task.delay(4.2, announce, `💎 {player.DisplayName} hit the JACKPOT on the spin wheel!`, Color3.fromRGB(255, 90, 90))
+	end
+end
+
+local function redeem(player, code)
+	local d = sessions[player]
+	if not d or type(code) ~= "string" then
+		return
+	end
+	code = string.upper((string.gsub(code, "%s", "")))
+	local reward = CODES[code]
+	if not reward then
+		Remotes.Purchased:FireClient(player, "code", false, "That code doesn't exist")
+		return
+	end
+	if d.codes[code] then
+		Remotes.Purchased:FireClient(player, "code", false, "You already used this code")
+		return
+	end
+	d.codes[code] = true
+	local text
+	if reward.coinMinutes then
+		text = "+ 💰 " .. fmt(coinMinutes(player, reward.coinMinutes))
+	else
+		addPotion(player, reward.potion, reward.minutes)
+		text = `{reward.potion} potion · {reward.minutes} min`
+	end
+	sync(player)
+	Remotes.Purchased:FireClient(player, "code", true, text)
+end
+
+local function applyPass(player, key)
+	local d = sessions[player]
+	if not d then
+		return
+	end
+	d._passes = d._passes or {}
+	if d._passes[key] then
+		return
+	end
+	d._passes[key] = true
+	if key == "VIP" then
+		givePick(player)
+		updateNameplate(player)
+	elseif key == "MorePets" then
+		equipBest(player)
+		syncPets(player)
+	end
+	sync(player)
+	updateBagFill(player)
+end
+
+local function grantProduct(player, key)
+	local d = sessions[player]
+	local product = PRODUCT_BY_KEY[key]
+	if not d or not product then
+		return false
+	end
+	local text
+	if product.starter then
+		if not d.starter then
+			d.starter = true
+			givePet(player, "StarterPup")
+			syncPets(player)
+		end
+		for _, potion in { "Coins", "Luck", "Speed" } do
+			addPotion(player, potion, 15)
+		end
+		text = "Starter Pup + potions + 💰 " .. fmt(coinMinutes(player, 30))
+	elseif product.coinMinutes then
+		text = "+ 💰 " .. fmt(coinMinutes(player, product.coinMinutes))
+	elseif product.potion then
+		addPotion(player, product.potion, product.minutes)
+		text = `{product.name} · {product.minutes} min`
+	elseif key == "NextPick" then
+		if d.pick < #PICKS then
+			d.pick += 1
+			givePick(player)
+			text = "Equipped the " .. PICKS[d.pick].name .. "!"
+		else
+			text = "+ 💰 " .. fmt(coinMinutes(player, 120))
+		end
+	end
+	sync(player)
+	Remotes.Purchased:FireClient(player, key, true, text or product.name)
+	return true
+end
+
+MarketplaceService.ProcessReceipt = function(receipt)
+	local player = Players:GetPlayerByUserId(receipt.PlayerId)
+	local d = player and sessions[player]
+	if not d then
+		return Enum.ProductPurchaseDecision.NotProcessedYet
+	end
+	if table.find(d.receipts, receipt.PurchaseId) then
+		return Enum.ProductPurchaseDecision.PurchaseGranted
+	end
+	local product = PRODUCT_BY_ID[receipt.ProductId]
+	if not product then
+		return Enum.ProductPurchaseDecision.NotProcessedYet
+	end
+	local ok = pcall(grantProduct, player, product.key)
+	if not ok then
+		return Enum.ProductPurchaseDecision.NotProcessedYet
+	end
+	table.insert(d.receipts, receipt.PurchaseId)
+	while #d.receipts > 50 do
+		table.remove(d.receipts, 1)
+	end
+	saveData(player)
+	return Enum.ProductPurchaseDecision.PurchaseGranted
+end
+
+MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, passId, purchased)
+	local pass = PASS_BY_ID[passId]
+	if purchased and pass then
+		applyPass(player, pass.key)
+		Remotes.Purchased:FireClient(player, pass.key, true, pass.name .. " unlocked!")
+	end
+end)
+
+local function loadPasses(player)
+	for _, pass in PASSES do
+		if pass.id ~= 0 then
+			local ok, has = pcall(function()
+				return MarketplaceService:UserOwnsGamePassAsync(player.UserId, pass.id)
+			end)
+			if ok and has then
+				applyPass(player, pass.key)
+			end
+		end
+	end
+end
+
+local lastAction = {}
+Remotes.Action.OnServerEvent:Connect(function(player, action, arg, arg2)
+	local d = sessions[player]
+	if not d or type(action) ~= "string" then
+		return
+	end
+	if os.clock() - (lastAction[player] or 0) < 0.15 then
+		return
+	end
+	lastAction[player] = os.clock()
+	if action == "Sell" then
+		if owns(player, "SellAnywhere") then
+			trySell(player)
+		end
+	elseif action == "Equip" or action == "Unequip" then
+		local pet = findPet(d, arg)
+		if not pet then
+			return
+		end
+		local at = table.find(d.equipped, pet.uid)
+		if action == "Unequip" and at then
+			table.remove(d.equipped, at)
+		elseif action == "Equip" and not at then
+			if #d.equipped >= petSlots(player) then
+				Remotes.Notify:FireClient(player, "All pet slots are full. Unequip one first.", Color3.fromRGB(255, 180, 120))
+				return
+			end
+			table.insert(d.equipped, pet.uid)
+		end
+		syncPets(player)
+		sync(player)
+	elseif action == "EquipBest" then
+		equipBest(player)
+		syncPets(player)
+		sync(player)
+	elseif action == "Delete" then
+		local pet, i = findPet(d, arg)
+		if pet and i then
+			table.remove(d.pets, i)
+			local at = table.find(d.equipped, pet.uid)
+			if at then
+				table.remove(d.equipped, at)
+			end
+			syncPets(player)
+			sync(player)
+		end
+	elseif action == "Redeem" then
+		redeem(player, arg)
+	elseif action == "Spin" then
+		spin(player)
+	elseif action == "DevGrant" then
+		-- Studio-only test purchases for items whose id is still 0
+		if not RunService:IsStudio() then
+			return
+		end
+		if arg == "Pass" and PASS_BY_KEY[arg2] and PASS_BY_KEY[arg2].id == 0 then
+			applyPass(player, arg2)
+			Remotes.Purchased:FireClient(player, arg2, true, PASS_BY_KEY[arg2].name .. " unlocked! (Studio test)")
+		elseif arg == "Product" and PRODUCT_BY_KEY[arg2] and PRODUCT_BY_KEY[arg2].id == 0 then
+			grantProduct(player, arg2)
+		end
 	end
 end)
 
@@ -2004,6 +2688,8 @@ ProximityPromptService.PromptTriggered:Connect(function(p, player)
 		claimDaily(player)
 	elseif kind == "Ascend" then
 		ascend(player)
+	elseif kind == "Egg" then
+		hatch(player, p:GetAttribute("Egg"), false)
 	end
 end)
 
@@ -2063,7 +2749,17 @@ local function onJoin(player)
 		return
 	end
 	sessions[player] = d
+	d._passes = {}
+	if d.firstJoin == 0 then
+		d.firstJoin = os.time()
+	end
 	sync(player)
+	syncPets(player)
+	task.spawn(function()
+		loadPasses(player)
+		sync(player)
+		syncPets(player)
+	end)
 	player.CharacterAdded:Connect(function(char)
 		onCharacter(player, char)
 	end)
@@ -2084,6 +2780,8 @@ Players.PlayerRemoving:Connect(function(player)
 	lastHit[player] = nil
 	lastSell[player] = nil
 	lastSurface[player] = nil
+	lastHatch[player] = nil
+	lastAction[player] = nil
 	for _, info in blockInfo do
 		if info.hitters then
 			info.hitters[player] = nil
@@ -2199,6 +2897,7 @@ local StarterGui = game:GetService("StarterGui")
 local SoundService = game:GetService("SoundService")
 local HttpService = game:GetService("HttpService")
 local Debris = game:GetService("Debris")
+local MarketplaceService = game:GetService("MarketplaceService")
 
 local player = Players.LocalPlayer
 local camera = workspace.CurrentCamera
@@ -2301,6 +3000,10 @@ local function stroke(thickness, color, transparency)
 	return create("UIStroke", { Thickness = thickness, Color = color or INK, Transparency = transparency or 0 })
 end
 
+local function gradient(parent, top, bottom, rotation)
+	return create("UIGradient", { Color = ColorSequence.new(top, bottom), Rotation = rotation or 90, Parent = parent })
+end
+
 local function tween(inst, time, props, style, direction)
 	local t = TweenService:Create(inst, TweenInfo.new(time, style or Enum.EasingStyle.Quad, direction or Enum.EasingDirection.Out), props)
 	t:Play()
@@ -2389,12 +3092,15 @@ local gui = create("ScreenGui", {
 local coinRow = create("Frame", {
 	Name = "Coins",
 	AnchorPoint = Vector2.new(0.5, 0),
-	Position = UDim2.new(0.5, 0, 0, 14),
-	Size = UDim2.fromOffset(0, 44),
+	Position = UDim2.new(0.5, 0, 0, 12),
+	Size = UDim2.fromOffset(0, 48),
 	AutomaticSize = Enum.AutomaticSize.X,
-	BackgroundTransparency = 1,
+	BackgroundColor3 = WHITE,
 	Parent = gui,
 }, {
+	corner(),
+	stroke(4, Color3.fromRGB(120, 70, 10)),
+	create("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 22) }),
 	create("UIListLayout", {
 		FillDirection = Enum.FillDirection.Horizontal,
 		HorizontalAlignment = Enum.HorizontalAlignment.Center,
@@ -2403,10 +3109,11 @@ local coinRow = create("Frame", {
 		SortOrder = Enum.SortOrder.LayoutOrder,
 	}),
 })
+gradient(coinRow, Color3.fromRGB(255, 226, 92), Color3.fromRGB(255, 160, 30))
 local coinScale = create("UIScale", { Parent = coinRow })
 local coinIcon = create("Frame", {
 	LayoutOrder = 1,
-	Size = UDim2.fromOffset(30, 30),
+	Size = UDim2.fromOffset(36, 36),
 	BackgroundColor3 = GOLD,
 	Parent = coinRow,
 }, {
@@ -2429,12 +3136,12 @@ local coinLabel = create("TextLabel", {
 	TextColor3 = WHITE,
 	Text = "0",
 	Parent = coinRow,
-}, { stroke(3) })
+}, { stroke(3.5, Color3.fromRGB(110, 60, 5)) })
 
 local eventLabel = create("TextLabel", {
 	Name = "Event",
 	AnchorPoint = Vector2.new(0.5, 0),
-	Position = UDim2.new(0.5, 0, 0, 58),
+	Position = UDim2.new(0.5, 0, 0, 88),
 	Size = UDim2.fromOffset(360, 20),
 	BackgroundTransparency = 1,
 	Font = FONT,
@@ -2450,19 +3157,18 @@ local bagPill = create("Frame", {
 	Name = "Bag",
 	AnchorPoint = Vector2.new(0.5, 1),
 	Position = UDim2.new(0.5, 0, 1, -22),
-	Size = UDim2.fromOffset(290, 36),
-	BackgroundColor3 = Color3.fromRGB(20, 20, 26),
-	BackgroundTransparency = 0.3,
+	Size = UDim2.fromOffset(310, 42),
+	BackgroundColor3 = Color3.fromRGB(58, 40, 96),
 	Parent = gui,
-}, { corner(), stroke(1.5, WHITE, 0.85) })
+}, { corner(), stroke(4, INK) })
 local bagScale = create("UIScale", { Parent = bagPill })
 local bagFill = create("Frame", {
 	Size = UDim2.fromScale(0, 1),
-	BackgroundColor3 = GOLD,
-	BackgroundTransparency = 0.1,
+	BackgroundColor3 = WHITE,
 	ZIndex = 1,
 	Parent = bagPill,
 }, { corner() })
+local bagGradient = gradient(bagFill, Color3.fromRGB(140, 240, 110), Color3.fromRGB(60, 190, 70))
 local bagLabel = create("TextLabel", {
 	Size = UDim2.fromScale(1, 1),
 	BackgroundTransparency = 1,
@@ -2478,8 +3184,8 @@ local bagLabel = create("TextLabel", {
 local gauge = create("Frame", {
 	Name = "Depth",
 	AnchorPoint = Vector2.new(1, 0.5),
-	Position = UDim2.new(1, -34, 0.46, 0),
-	Size = UDim2.fromOffset(8, 250),
+	Position = UDim2.new(1, -34, 0.6, 0),
+	Size = UDim2.fromOffset(8, 230),
 	BackgroundTransparency = 1,
 	Visible = false,
 	Parent = gui,
@@ -2541,15 +3247,15 @@ local surfaceButton = create("TextButton", {
 	Name = "Surface",
 	AnchorPoint = Vector2.new(1, 1),
 	Position = if isTouch then UDim2.new(1, -28, 1, -190) else UDim2.new(1, -28, 1, -24),
-	Size = UDim2.fromOffset(78, 78),
-	BackgroundColor3 = Color3.fromRGB(40, 150, 90),
-	AutoButtonColor = true,
+	Size = UDim2.fromOffset(84, 84),
+	BackgroundColor3 = WHITE,
+	AutoButtonColor = false,
 	Text = "",
 	Visible = false,
 	Parent = gui,
 }, {
-	corner(),
-	stroke(3, INK, 0.1),
+	corner(UDim.new(0.3, 0)),
+	stroke(4, INK),
 	create("TextLabel", {
 		Size = UDim2.new(1, 0, 0.6, 0),
 		Position = UDim2.fromScale(0, 0.08),
@@ -2569,6 +3275,8 @@ local surfaceButton = create("TextButton", {
 		Text = if isTouch then "SURFACE" else "SURFACE [R]",
 	}, { stroke(1.5) }),
 })
+
+gradient(surfaceButton, Color3.fromRGB(120, 235, 120), Color3.fromRGB(40, 170, 70))
 
 -- Tutorial hint, lower centre
 local hintLabel = create("TextLabel", {
@@ -2591,10 +3299,10 @@ local toastLabel = create("TextLabel", {
 	Name = "Toast",
 	AnchorPoint = Vector2.new(0.5, 0.5),
 	Position = UDim2.fromScale(0.5, 0.25),
-	Size = UDim2.fromOffset(600, 30),
+	Size = UDim2.fromOffset(600, 34),
 	BackgroundTransparency = 1,
 	Font = FONT,
-	TextSize = 22,
+	TextSize = 24,
 	TextColor3 = WHITE,
 	TextTransparency = 1,
 	Text = "",
@@ -2609,14 +3317,14 @@ local banner = create("Frame", {
 	Position = UDim2.new(0.5, 0, 0, -80),
 	Size = UDim2.fromOffset(0, 40),
 	AutomaticSize = Enum.AutomaticSize.X,
-	BackgroundColor3 = Color3.fromRGB(18, 16, 24),
-	BackgroundTransparency = 0.2,
+	BackgroundColor3 = Color3.fromRGB(40, 30, 70),
 	Parent = gui,
 }, {
 	corner(),
-	create("UIPadding", { PaddingLeft = UDim.new(0, 20), PaddingRight = UDim.new(0, 20) }),
+	create("UIPadding", { PaddingLeft = UDim.new(0, 22), PaddingRight = UDim.new(0, 22) }),
 })
-local bannerStroke = create("UIStroke", { Thickness = 2, Color = GOLD, Parent = banner })
+gradient(banner, Color3.fromRGB(80, 60, 140), Color3.fromRGB(34, 24, 64))
+local bannerStroke = create("UIStroke", { Thickness = 4, Color = GOLD, Parent = banner })
 local bannerLabel = create("TextLabel", {
 	Size = UDim2.fromScale(0, 1),
 	AutomaticSize = Enum.AutomaticSize.X,
@@ -2677,7 +3385,10 @@ local function refreshBag()
 	local f = math.clamp(count / math.max(1, max), 0, 1)
 	local full = count >= max
 	tween(bagFill, 0.2, { Size = UDim2.fromScale(f, 1) })
-	bagFill.BackgroundColor3 = if full then RED else GOLD
+	bagGradient.Color = if full
+		then ColorSequence.new(Color3.fromRGB(255, 120, 110), Color3.fromRGB(220, 50, 50))
+		elseif f > 0.75 then ColorSequence.new(Color3.fromRGB(255, 226, 92), Color3.fromRGB(255, 160, 30))
+		else ColorSequence.new(Color3.fromRGB(140, 240, 110), Color3.fromRGB(60, 190, 70))
 	local worth = attr("BagValue", 0)
 	bagLabel.Text = if full
 		then "🎒 FULL · SURFACE TO SELL"
@@ -2727,7 +3438,7 @@ local function showBanner(text, color)
 			bannerStroke.Color = item.color or GOLD
 			bannerLabel.TextColor3 = WHITE
 			banner.Position = UDim2.new(0.5, 0, 0, -80)
-			tween(banner, 0.45, { Position = UDim2.new(0.5, 0, 0, 90) }, Enum.EasingStyle.Back)
+			tween(banner, 0.45, { Position = UDim2.new(0.5, 0, 0, 132) }, Enum.EasingStyle.Back)
 			task.wait(if #bannerQueue > 0 then 2.6 else 4)
 			tween(banner, 0.3, { Position = UDim2.new(0.5, 0, 0, -80) }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 			task.wait(0.35)
@@ -2876,6 +3587,7 @@ rayParams.FilterType = Enum.RaycastFilterType.Include
 rayParams.FilterDescendantsInstances = { mineFolder }
 
 local mouseHeld = false
+local autoMine = false -- Auto Mine pass toggle
 local activeTouch = nil
 local touchPos = nil
 local touchStart = nil
@@ -2984,6 +3696,19 @@ local function updateMining()
 	local target, hitPos = nil, nil
 	if hum and hum.Health > 0 and (holding or not isTouch) then
 		target, hitPos = findTarget()
+	end
+	-- Auto Mine pass: keep digging the block under your feet (or whatever you point at)
+	if autoMine and hum and hum.Health > 0 and not holding then
+		holding = true
+		if not target then
+			local root = getRoot()
+			if root then
+				local down = workspace:Raycast(root.Position, Vector3.new(0, -9, 0), rayParams)
+				if down and not down.Instance:GetAttribute("Bedrock") then
+					target, hitPos = down.Instance, down.Position
+				end
+			end
+		end
 	end
 
 	if target then
@@ -3464,6 +4189,929 @@ local function checkSky()
 	skyOpen = hit == nil
 end
 
+--------------------------------------------------------------------------------
+-- SIMULATOR UI: button stack, shop, pets, spin wheel, codes, hatching, levels
+--------------------------------------------------------------------------------
+local windowsGui = create("ScreenGui", { Name = "DigWindows", ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = 5, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, Parent = player.PlayerGui })
+local overlayGui = create("ScreenGui", { Name = "DigOverlay", ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = 10, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, Parent = player.PlayerGui })
+local blur = create("BlurEffect", { Size = 0, Parent = Lighting })
+
+local function label(props)
+	local l = create("TextLabel", {
+		BackgroundTransparency = 1,
+		Font = FONT,
+		TextColor3 = props.color or WHITE,
+		TextSize = props.size or 18,
+		Text = props.text or "",
+		Size = props.sz or UDim2.fromScale(1, 1),
+		Position = props.pos or UDim2.new(),
+		AnchorPoint = props.anchor or Vector2.zero,
+		TextXAlignment = props.alignX or Enum.TextXAlignment.Center,
+		TextWrapped = props.wrap or false,
+		RichText = props.rich or false,
+		ZIndex = props.z or 1,
+		LayoutOrder = props.order or 0,
+		Parent = props.parent,
+	})
+	if props.outline ~= false then
+		stroke(props.outline or math.max(1.5, (props.size or 18) / 9), INK).Parent = l
+	end
+	return l
+end
+
+-- A chunky, bouncy button with a vertical gradient and a thick outline.
+local function cartoonButton(parent, props)
+	local b = create("TextButton", {
+		Name = props.name or "Button",
+		Size = props.sz,
+		Position = props.pos or UDim2.new(),
+		AnchorPoint = props.anchor or Vector2.zero,
+		BackgroundColor3 = WHITE,
+		AutoButtonColor = false,
+		Text = "",
+		LayoutOrder = props.order or 0,
+		ZIndex = props.z or 1,
+		Parent = parent,
+	}, { corner(props.radius or UDim.new(0.25, 0)), stroke(props.strokeSize or 3.5, INK) })
+	local grad = gradient(b, props.top, props.bottom)
+	local sc = create("UIScale", { Parent = b })
+	b.MouseEnter:Connect(function()
+		tween(sc, 0.12, { Scale = 1.07 })
+	end)
+	b.MouseLeave:Connect(function()
+		tween(sc, 0.12, { Scale = 1 })
+	end)
+	b.MouseButton1Down:Connect(function()
+		tween(sc, 0.08, { Scale = 0.9 })
+	end)
+	b.MouseButton1Up:Connect(function()
+		tween(sc, 0.25, { Scale = 1.05 }, Enum.EasingStyle.Back)
+	end)
+	if props.text then
+		label({ parent = b, text = props.text, size = props.textSize or 20, z = (props.z or 1) + 1 })
+	end
+	if props.onClick then
+		b.Activated:Connect(function()
+			playSound("Pickup", 1.4)
+			props.onClick()
+		end)
+	end
+	return b, grad
+end
+
+-- Windows ---------------------------------------------------------------------
+local openWindow = nil
+local windows = {}
+
+local function closeWindows()
+	if openWindow then
+		local w = openWindow
+		openWindow = nil
+		local sc = w:FindFirstChildOfClass("UIScale")
+		local t = tween(sc, 0.15, { Scale = 0.6 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+		t.Completed:Connect(function()
+			if openWindow ~= w then
+				w.Visible = false
+			end
+		end)
+		tween(blur, 0.2, { Size = 0 })
+	end
+end
+
+local function makeWindow(key, title, top, bottom)
+	local w = create("Frame", {
+		Name = key,
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.52),
+		Size = UDim2.new(0.62, 0, 0.66, 0),
+		BackgroundColor3 = Color3.fromRGB(255, 250, 240),
+		Visible = false,
+		Parent = windowsGui,
+	}, {
+		corner(UDim.new(0, 26)),
+		stroke(5, INK),
+		create("UISizeConstraint", { MaxSize = Vector2.new(780, 520), MinSize = Vector2.new(320, 300) }),
+		create("UIScale", {}),
+	})
+	gradient(w, Color3.fromRGB(255, 252, 244), Color3.fromRGB(236, 226, 210))
+	local header = create("Frame", {
+		Size = UDim2.new(1, 0, 0, 62),
+		BackgroundColor3 = WHITE,
+		Parent = w,
+	}, { corner(UDim.new(0, 26)), stroke(5, INK) })
+	gradient(header, top, bottom)
+	label({ parent = header, text = title, size = 34, z = 2 })
+	cartoonButton(header, {
+		name = "Close",
+		sz = UDim2.fromOffset(50, 50),
+		anchor = Vector2.new(0.5, 0.5),
+		pos = UDim2.new(1, -14, 0, 8),
+		top = Color3.fromRGB(255, 110, 100),
+		bottom = Color3.fromRGB(220, 40, 50),
+		radius = UDim.new(1, 0),
+		text = "✖",
+		textSize = 26,
+		z = 3,
+		onClick = closeWindows,
+	})
+	local body = create("Frame", {
+		Name = "Body",
+		Position = UDim2.fromOffset(18, 76),
+		Size = UDim2.new(1, -36, 1, -92),
+		BackgroundTransparency = 1,
+		Parent = w,
+	})
+	windows[key] = w
+	return w, body
+end
+
+local function openWindowByKey(key)
+	local w = windows[key]
+	if not w then
+		return
+	end
+	if openWindow == w then
+		closeWindows()
+		return
+	end
+	if openWindow then
+		openWindow.Visible = false
+	end
+	openWindow = w
+	w.Visible = true
+	local sc = w:FindFirstChildOfClass("UIScale")
+	sc.Scale = 0.5
+	tween(sc, 0.35, { Scale = 1 }, Enum.EasingStyle.Back)
+	tween(blur, 0.2, { Size = 14 })
+	if w:GetAttribute("OnOpen") then
+		task.defer(function()
+			local fn = windows[key .. "_open"]
+			if fn then
+				fn()
+			end
+		end)
+	end
+end
+
+-- Purchases -------------------------------------------------------------------
+local function buy(kind, item)
+	if item.id and item.id ~= 0 then
+		if kind == "Pass" then
+			MarketplaceService:PromptGamePassPurchase(player, item.id)
+		else
+			MarketplaceService:PromptProductPurchase(player, item.id)
+		end
+	elseif RunService:IsStudio() then
+		Remotes.Action:FireServer("DevGrant", kind, item.key)
+	else
+		toast("Coming soon!", Color3.fromRGB(220, 220, 230))
+	end
+end
+
+-- Confetti --------------------------------------------------------------------
+local function confetti(count)
+	local colors = { Color3.fromRGB(255, 90, 90), Color3.fromRGB(255, 210, 60), Color3.fromRGB(90, 220, 120), Color3.fromRGB(90, 170, 255), Color3.fromRGB(200, 120, 255) }
+	for _ = 1, count do
+		local piece = create("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.new(math.random(), 0, -0.05, 0),
+			Size = UDim2.fromOffset(math.random(8, 14), math.random(12, 20)),
+			Rotation = math.random(0, 360),
+			BackgroundColor3 = colors[math.random(1, #colors)],
+			ZIndex = 50,
+			Parent = overlayGui,
+		}, { corner(UDim.new(0, 3)) })
+		local t = tween(piece, math.random(18, 30) / 10, { Position = UDim2.new(piece.Position.X.Scale + (math.random() - 0.5) * 0.3, 0, 1.1, 0), Rotation = piece.Rotation + math.random(-540, 540) }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+		t.Completed:Connect(function()
+			piece:Destroy()
+		end)
+	end
+end
+
+-- Left button stack -----------------------------------------------------------
+local stack = create("Frame", {
+	Name = "Stack",
+	AnchorPoint = Vector2.new(0, 0.5),
+	Position = UDim2.new(0, 14, 0.5, 0),
+	Size = UDim2.fromOffset(160, 330),
+	BackgroundTransparency = 1,
+	Parent = gui,
+}, {
+	create("UIGridLayout", { CellSize = UDim2.fromOffset(72, 72), CellPadding = UDim2.fromOffset(10, 22), SortOrder = Enum.SortOrder.LayoutOrder }),
+})
+local stackButtons = {}
+local function stackButton(order, key, icon, text, top, bottom)
+	local b = cartoonButton(stack, { name = key, order = order, top = top, bottom = bottom, onClick = function()
+		openWindowByKey(key)
+	end })
+	label({ parent = b, text = icon, size = 34, outline = false, z = 2 })
+	label({ parent = b, text = text, size = 15, pos = UDim2.new(0.5, 0, 1, 2), anchor = Vector2.new(0.5, 0), sz = UDim2.new(1.4, 0, 0, 18), z = 3 })
+	local badge = create("Frame", {
+		Name = "Badge",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new(1, -4, 0, 4),
+		Size = UDim2.fromOffset(24, 24),
+		BackgroundColor3 = Color3.fromRGB(255, 60, 60),
+		Visible = false,
+		ZIndex = 4,
+		Parent = b,
+	}, { corner(), stroke(2.5, INK) })
+	label({ parent = badge, text = "!", size = 16, z = 5 })
+	stackButtons[key] = b
+	return b
+end
+stackButton(1, "Shop", "🛒", "SHOP", Color3.fromRGB(255, 226, 92), Color3.fromRGB(255, 150, 30))
+stackButton(2, "Pets", "🐾", "PETS", Color3.fromRGB(255, 150, 200), Color3.fromRGB(230, 70, 140))
+stackButton(3, "Spin", "🎡", "SPIN", Color3.fromRGB(120, 200, 255), Color3.fromRGB(50, 110, 230))
+stackButton(4, "Codes", "🎟️", "CODES", Color3.fromRGB(200, 150, 255), Color3.fromRGB(130, 70, 220))
+local offerButton = stackButton(5, "Offer", "🎁", "OFFER!", Color3.fromRGB(255, 130, 110), Color3.fromRGB(230, 40, 80))
+
+-- Level bar under the coins ------------------------------------------------------
+local levelRow = create("Frame", {
+	AnchorPoint = Vector2.new(0.5, 0),
+	Position = UDim2.new(0.5, 0, 0, 64),
+	Size = UDim2.fromOffset(230, 20),
+	BackgroundColor3 = Color3.fromRGB(40, 30, 70),
+	Parent = gui,
+}, { corner(), stroke(3, INK) })
+local levelFill = create("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = WHITE, Parent = levelRow }, { corner() })
+gradient(levelFill, Color3.fromRGB(130, 220, 255), Color3.fromRGB(60, 140, 255))
+local levelText = label({ parent = levelRow, text = "Lv 1", size = 15, z = 2 })
+
+-- Potion timers ----------------------------------------------------------------
+local potionRow = create("Frame", {
+	AnchorPoint = Vector2.new(0.5, 0),
+	Position = UDim2.new(0.5, 0, 0, 112),
+	Size = UDim2.fromOffset(420, 30),
+	BackgroundTransparency = 1,
+	Parent = gui,
+}, { create("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0, 8) }) })
+local POTIONS = { { key = "Coins", icon = "🧪", name = "2x Coins", color = Color3.fromRGB(255, 170, 60) }, { key = "Luck", icon = "🍀", name = "Luck", color = Color3.fromRGB(90, 210, 130) }, { key = "Speed", icon = "⚡", name = "Speed", color = Color3.fromRGB(170, 120, 255) } }
+local potionPills = {}
+for _, pdef in POTIONS do
+	local pill = create("Frame", { Size = UDim2.fromOffset(112, 28), BackgroundColor3 = pdef.color, Visible = false, Parent = potionRow }, { corner(), stroke(3, INK) })
+	potionPills[pdef.key] = label({ parent = pill, text = "", size = 15, z = 2 })
+end
+
+-- Right-side action buttons (Sell Anywhere, Auto Mine) ---------------------------
+local sellButton = cartoonButton(gui, {
+	name = "SellAnywhere",
+	sz = UDim2.fromOffset(84, 60),
+	anchor = Vector2.new(1, 1),
+	pos = if isTouch then UDim2.new(1, -124, 1, -190) else UDim2.new(1, -124, 1, -24),
+	top = Color3.fromRGB(255, 226, 92),
+	bottom = Color3.fromRGB(255, 150, 30),
+	text = "💰 SELL",
+	textSize = 20,
+	onClick = function()
+		Remotes.Action:FireServer("Sell")
+	end,
+})
+sellButton.Visible = false
+local autoButton, autoGrad = cartoonButton(gui, {
+	name = "AutoMine",
+	sz = UDim2.fromOffset(84, 60),
+	anchor = Vector2.new(1, 1),
+	pos = if isTouch then UDim2.new(1, -218, 1, -190) else UDim2.new(1, -218, 1, -24),
+	top = Color3.fromRGB(200, 200, 210),
+	bottom = Color3.fromRGB(130, 130, 145),
+	text = "🤖 AUTO",
+	textSize = 20,
+})
+autoButton.Visible = false
+autoButton.Activated:Connect(function()
+	autoMine = not autoMine
+	autoGrad.Color = if autoMine
+		then ColorSequence.new(Color3.fromRGB(120, 235, 120), Color3.fromRGB(40, 170, 70))
+		else ColorSequence.new(Color3.fromRGB(200, 200, 210), Color3.fromRGB(130, 130, 145))
+	toast(if autoMine then "🤖 Auto Mine ON" else "Auto Mine OFF", if autoMine then GREEN else WHITE)
+end)
+
+-- SHOP window -------------------------------------------------------------------
+do
+	local _, body = makeWindow("Shop", "🛒 SHOP", Color3.fromRGB(255, 226, 92), Color3.fromRGB(255, 150, 30))
+	local tabs = create("Frame", { Size = UDim2.new(1, 0, 0, 46), BackgroundTransparency = 1, Parent = body }, {
+		create("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 10), HorizontalAlignment = Enum.HorizontalAlignment.Center }),
+	})
+	local scroll = create("ScrollingFrame", {
+		Position = UDim2.fromOffset(0, 58),
+		Size = UDim2.new(1, 0, 1, -58),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 8,
+		ScrollBarImageColor3 = INK,
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		CanvasSize = UDim2.new(),
+		Parent = body,
+	}, {
+		create("UIGridLayout", { CellSize = UDim2.fromOffset(172, 200), CellPadding = UDim2.fromOffset(12, 12), HorizontalAlignment = Enum.HorizontalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder }),
+		create("UIPadding", { PaddingTop = UDim.new(0, 6), PaddingBottom = UDim.new(0, 6) }),
+	})
+	local cards = {}
+	local function card(kind, item, order, tab)
+		local c = create("Frame", { LayoutOrder = order, BackgroundColor3 = WHITE, Parent = scroll }, { corner(UDim.new(0, 18)), stroke(3.5, INK) })
+		gradient(c, Color3.fromRGB(255, 255, 255), Color3.fromRGB(226, 234, 255))
+		label({ parent = c, text = item.icon, size = 46, outline = false, sz = UDim2.new(1, 0, 0, 58), pos = UDim2.fromOffset(0, 6) })
+		label({ parent = c, text = item.name, size = 19, sz = UDim2.new(1, -10, 0, 24), pos = UDim2.fromOffset(5, 64) })
+		local desc = label({ parent = c, text = item.desc or "", size = 13, color = Color3.fromRGB(70, 70, 90), outline = false, wrap = true, sz = UDim2.new(1, -16, 0, 58), pos = UDim2.fromOffset(8, 88) })
+		local btn = cartoonButton(c, {
+			sz = UDim2.new(1, -24, 0, 38),
+			pos = UDim2.new(0.5, 0, 1, -10),
+			anchor = Vector2.new(0.5, 1),
+			top = Color3.fromRGB(120, 235, 120),
+			bottom = Color3.fromRGB(40, 170, 70),
+			onClick = function()
+				buy(kind, item)
+			end,
+		})
+		local priceLabel = label({ parent = btn, text = "R$ " .. item.price, size = 19, z = 2 })
+		table.insert(cards, { frame = c, kind = kind, item = item, tab = tab, price = priceLabel, button = btn, desc = desc })
+	end
+	for i, pass in CFG.passes do
+		card("Pass", pass, i, "Passes")
+	end
+	for i, product in CFG.products do
+		card("Product", product, i, if product.coinMinutes then "Coins" else "Boosts")
+	end
+	local current = "Passes"
+	local tabButtons = {}
+	local function refresh()
+		local pick = CFG.picks[attr("Pick", 1)] or CFG.picks[1]
+		for _, c in cards do
+			c.frame.Visible = c.tab == current
+			if c.kind == "Pass" and attr("Pass_" .. c.item.key, false) then
+				c.price.Text = "OWNED ✔"
+				c.button.Active = false
+			elseif c.item.starter and attr("Starter", false) then
+				c.price.Text = "R$ " .. c.item.price
+			else
+				c.price.Text = if c.item.id == 0 and not RunService:IsStudio() then "Soon" else "R$ " .. c.item.price
+			end
+			if c.item.coinMinutes then
+				local income = CFG.income[attr("Pick", 1)] or CFG.income[1]
+				c.desc.Text = "+ 💰 " .. fmt(income * c.item.coinMinutes * (1 + attr("Asc", 0) * CFG.ascendBonus))
+			elseif c.item.key == "NextPick" then
+				local nextPick = CFG.picks[attr("Pick", 1) + 1]
+				c.desc.Text = if nextPick then "Get the " .. nextPick.name .. " right now" else "You have the best pickaxe!"
+			elseif c.item.potion then
+				c.desc.Text = `{c.item.minutes} minutes. Stacks up to 3 hours`
+			end
+		end
+		for key, b in tabButtons do
+			b.BackgroundTransparency = if key == current then 0 else 0.35
+		end
+		local _ = pick
+	end
+	for i, t in { { "Passes", "⭐ PASSES" }, { "Boosts", "🧪 BOOSTS" }, { "Coins", "💰 COINS" } } do
+		local b = cartoonButton(tabs, {
+			sz = UDim2.fromOffset(150, 42),
+			order = i,
+			top = Color3.fromRGB(120, 200, 255),
+			bottom = Color3.fromRGB(50, 110, 230),
+			text = t[2],
+			textSize = 18,
+			onClick = function()
+				current = t[1]
+				refresh()
+			end,
+		})
+		tabButtons[t[1]] = b
+	end
+	windows.Shop_open = refresh
+	windows.Shop:SetAttribute("OnOpen", true)
+	for _, name in { "Pick", "Asc", "Starter" } do
+		player:GetAttributeChangedSignal(name):Connect(refresh)
+	end
+	for _, pass in CFG.passes do
+		player:GetAttributeChangedSignal("Pass_" .. pass.key):Connect(refresh)
+	end
+	refresh()
+	-- the Offer button jumps straight to the starter pack
+	stackButtons.Offer.Activated:Connect(function()
+		current = "Boosts"
+		refresh()
+		if openWindow ~= windows.Shop then
+			openWindowByKey("Shop")
+		end
+	end)
+end
+windows.Offer = nil
+
+-- PET MODELS (used by the pets that follow players and by the hatch reveal) -------
+local function petPart(model, size, cf, color, mat, shape)
+	local p = Instance.new("Part")
+	p.Anchored = true
+	p.CanCollide = false
+	p.CanQuery = false
+	p.CanTouch = false
+	p.CastShadow = false
+	p.Size = size
+	p.CFrame = cf
+	p.Color = color
+	p.Material = mat or Enum.Material.SmoothPlastic
+	p.TopSurface = Enum.SurfaceType.Smooth
+	p.BottomSurface = Enum.SurfaceType.Smooth
+	if shape then
+		p.Shape = shape
+	end
+	p.Parent = model
+	return p
+end
+
+local function buildPet(id)
+	local P = CFG.pets[id]
+	local m = Instance.new("Model")
+	m.Name = "Pet_" .. id
+	if not P then
+		return m
+	end
+	local c, acc = rgb(P.color), rgb(P.accent)
+	local ball = Enum.PartType.Ball
+	local body = petPart(m, Vector3.new(2.2, 2.2, 2.2), CFrame.new(), c, if P.jelly then Enum.Material.Glass else Enum.Material.SmoothPlastic, ball)
+	if P.jelly then
+		body.Transparency = 0.2
+	end
+	for _, x in { -0.42, 0.42 } do
+		petPart(m, Vector3.new(0.62, 0.62, 0.62), CFrame.new(x, 0.25, -0.86), WHITE, nil, ball)
+		petPart(m, Vector3.new(0.34, 0.34, 0.34), CFrame.new(x, 0.25, -1.08), Color3.fromRGB(20, 20, 26), nil, ball)
+		petPart(m, Vector3.new(0.3, 0.2, 0.1), CFrame.new(x * 1.5, -0.15, -0.95), acc, nil, nil).Transparency = 0.3
+	end
+	if P.ears == "round" then
+		for _, x in { -0.7, 0.7 } do
+			petPart(m, Vector3.new(0.75, 0.75, 0.75), CFrame.new(x, 0.95, 0), c, nil, ball)
+			petPart(m, Vector3.new(0.45, 0.45, 0.45), CFrame.new(x, 0.95, -0.2), acc, nil, ball)
+		end
+	elseif P.ears == "long" then
+		for _, x in { -0.45, 0.45 } do
+			petPart(m, Vector3.new(0.4, 1.5, 0.3), CFrame.new(x, 1.5, 0.1) * CFrame.Angles(0, 0, x * -0.3), c)
+			petPart(m, Vector3.new(0.22, 1.1, 0.1), CFrame.new(x, 1.5, -0.06) * CFrame.Angles(0, 0, x * -0.3), acc)
+		end
+	elseif P.ears == "pointy" then
+		for _, x in { -0.6, 0.6 } do
+			petPart(m, Vector3.new(0.55, 0.9, 0.3), CFrame.new(x, 1.05, 0) * CFrame.Angles(0, 0, x * -0.6), c)
+		end
+	end
+	if P.horns then
+		for _, x in { -0.45, 0.45 } do
+			petPart(m, Vector3.new(0.26, 0.8, 0.26), CFrame.new(x, 1.15, -0.2) * CFrame.Angles(-0.4, 0, x * -0.5), acc)
+		end
+	end
+	if P.wings then
+		for _, x in { -1, 1 } do
+			petPart(m, Vector3.new(0.15, 1.2, 1.5), CFrame.new(x * 1.2, 0.35, 0.3) * CFrame.Angles(0, 0, x * -0.5), acc).Transparency = 0.1
+		end
+	end
+	if P.tail then
+		petPart(m, Vector3.new(0.45, 0.45, 1.2), CFrame.new(0, -0.3, 1.15) * CFrame.Angles(0.5, 0, 0), c)
+	end
+	if P.glow then
+		local light = Instance.new("PointLight")
+		light.Color = acc
+		light.Range = 9
+		light.Brightness = 1.4
+		light.Parent = body
+		local sp = Instance.new("Sparkles")
+		sp.SparkleColor = acc
+		sp.Parent = body
+	end
+	m.PrimaryPart = body
+	return m
+end
+
+-- Pets that follow every player (built locally for smooth movement) ---------------
+local followers = {} -- [Player] = { ids = string, models = { Model } }
+local function rebuildPets(plr)
+	local entry = followers[plr]
+	if entry then
+		for _, m in entry.models do
+			m:Destroy()
+		end
+	end
+	local raw = plr:GetAttribute("PetsEquipped")
+	local ids = {}
+	if type(raw) == "string" then
+		local ok, data = pcall(function()
+			return HttpService:JSONDecode(raw)
+		end)
+		if ok and type(data) == "table" then
+			ids = data
+		end
+	end
+	local models = {}
+	for i, id in ids do
+		local m = buildPet(id)
+		m:ScaleTo(0.8)
+		m.Parent = workspace
+		models[i] = m
+	end
+	followers[plr] = { models = models, pos = {} }
+end
+local function watchPlayer(plr)
+	plr:GetAttributeChangedSignal("PetsEquipped"):Connect(function()
+		rebuildPets(plr)
+	end)
+	rebuildPets(plr)
+end
+for _, plr in Players:GetPlayers() do
+	watchPlayer(plr)
+end
+Players.PlayerAdded:Connect(watchPlayer)
+Players.PlayerRemoving:Connect(function(plr)
+	local entry = followers[plr]
+	if entry then
+		for _, m in entry.models do
+			m:Destroy()
+		end
+	end
+	followers[plr] = nil
+end)
+local SLOT_OFFSETS = { Vector3.new(-3.2, 0.8, 3), Vector3.new(3.2, 0.8, 3), Vector3.new(0, 1, 4.6), Vector3.new(-5.4, 0.6, 1), Vector3.new(5.4, 0.6, 1) }
+local function updatePets(dt)
+	local t = os.clock()
+	for plr, entry in followers do
+		local char = plr.Character
+		local root = char and char:FindFirstChild("HumanoidRootPart")
+		if root then
+			for i, m in entry.models do
+				local offset = SLOT_OFFSETS[i] or Vector3.new(0, 1, 3 + i)
+				local goal = (root.CFrame * CFrame.new(offset)).Position + Vector3.new(0, math.sin(t * 3 + i) * 0.35 - 1.2, 0)
+				local cur = entry.pos[i] or goal
+				if (cur - goal).Magnitude > 60 then
+					cur = goal
+				end
+				cur = cur:Lerp(goal, 1 - math.exp(-dt * 7))
+				entry.pos[i] = cur
+				local look = root.CFrame.LookVector
+				m:PivotTo(CFrame.lookAt(cur, cur - Vector3.new(look.X, 0, look.Z).Unit * -1) * CFrame.Angles(0, math.pi, 0))
+			end
+		end
+	end
+end
+
+-- PETS window ---------------------------------------------------------------------
+do
+	local _, body = makeWindow("Pets", "🐾 PETS", Color3.fromRGB(255, 150, 200), Color3.fromRGB(230, 70, 140))
+	local info = label({ parent = body, text = "", size = 18, color = INK, outline = false, sz = UDim2.new(1, -190, 0, 30), alignX = Enum.TextXAlignment.Left })
+	cartoonButton(body, {
+		sz = UDim2.fromOffset(170, 40),
+		pos = UDim2.new(1, 0, 0, -4),
+		anchor = Vector2.new(1, 0),
+		top = Color3.fromRGB(120, 235, 120),
+		bottom = Color3.fromRGB(40, 170, 70),
+		text = "⭐ EQUIP BEST",
+		textSize = 18,
+		onClick = function()
+			Remotes.Action:FireServer("EquipBest")
+		end,
+	})
+	local scroll = create("ScrollingFrame", {
+		Position = UDim2.fromOffset(0, 46),
+		Size = UDim2.new(1, 0, 1, -46),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 8,
+		ScrollBarImageColor3 = INK,
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		CanvasSize = UDim2.new(),
+		Parent = body,
+	}, {
+		create("UIGridLayout", { CellSize = UDim2.fromOffset(112, 138), CellPadding = UDim2.fromOffset(10, 10), SortOrder = Enum.SortOrder.LayoutOrder }),
+		create("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingLeft = UDim.new(0, 4) }),
+	})
+	local empty = label({ parent = body, text = "No pets yet!\nHatch eggs at the 🥚 Pet Shop next to the museum.", size = 20, color = INK, outline = false, wrap = true, sz = UDim2.new(1, 0, 0, 80), pos = UDim2.fromScale(0, 0.4) })
+	local function refresh()
+		for _, c in scroll:GetChildren() do
+			if c:IsA("Frame") then
+				c:Destroy()
+			end
+		end
+		local list = {}
+		local raw = player:GetAttribute("Pets")
+		if type(raw) == "string" then
+			local ok, data = pcall(function()
+				return HttpService:JSONDecode(raw)
+			end)
+			if ok and type(data) == "table" then
+				list = data
+			end
+		end
+		table.sort(list, function(a, b)
+			if a.e ~= b.e then
+				return a.e
+			end
+			local pa, pb = CFG.pets[a.id], CFG.pets[b.id]
+			return (pa and pa.boost or 0) > (pb and pb.boost or 0)
+		end)
+		local equipped, total = 0, 0
+		for i, pet in list do
+			local P = CFG.pets[pet.id]
+			if P then
+				if pet.e then
+					equipped += 1
+					total += P.boost
+				end
+				local rc = rgb(CFG.rarityColors[P.rarity] or { 200, 200, 210 })
+				local c = create("Frame", { LayoutOrder = i, BackgroundColor3 = WHITE, Parent = scroll }, { corner(UDim.new(0, 16)), stroke(if pet.e then 4 else 3, if pet.e then Color3.fromRGB(40, 170, 70) else INK) })
+				gradient(c, WHITE, rc:Lerp(WHITE, 0.45))
+				label({ parent = c, text = P.icon, size = 40, outline = false, sz = UDim2.new(1, 0, 0, 50), pos = UDim2.fromOffset(0, 4) })
+				label({ parent = c, text = P.name, size = 14, sz = UDim2.new(1, -6, 0, 18), pos = UDim2.fromOffset(3, 54) })
+				label({ parent = c, text = `+{math.floor(P.boost * 100 + 0.5)}%`, size = 16, color = Color3.fromRGB(255, 214, 70), sz = UDim2.new(1, 0, 0, 18), pos = UDim2.fromOffset(0, 72) })
+				cartoonButton(c, {
+					sz = UDim2.new(0.62, 0, 0, 30),
+					pos = UDim2.new(0, 6, 1, -6),
+					anchor = Vector2.new(0, 1),
+					top = if pet.e then Color3.fromRGB(255, 200, 90) else Color3.fromRGB(120, 235, 120),
+					bottom = if pet.e then Color3.fromRGB(230, 140, 30) else Color3.fromRGB(40, 170, 70),
+					text = if pet.e then "UNEQUIP" else "EQUIP",
+					textSize = 12,
+					onClick = function()
+						Remotes.Action:FireServer(if pet.e then "Unequip" else "Equip", pet.u)
+					end,
+				})
+				cartoonButton(c, {
+					sz = UDim2.new(0.28, 0, 0, 30),
+					pos = UDim2.new(1, -6, 1, -6),
+					anchor = Vector2.new(1, 1),
+					top = Color3.fromRGB(255, 110, 100),
+					bottom = Color3.fromRGB(220, 40, 50),
+					text = "🗑",
+					textSize = 14,
+					onClick = function()
+						Remotes.Action:FireServer("Delete", pet.u)
+					end,
+				})
+			end
+		end
+		empty.Visible = #list == 0
+		info.Text = `{#list}/{CFG.maxPets} pets · equipped {equipped}/{attr("PetSlots", CFG.petSlots)} · +{math.floor(total * 100 + 0.5)}% coins`
+	end
+	player:GetAttributeChangedSignal("Pets"):Connect(refresh)
+	player:GetAttributeChangedSignal("PetSlots"):Connect(refresh)
+	refresh()
+end
+
+-- SPIN window ------------------------------------------------------------------
+local wheelSpinning = false
+local spinButton, spinLabel, wheel, spinResult
+do
+	local _, body = makeWindow("Spin", "🎡 SPIN THE WHEEL", Color3.fromRGB(120, 200, 255), Color3.fromRGB(50, 110, 230))
+	-- square wheel sized from the window height, so it always fits
+	local holder = create("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 22), Size = UDim2.fromScale(0.62, 0.62), BackgroundTransparency = 1, Parent = body }, {
+		create("UIAspectRatioConstraint", { AspectRatio = 1, DominantAxis = Enum.DominantAxis.Height }),
+	})
+	wheel = create("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(255, 250, 240), Parent = holder }, { corner(), stroke(6, INK) })
+	local n = #CFG.spin
+	for i, seg in CFG.spin do
+		-- Roblox rotates a frame around its own centre, so each slice sits in a full-size
+		-- rotor that turns around the wheel's centre.
+		local rotor = create("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Rotation = (i - 1) * 360 / n, Parent = wheel })
+		local petal = create("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0),
+			Position = UDim2.fromScale(0.5, 0.03),
+			Size = UDim2.fromScale(0.3, 0.47),
+			BackgroundColor3 = rgb(seg.color),
+			Parent = rotor,
+		}, { corner(UDim.new(0.5, 0)), stroke(3, INK) })
+		label({ parent = petal, text = seg.icon, size = 26, outline = false, sz = UDim2.new(1, 0, 0, 30), pos = UDim2.fromOffset(0, 8) })
+		label({ parent = petal, text = seg.label, size = 12, sz = UDim2.new(1, 0, 0, 16), pos = UDim2.fromOffset(0, 40) })
+	end
+	create("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.16, 0.16), BackgroundColor3 = GOLD, ZIndex = 3, Parent = wheel }, { corner(), stroke(4, INK) })
+	label({ parent = holder, text = "▼", size = 44, color = Color3.fromRGB(255, 70, 70), sz = UDim2.fromOffset(60, 50), pos = UDim2.new(0.5, 0, 0, -30), anchor = Vector2.new(0.5, 0), z = 5 })
+	spinResult = label({ parent = body, text = "", size = 22, color = INK, outline = false, sz = UDim2.new(1, 0, 0, 28), pos = UDim2.new(0, 0, 0.66, 30) })
+	spinButton = cartoonButton(body, {
+		sz = UDim2.fromOffset(230, 56),
+		pos = UDim2.new(0.5, 0, 1, -4),
+		anchor = Vector2.new(0.5, 1),
+		top = Color3.fromRGB(120, 235, 120),
+		bottom = Color3.fromRGB(40, 170, 70),
+		onClick = function()
+			if wheelSpinning then
+				return
+			end
+			if workspace:GetServerTimeNow() < attr("SpinAt", 0) then
+				toast("The wheel is recharging!", WHITE)
+				return
+			end
+			wheelSpinning = true
+			spinResult.Text = ""
+			Remotes.Action:FireServer("Spin")
+			task.delay(8, function()
+				wheelSpinning = false
+			end)
+		end,
+	})
+	spinLabel = label({ parent = spinButton, text = "SPIN!", size = 26, z = 2 })
+end
+
+Remotes.SpinResult.OnClientEvent:Connect(function(index, text)
+	local n = #CFG.spin
+	-- land segment `index` under the pointer at the top
+	local target = 360 * 6 - (index - 1) * 360 / n + math.random(-12, 12)
+	wheel.Rotation = wheel.Rotation % 360
+	local t = tween(wheel, 4, { Rotation = target }, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+	for k = 1, 16 do
+		task.delay(k * 0.22, playSound, "Swing", 1.6)
+	end
+	t.Completed:Connect(function()
+		wheelSpinning = false
+		spinResult.Text = "🎉 " .. text
+		playSound("Treasure", 1.2)
+		confetti(40)
+		toast("🎡 " .. text, GOLD)
+	end)
+end)
+
+-- CODES window -----------------------------------------------------------------
+do
+	local _, body = makeWindow("Codes", "🎟️ CODES", Color3.fromRGB(200, 150, 255), Color3.fromRGB(130, 70, 220))
+	label({ parent = body, text = "Enter a code for free rewards!", size = 22, color = INK, outline = false, sz = UDim2.new(1, 0, 0, 30), pos = UDim2.fromOffset(0, 10) })
+	local boxFrame = create("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 60), Size = UDim2.new(0.8, 0, 0, 56), BackgroundColor3 = WHITE, Parent = body }, { corner(UDim.new(0, 16)), stroke(4, INK) })
+	local box = create("TextBox", {
+		Size = UDim2.new(1, -24, 1, 0),
+		Position = UDim2.fromOffset(12, 0),
+		BackgroundTransparency = 1,
+		Font = FONT,
+		TextSize = 26,
+		TextColor3 = INK,
+		PlaceholderText = "Type code here...",
+		PlaceholderColor3 = Color3.fromRGB(160, 160, 170),
+		Text = "",
+		ClearTextOnFocus = false,
+		Parent = boxFrame,
+	})
+	local result = label({ parent = body, text = "", size = 20, color = INK, outline = false, sz = UDim2.new(1, 0, 0, 28), pos = UDim2.fromOffset(0, 196) })
+	cartoonButton(body, {
+		sz = UDim2.fromOffset(220, 54),
+		pos = UDim2.new(0.5, 0, 0, 132),
+		anchor = Vector2.new(0.5, 0),
+		top = Color3.fromRGB(120, 235, 120),
+		bottom = Color3.fromRGB(40, 170, 70),
+		text = "REDEEM",
+		textSize = 24,
+		onClick = function()
+			if box.Text ~= "" then
+				Remotes.Action:FireServer("Redeem", box.Text)
+			end
+		end,
+	})
+	Remotes.Purchased.OnClientEvent:Connect(function(kind, ok, text)
+		if kind == "code" then
+			result.Text = (if ok then "✅ " else "❌ ") .. tostring(text)
+			result.TextColor3 = if ok then Color3.fromRGB(30, 140, 60) else Color3.fromRGB(200, 40, 40)
+			if ok then
+				confetti(30)
+				playSound("Buy", 1.2)
+				box.Text = ""
+			end
+		elseif ok then
+			toast("🎉 " .. tostring(text), GOLD)
+			confetti(60)
+			playSound("Buy", 1)
+		end
+	end)
+end
+
+-- HATCH animation ------------------------------------------------------------------
+local hatching = false
+Remotes.Hatched.OnClientEvent:Connect(function(petId, eggId)
+	local P = CFG.pets[petId]
+	local egg
+	for _, e in CFG.eggs do
+		if e.id == eggId then
+			egg = e
+		end
+	end
+	if not P or not egg or hatching then
+		if P then
+			toast(`🐾 {P.name} hatched!`, GOLD)
+		end
+		return
+	end
+	hatching = true
+	local rc = rgb(CFG.rarityColors[P.rarity] or { 200, 200, 210 })
+	local shade = create("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 1, ZIndex = 20, Parent = overlayGui })
+	tween(shade, 0.25, { BackgroundTransparency = 0.35 })
+	local eggFrame = create("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.48),
+		Size = UDim2.fromOffset(170, 220),
+		BackgroundColor3 = WHITE,
+		ZIndex = 21,
+		Parent = overlayGui,
+	}, { corner(UDim.new(0.5, 0)), stroke(6, INK) })
+	gradient(eggFrame, rgb(egg.color):Lerp(WHITE, 0.25), rgb(egg.color))
+	for k = 1, 5 do
+		create("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.2 + (k * 0.37) % 0.7, 0.2 + (k * 0.23) % 0.6), Size = UDim2.fromOffset(28, 28), BackgroundColor3 = rgb(egg.spots), ZIndex = 22, Parent = eggFrame }, { corner() })
+	end
+	local sc = create("UIScale", { Scale = 0.2, Parent = eggFrame })
+	tween(sc, 0.4, { Scale = 1 }, Enum.EasingStyle.Back)
+	task.wait(0.5)
+	for k = 1, 3 do
+		local amt = 8 + k * 6
+		for _ = 1, 3 do
+			tween(eggFrame, 0.06, { Rotation = amt })
+			task.wait(0.07)
+			tween(eggFrame, 0.06, { Rotation = -amt })
+			task.wait(0.07)
+		end
+		eggFrame.Rotation = 0
+		playSound("Break", 0.8 + k * 0.2)
+		task.wait(0.25)
+	end
+	local flash = create("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = WHITE, ZIndex = 30, Parent = overlayGui })
+	tween(flash, 0.5, { BackgroundTransparency = 1 })
+	Debris:AddItem(flash, 0.6)
+	eggFrame:Destroy()
+	playSound("Treasure", if P.rarity == "Legendary" then 0.7 else 1.1)
+	confetti(if P.rarity == "Legendary" then 120 else 50)
+	local vp = create("ViewportFrame", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.44),
+		Size = UDim2.fromOffset(300, 300),
+		BackgroundTransparency = 1,
+		ZIndex = 23,
+		Ambient = Color3.fromRGB(200, 200, 200),
+		LightColor = WHITE,
+		Parent = overlayGui,
+	})
+	local model = buildPet(petId)
+	model.Parent = vp
+	local cam = Instance.new("Camera")
+	cam.FieldOfView = 40
+	cam.CFrame = CFrame.lookAt(Vector3.new(0, 0.9, -6.5), Vector3.new(0, 0.3, 0))
+	cam.Parent = vp
+	vp.CurrentCamera = cam
+	local vsc = create("UIScale", { Scale = 0.2, Parent = vp })
+	tween(vsc, 0.5, { Scale = 1 }, Enum.EasingStyle.Back)
+	local ribbon = create("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.66, 0), Size = UDim2.fromOffset(360, 110), BackgroundColor3 = WHITE, ZIndex = 24, Parent = overlayGui }, { corner(UDim.new(0, 22)), stroke(5, INK) })
+	gradient(ribbon, rc:Lerp(WHITE, 0.3), rc:Lerp(Color3.new(0, 0, 0), 0.15))
+	label({ parent = ribbon, text = P.name, size = 36, sz = UDim2.new(1, 0, 0, 44), pos = UDim2.fromOffset(0, 6), z = 25 })
+	label({ parent = ribbon, text = `{string.upper(P.rarity)} · +{math.floor(P.boost * 100 + 0.5)}% coins`, size = 20, sz = UDim2.new(1, 0, 0, 28), pos = UDim2.fromOffset(0, 54), z = 25 })
+	local start = os.clock()
+	local revealDone = false
+	local conn
+	conn = RunService.RenderStepped:Connect(function()
+		if revealDone then
+			conn:Disconnect()
+			return
+		end
+		model:PivotTo(CFrame.Angles(0, (os.clock() - start) * 1.6, 0) * CFrame.new(0, math.sin((os.clock() - start) * 3) * 0.12, 0))
+	end)
+	task.wait(3)
+	revealDone = true
+	conn:Disconnect()
+	tween(shade, 0.3, { BackgroundTransparency = 1 })
+	tween(vsc, 0.25, { Scale = 0 })
+	local rsc = create("UIScale", { Parent = ribbon })
+	tween(rsc, 0.25, { Scale = 0 })
+	task.wait(0.35)
+	shade:Destroy()
+	vp:Destroy()
+	ribbon:Destroy()
+	hatching = false
+end)
+
+-- LEVEL UP -----------------------------------------------------------------------
+Remotes.LevelUp.OnClientEvent:Connect(function(level, reward)
+	local big = label({ parent = overlayGui, text = "LEVEL UP!", size = 64, color = Color3.fromRGB(130, 220, 255), sz = UDim2.fromOffset(600, 80), pos = UDim2.fromScale(0.5, 0.3), anchor = Vector2.new(0.5, 0.5), z = 40 })
+	local sub = label({ parent = overlayGui, text = `Level {level} · +1% ore value · + 💰 {fmt(reward)}`, size = 26, color = GOLD, sz = UDim2.fromOffset(600, 36), pos = UDim2.fromScale(0.5, 0.37), anchor = Vector2.new(0.5, 0.5), z = 40 })
+	local sc = create("UIScale", { Scale = 0.3, Parent = big })
+	tween(sc, 0.4, { Scale = 1 }, Enum.EasingStyle.Back)
+	confetti(45)
+	playSound("Buy", 1.5)
+	task.delay(2.2, function()
+		tween(sc, 0.25, { Scale = 0 })
+		tween(sub, 0.25, { TextTransparency = 1 })
+		task.wait(0.3)
+		big:Destroy()
+		sub:Destroy()
+	end)
+end)
+
+-- Slow HUD refresh (level bar, potions, badges, pass buttons) ----------------------
+local function updateSimHUD()
+	local now = workspace:GetServerTimeNow()
+	local lvl, xp, need = attr("Level", 1), attr("XP", 0), attr("XPNeed", 30)
+	levelText.Text = `Lv {lvl}  ·  {fmt(xp)} / {fmt(need)} XP`
+	levelFill.Size = UDim2.fromScale(math.clamp(xp / math.max(1, need), 0, 1), 1)
+	for _, pdef in POTIONS do
+		local left = attr("Potion_" .. pdef.key, 0) - now
+		local pill = potionPills[pdef.key]
+		pill.Parent.Visible = left > 0
+		if left > 0 then
+			pill.Text = `{pdef.icon} {clock(left)}`
+		end
+	end
+	local spinReady = now >= attr("SpinAt", 0)
+	stackButtons.Spin.Badge.Visible = spinReady
+	if spinLabel and not wheelSpinning then
+		spinLabel.Text = if spinReady then "SPIN!" else "⏳ " .. clock(attr("SpinAt", 0) - now)
+	end
+	offerButton.Visible = not attr("Starter", false)
+	sellButton.Visible = attr("Pass_SellAnywhere", false) and attr("Bag", 0) > 0
+	autoButton.Visible = attr("Pass_AutoMine", false)
+end
+
 -- Tell the player when their coins plus the ore in their bag can pay for the next pickaxe.
 local announcedTier = attr("Pick", 1)
 local function checkAfford()
@@ -3489,6 +5137,7 @@ local gaugeShown = false
 
 RunService.RenderStepped:Connect(function(dt)
 	updateMining()
+	updatePets(dt)
 
 	local depth = currentDepth()
 	local now = workspace:GetServerTimeNow()
@@ -3563,6 +5212,7 @@ RunService.RenderStepped:Connect(function(dt)
 		end
 		checkSky()
 		checkAfford()
+		updateSimHUD()
 		refreshStations()
 		updateTutorial(depth)
 	end

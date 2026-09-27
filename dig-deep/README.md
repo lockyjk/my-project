@@ -29,6 +29,45 @@ To keep progress between sessions, turn on **Game Settings → Security → Enab
 | **Ascend** | Once you've reached bedrock, use the Ascension Shrine next to the museum. It resets your coins, gear and depth but keeps your treasures, and gives +50% ore value forever each time. |
 | **Elevator** | Takes you straight to your deepest 25m checkpoint. |
 
+## Making money (Game Passes and Developer Products)
+
+Everything is already built. You only need to create the items on Roblox and paste their IDs in:
+
+1. Publish the place (**File → Publish to Roblox**).
+2. On the [Creator Dashboard](https://create.roblox.com/dashboard/creations), open the experience. Create each **Pass** under *Monetization → Passes* and each **Developer Product** under *Monetization → Developer Products*.
+3. Put each item's ID into the `PASSES` / `PRODUCTS` tables at the top of `DigDeepServer`, replacing the `id = 0`.
+
+While an ID is `0`, the item shows **"Soon"** in the live game. **In Studio, buying it gives it to you for free** for that session, so you can test everything before publishing.
+
+| Game Pass | Suggested price | What it does |
+|---|---|---|
+| 👑 VIP | 399 | +25% ore value, 👑 VIP tag over your head, sparkling pickaxe |
+| 💰 2x Coins | 349 | Everything you sell is worth double |
+| 🤖 Auto Mine | 299 | Toggle button: digs automatically |
+| 🛒 Sell Anywhere | 249 | SELL button on screen, no trip to the surface |
+| 🍀 Lucky Miner | 299 | 2x treasure luck, better egg odds |
+| ⚡ Fast Swings | 249 | 25% faster pickaxe |
+| ♾️ Infinite Backpack | 799 | Backpack never fills |
+| 🐾 +2 Pet Slots | 349 | Equip 5 pets instead of 3 |
+
+| Developer Product | Suggested price | What it gives |
+|---|---|---|
+| 🎁 Starter Pack | 99 | Exclusive Starter Pup pet, 15 min of every potion, coins |
+| 🪙 / 💰 / 🏦 Coin packs | 49 / 199 / 599 | 20 min / 2 h / 8 h worth of digging at your current pickaxe |
+| 🧪 🍀 ⚡ Potions | 39 each | 15 min of 2x Coins / 2x Luck / faster swings (stack up to 3 h) |
+| ⛏ Instant Pickaxe | 149 | Skip straight to your next pickaxe |
+
+**Policy-safe by design:** eggs and spins can't be bought with Robux, so there are no paid random items. Every Robux purchase gives a fixed, stated reward. Receipts are tracked so a purchase is never granted twice, and one is never lost if the player leaves mid-purchase.
+
+## Simulator features
+
+- **Pets:** 16 pets from 4 eggs in the 🥚 Pet Shop next to the museum (coins only, odds shown on each egg), plus the exclusive Starter Pup. Pets follow you and boost your coins. New pets equip themselves if they're better, and the Pets window has Equip, Delete and Equip Best.
+- **Miner Level:** XP for every block (deeper layers give more). Each level gives +1% ore value and a coin reward. Your level shows over your head.
+- **🎡 Spin wheel:** a free spin every 20 minutes (coins, potions, a free egg, or a 💎 jackpot).
+- **🎟️ Codes:** `RELEASE`, `DIGDEEP`, `GOLDRUSH`, `THANKYOU`. Add more in the `CODES` table and post them on your group or socials.
+- **Potions:** timers show under your coins.
+- **Cartoony UI:** a button stack on the left (Shop, Pets, Spin, Codes, Offer), chunky gradient buttons, bouncy windows, confetti, and a level-up burst.
+
 ## What keeps players coming back
 
 - **Treasures:** 8 rare finds, from an Old Boot near the surface to the Crown of the Deep below 360m, plus a 1-in-40,000 Rubber Duck anywhere. Each find gets a big reveal and is announced to the whole server. First finds and rare treasures are announced to the server. Repeat finds of common ones show as a small popup. Each one goes into the **Museum of the Deep**, which shows silhouettes for the ones you haven't found. Every unique treasure gives **+10% ore value forever**.

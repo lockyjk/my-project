@@ -12,6 +12,7 @@ local CollectionService = game:GetService("CollectionService")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local Lighting = game:GetService("Lighting")
 local HttpService = game:GetService("HttpService")
+local MarketplaceService = game:GetService("MarketplaceService")
 local RunService = game:GetService("RunService")
 
 pcall(function()
@@ -129,6 +130,89 @@ local TREASURES = {
 
 -- Daily chest base reward by pickaxe tier, so it stays useful as you progress.
 local DAILY = { 100, 300, 1500, 8000, 25000, 120000, 700000, 5000000, 35000000, 250000000 }
+
+-- Rough coins per minute of digging for each pickaxe tier. Coin packs, codes and the spin wheel
+-- pay "N minutes of digging", so rewards stay useful at every stage of the game.
+local INCOME = { 30, 90, 300, 1100, 3500, 14000, 60000, 350000, 2000000, 12000000 }
+
+--------------------------------------------------------------------------------
+-- MONETIZATION
+-- Create each pass / product on the Creator Dashboard and paste its id here.
+-- While an id is 0: in a live game the item shows "Coming soon"; in Studio, buying it
+-- grants it for free (this session only) so you can test everything.
+--------------------------------------------------------------------------------
+local PASSES = {
+	{ key = "VIP", id = 0, price = 399, name = "VIP", icon = "👑", desc = "+25% ore value, a VIP tag and a sparkling VIP pickaxe" },
+	{ key = "DoubleCoins", id = 0, price = 349, name = "2x Coins", icon = "💰", desc = "Everything you sell is worth double" },
+	{ key = "AutoMine", id = 0, price = 299, name = "Auto Mine", icon = "🤖", desc = "Dig without clicking. Toggle it any time" },
+	{ key = "SellAnywhere", id = 0, price = 249, name = "Sell Anywhere", icon = "🛒", desc = "Sell your bag from anywhere with one tap" },
+	{ key = "Lucky", id = 0, price = 299, name = "Lucky Miner", icon = "🍀", desc = "2x treasure luck and better egg odds" },
+	{ key = "FastMine", id = 0, price = 249, name = "Fast Swings", icon = "⚡", desc = "Swing your pickaxe 25% faster" },
+	{ key = "InfiniteBag", id = 0, price = 799, name = "Infinite Backpack", icon = "♾️", desc = "Your backpack never fills up" },
+	{ key = "MorePets", id = 0, price = 349, name = "+2 Pet Slots", icon = "🐾", desc = "Equip 5 pets instead of 3" },
+}
+local PRODUCTS = {
+	{ key = "Starter", id = 0, price = 99, name = "Starter Pack", icon = "🎁", desc = "Starter Pup pet, 15 min of every potion and a coin bundle", starter = true },
+	{ key = "CoinsS", id = 0, price = 49, name = "Pile of Coins", icon = "🪙", coinMinutes = 20 },
+	{ key = "CoinsM", id = 0, price = 199, name = "Sack of Coins", icon = "💰", coinMinutes = 120 },
+	{ key = "CoinsL", id = 0, price = 599, name = "Vault of Coins", icon = "🏦", coinMinutes = 480 },
+	{ key = "PotionCoins", id = 0, price = 39, name = "2x Coins Potion", icon = "🧪", potion = "Coins", minutes = 15 },
+	{ key = "PotionLuck", id = 0, price = 39, name = "Luck Potion", icon = "🍀", potion = "Luck", minutes = 15 },
+	{ key = "PotionSpeed", id = 0, price = 39, name = "Speed Potion", icon = "⚡", potion = "Speed", minutes = 15 },
+	{ key = "NextPick", id = 0, price = 149, name = "Instant Pickaxe", icon = "⛏", desc = "Skip straight to your next pickaxe" },
+}
+
+--------------------------------------------------------------------------------
+-- PETS, EGGS, LEVELS, SPIN WHEEL, CODES
+-- Eggs cost coins only (never Robux), so there are no paid random items.
+--------------------------------------------------------------------------------
+local PETS = {
+	Mole = { name = "Mole", rarity = "Common", boost = 0.05, color = { 150, 108, 78 }, accent = { 255, 170, 170 }, ears = "round", icon = "🐹" },
+	Bunny = { name = "Bunny", rarity = "Uncommon", boost = 0.1, color = { 240, 238, 242 }, accent = { 255, 170, 195 }, ears = "long", icon = "🐰" },
+	PebblePup = { name = "Pebble Pup", rarity = "Rare", boost = 0.2, color = { 150, 150, 162 }, accent = { 90, 90, 104 }, ears = "pointy", tail = true, icon = "🐶" },
+	GoldenMole = { name = "Golden Mole", rarity = "Legendary", boost = 0.5, color = { 255, 200, 60 }, accent = { 255, 240, 170 }, ears = "round", glow = true, icon = "🌟" },
+	Bat = { name = "Cave Bat", rarity = "Common", boost = 0.25, color = { 84, 64, 112 }, accent = { 255, 140, 200 }, ears = "pointy", wings = true, icon = "🦇" },
+	Slime = { name = "Slime", rarity = "Uncommon", boost = 0.4, color = { 90, 222, 124 }, accent = { 40, 140, 70 }, ears = "none", jelly = true, icon = "🟢" },
+	RockGolem = { name = "Rock Golem", rarity = "Rare", boost = 0.7, color = { 124, 114, 104 }, accent = { 255, 170, 60 }, ears = "none", horns = true, icon = "🗿" },
+	LavaPup = { name = "Lava Pup", rarity = "Legendary", boost = 1.5, color = { 255, 92, 32 }, accent = { 255, 222, 92 }, ears = "pointy", tail = true, glow = true, icon = "🔥" },
+	CrystalFox = { name = "Crystal Fox", rarity = "Common", boost = 1, color = { 140, 210, 255 }, accent = { 255, 255, 255 }, ears = "pointy", tail = true, icon = "🦊" },
+	GemOwl = { name = "Gem Owl", rarity = "Uncommon", boost = 1.5, color = { 170, 110, 255 }, accent = { 255, 222, 122 }, ears = "pointy", wings = true, icon = "🦉" },
+	PrismDragon = { name = "Prism Dragon", rarity = "Rare", boost = 2.5, color = { 255, 122, 222 }, accent = { 122, 255, 240 }, ears = "none", horns = true, wings = true, tail = true, icon = "🐲" },
+	DiamondDragon = { name = "Diamond Dragon", rarity = "Legendary", boost = 6, color = { 205, 245, 255 }, accent = { 120, 200, 255 }, ears = "none", horns = true, wings = true, tail = true, glow = true, icon = "💎" },
+	ShadowCat = { name = "Shadow Cat", rarity = "Common", boost = 3, color = { 44, 34, 64 }, accent = { 182, 122, 255 }, ears = "pointy", tail = true, icon = "🐈‍⬛" },
+	VoidWisp = { name = "Void Wisp", rarity = "Uncommon", boost = 5, color = { 112, 42, 202 }, accent = { 232, 182, 255 }, ears = "none", glow = true, icon = "👻" },
+	NebulaSerpent = { name = "Nebula Serpent", rarity = "Rare", boost = 8, color = { 62, 22, 122 }, accent = { 255, 122, 222 }, ears = "none", horns = true, tail = true, glow = true, icon = "🐍" },
+	SingularitySpirit = { name = "Singularity Spirit", rarity = "Legendary", boost = 18, color = { 24, 24, 28 }, accent = { 255, 255, 255 }, ears = "none", wings = true, glow = true, icon = "✨" },
+	StarterPup = { name = "Starter Pup", rarity = "Exclusive", boost = 0.5, color = { 255, 202, 122 }, accent = { 255, 122, 82 }, ears = "round", tail = true, icon = "🐕" },
+}
+local RARITY_COLORS = { Common = { 200, 200, 210 }, Uncommon = { 110, 230, 130 }, Rare = { 80, 170, 255 }, Legendary = { 255, 200, 50 }, Exclusive = { 255, 110, 200 } }
+local EGGS = {
+	{ id = "DirtEgg", name = "Dirt Egg", price = 250, depth = 0, color = { 176, 124, 82 }, spots = { 120, 80, 50 }, pets = { { "Mole", 60 }, { "Bunny", 28 }, { "PebblePup", 10 }, { "GoldenMole", 2 } } },
+	{ id = "CaveEgg", name = "Cave Egg", price = 6000, depth = 60, color = { 92, 92, 112 }, spots = { 255, 140, 60 }, pets = { { "Bat", 60 }, { "Slime", 28 }, { "RockGolem", 10 }, { "LavaPup", 2 } } },
+	{ id = "CrystalEgg", name = "Crystal Egg", price = 250000, depth = 200, color = { 152, 202, 255 }, spots = { 255, 140, 230 }, pets = { { "CrystalFox", 60 }, { "GemOwl", 28 }, { "PrismDragon", 10 }, { "DiamondDragon", 2 } } },
+	{ id = "VoidEgg", name = "Void Egg", price = 25000000, depth = 300, color = { 44, 22, 74 }, spots = { 202, 142, 255 }, pets = { { "ShadowCat", 60 }, { "VoidWisp", 28 }, { "NebulaSerpent", 10 }, { "SingularitySpirit", 2 } } },
+}
+local PET_SLOTS = 3
+local MAX_PETS = 50
+local LEVEL_BONUS = 0.01 -- +1% ore value per level
+local SPIN_COOLDOWN = 20 * 60
+local SPIN = {
+	{ label = "Coins", icon = "🪙", weight = 30, coinMinutes = 3, color = { 255, 206, 70 } },
+	{ label = "2x Coins", icon = "🧪", weight = 14, potion = "Coins", minutes = 10, color = { 255, 150, 60 } },
+	{ label = "Big Coins", icon = "💰", weight = 18, coinMinutes = 8, color = { 110, 220, 110 } },
+	{ label = "Luck", icon = "🍀", weight = 14, potion = "Luck", minutes = 10, color = { 80, 200, 150 } },
+	{ label = "Huge Coins", icon = "🏦", weight = 7, coinMinutes = 25, color = { 80, 160, 255 } },
+	{ label = "Speed", icon = "⚡", weight = 14, potion = "Speed", minutes = 10, color = { 170, 110, 255 } },
+	{ label = "Free Egg", icon = "🥚", weight = 2.5, egg = true, color = { 255, 120, 190 } },
+	{ label = "JACKPOT", icon = "💎", weight = 0.5, coinMinutes = 120, color = { 255, 80, 80 } },
+}
+-- Codes are case-insensitive. Post new ones in your group/social to bring players back.
+local CODES = {
+	RELEASE = { coinMinutes = 10 },
+	DIGDEEP = { potion = "Luck", minutes = 15 },
+	GOLDRUSH = { potion = "Coins", minutes = 15 },
+	THANKYOU = { coinMinutes = 30 },
+}
 
 --------------------------------------------------------------------------------
 -- HELPERS
@@ -439,7 +523,7 @@ treasureFolder.Parent = ReplicatedStorage
 local remoteFolder = Instance.new("Folder")
 remoteFolder.Name = "DigRemotes"
 local Remotes = {}
-for _, name in { "Hit", "Surface", "Mined", "Treasure", "Geode", "Sold", "Notify", "Announce", "Bought", "Reward" } do
+for _, name in { "Hit", "Surface", "Mined", "Treasure", "Geode", "Sold", "Notify", "Announce", "Bought", "Reward", "Action", "Hatched", "LevelUp", "SpinResult", "Purchased" } do
 	local r = Instance.new("RemoteEvent")
 	r.Name = name
 	r.Parent = remoteFolder
@@ -451,6 +535,9 @@ do
 		top = TOP, block = BLOCK, grid = GRID, maxDepth = MAX_DEPTH, reach = REACH,
 		rushEvery = RUSH_EVERY, rushLength = RUSH_LENGTH, elevatorStep = ELEVATOR_STEP, treasureBonus = TREASURE_BONUS,
 		layers = {}, ores = {}, picks = {}, bags = {}, treasures = {}, treasureOrder = {},
+		passes = PASSES, products = PRODUCTS, pets = PETS, eggs = EGGS, rarityColors = RARITY_COLORS,
+		petSlots = PET_SLOTS, maxPets = MAX_PETS, spin = SPIN, spinCooldown = SPIN_COOLDOWN, income = INCOME,
+		levelBonus = LEVEL_BONUS, ascendBonus = ASCEND_BONUS,
 	}
 	for _, L in LAYERS do
 		table.insert(cfg.layers, { name = L.name, from = L.from, tint = L.tint, color = L.color })
@@ -582,6 +669,7 @@ local function buildWorld()
 	ground(0, -130, 36, 20, Enum.Material.Cobblestone)
 	ground(0, -142, 20, 8, Enum.Material.Cobblestone)
 	ground(78, -131, 10, 26, Enum.Material.Cobblestone)
+	ground(-83, -131, 10, 26, Enum.Material.Cobblestone)
 
 	-- Lake with a sandy shore
 	local lake = W(176, 0, 150)
@@ -877,6 +965,55 @@ local function buildWorld()
 		CollectionService:AddTag(altar, "Shrine")
 		billboard(altar, 9, { { "Title", "⭐ ASCENSION", 22, Color3.fromRGB(215, 175, 255) }, { "Sub", "Reach bedrock (" .. MAX_DEPTH .. "m) to unlock", 14, Color3.fromRGB(235, 235, 245) } }, 70)
 		prompt(altar, "Ascend", "Ascend", "Ascension Shrine", 2)
+	end
+
+	-- Pet shop: four egg stands (odds shown on each, like every simulator)
+	do
+		local plank = Color3.fromRGB(140, 98, 60)
+		newPart({ Name = "PetShopFloor", Size = Vector3.new(64, 0.4, 18), Position = W(-83, 0.2, -150), Color = Color3.fromRGB(236, 214, 170), Material = Enum.Material.WoodPlanks }, town)
+		newPart({ Name = "PetShopBack", Size = Vector3.new(64, 12, 1), Position = W(-83, 6, -159.5), Color = Color3.fromRGB(255, 200, 220), Material = Enum.Material.WoodPlanks }, town)
+		local board = newPart({ Name = "PetShopSign", Size = Vector3.new(26, 5, 0.6), Position = W(-83, 14.6, -159.2), Color = Color3.fromRGB(120, 60, 90), Material = Enum.Material.WoodPlanks }, town)
+		signText(board, Enum.NormalId.Front, "🥚 PET SHOP", Color3.fromRGB(255, 230, 245))
+		for i = 0, 5 do
+			newPart({ Name = "PetShopAwning", Size = Vector3.new(64 / 6, 0.5, 8), CFrame = CFrame.new(W(-83 - 32 + (i + 0.5) * 64 / 6, 12.4, -156)) * CFrame.Angles(math.rad(-18), 0, 0), Color = if i % 2 == 0 then Color3.fromRGB(255, 120, 170) else Color3.fromRGB(255, 244, 250), Material = Enum.Material.Fabric }, town)
+		end
+		for i, egg in EGGS do
+			local x = -104 + (i - 1) * 14
+			local base = newPart({ Name = "EggStand", Shape = Enum.PartType.Cylinder, Size = Vector3.new(2.4, 7, 7), CFrame = CFrame.new(W(x, 1.6, -150)) * CFrame.Angles(0, 0, math.rad(90)), Color = plank, Material = Enum.Material.WoodPlanks }, town)
+			local eggRing = newPart({ Name = "EggRing", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.3, 7.4, 7.4), CFrame = CFrame.new(W(x, 2.9, -150)) * CFrame.Angles(0, 0, math.rad(90)), Color = rgb(egg.spots), Material = Enum.Material.Neon, CanCollide = false }, town)
+			eggRing.CanQuery = false
+			local model = Instance.new("Model")
+			model.Name = egg.id
+			local shell = piece(model, { Size = Vector3.new(4.6, 6, 4.6), CFrame = CFrame.new(), Color = rgb(egg.color), Material = Enum.Material.SmoothPlastic, Reflectance = 0.05 })
+			local mesh = Instance.new("SpecialMesh")
+			mesh.MeshType = Enum.MeshType.Sphere
+			mesh.Parent = shell
+			local er = Random.new(i * 17)
+			for _ = 1, 7 do
+				local a, h = er:NextNumber(0, math.pi * 2), er:NextNumber(-0.7, 0.8)
+				local r = math.sqrt(1 - h * h)
+				piece(model, { Shape = Enum.PartType.Ball, Size = Vector3.one * er:NextNumber(0.8, 1.3), CFrame = CFrame.new(math.cos(a) * r * 2.2, h * 2.9, math.sin(a) * r * 2.2), Color = rgb(egg.spots), Material = Enum.Material.SmoothPlastic })
+			end
+			addLight(shell, rgb(egg.spots), 10, 0.8)
+			model.PrimaryPart = shell
+			model:PivotTo(CFrame.new(W(x, 6.6, -150)))
+			CollectionService:AddTag(model, "Spin")
+			model.Parent = town
+			local odds = {}
+			for _, entry in egg.pets do
+				table.insert(odds, `{PETS[entry[1]].name} {entry[2]}%`)
+			end
+			base:SetAttribute("Egg", i)
+			CollectionService:AddTag(base, "EggStand")
+			billboard(base, 9.5, {
+				{ "Title", egg.name, 20, Color3.fromRGB(255, 255, 255) },
+				{ "Price", "💰 " .. fmt(egg.price), 18, Color3.fromRGB(255, 214, 90) },
+				{ "Odds1", odds[1] .. " · " .. odds[2], 12, Color3.fromRGB(215, 215, 225) },
+				{ "Odds2", odds[3] .. " · " .. odds[4], 12, rgb(RARITY_COLORS.Legendary) },
+			}, 45)
+			local pr = prompt(base, "Egg", "Hatch", egg.name, 0.3)
+			pr:SetAttribute("Egg", i)
+		end
 	end
 
 	-- Museum: a small marble temple with steps, columns, a frieze and a pediment
@@ -1400,6 +1537,8 @@ local function newData()
 		coins = 0, pick = 1, bag = 1, best = 0, mined = 0, asc = 0,
 		bagCount = 0, bagValue = 0, treasures = {},
 		streak = 0, lastDay = -1, earned = 0, tut = 0,
+		pets = {}, equipped = {}, petUid = 0, xp = 0, level = 1,
+		potions = {}, codes = {}, spinAt = 0, starter = false, firstJoin = 0, receipts = {},
 	}
 end
 
@@ -1458,6 +1597,82 @@ local function saveData(player)
 	end
 end
 
+local PASS_BY_KEY, PASS_BY_ID, PRODUCT_BY_KEY, PRODUCT_BY_ID = {}, {}, {}, {}
+for _, pass in PASSES do
+	PASS_BY_KEY[pass.key] = pass
+	if pass.id ~= 0 then
+		PASS_BY_ID[pass.id] = pass
+	end
+end
+for _, product in PRODUCTS do
+	PRODUCT_BY_KEY[product.key] = product
+	if product.id ~= 0 then
+		PRODUCT_BY_ID[product.id] = product
+	end
+end
+
+-- Pass ownership lives in the session (checked with Roblox on join), never in the save.
+local function owns(player, key)
+	local d = sessions[player]
+	return d ~= nil and d._passes ~= nil and d._passes[key] == true
+end
+
+local function potionActive(player, name)
+	local d = sessions[player]
+	return d ~= nil and (d.potions[name] or 0) > os.time()
+end
+
+local function petSlots(player)
+	return PET_SLOTS + (if owns(player, "MorePets") then 2 else 0)
+end
+
+local function petBoost(d)
+	local total = 0
+	for _, uid in d.equipped do
+		for _, pet in d.pets do
+			if pet.uid == uid and PETS[pet.id] then
+				total += PETS[pet.id].boost
+			end
+		end
+	end
+	return total
+end
+
+local function capacity(player)
+	local d = sessions[player]
+	if owns(player, "InfiniteBag") then
+		return 1e9
+	end
+	return BAGS[d.bag].capacity
+end
+
+-- Multiplier on the time between swings (lower is faster).
+local function swingMult(player)
+	local m = 1
+	if owns(player, "FastMine") then
+		m *= 0.8
+	end
+	if potionActive(player, "Speed") then
+		m *= 0.75
+	end
+	return m
+end
+
+local function luckMult(player)
+	local m = 1
+	if owns(player, "Lucky") then
+		m *= 2
+	end
+	if potionActive(player, "Luck") then
+		m *= 2
+	end
+	return m
+end
+
+local function xpForLevel(level)
+	return math.floor(30 * level ^ 1.5)
+end
+
 local function uniqueTreasures(d)
 	local n = 0
 	for _ in d.treasures do
@@ -1469,8 +1684,19 @@ end
 local function valueMult(player)
 	local d = sessions[player]
 	local m = (1 + uniqueTreasures(d) * TREASURE_BONUS) * (1 + (d.asc or 0) * ASCEND_BONUS)
+	m *= 1 + (d.level - 1) * LEVEL_BONUS
+	m *= 1 + petBoost(d)
 	if player:GetAttribute("FriendBonus") then
 		m *= 1 + FRIEND_BONUS
+	end
+	if owns(player, "VIP") then
+		m *= 1.25
+	end
+	if owns(player, "DoubleCoins") then
+		m *= 2
+	end
+	if potionActive(player, "Coins") then
+		m *= 2
 	end
 	return m
 end
@@ -1482,7 +1708,7 @@ local function sync(player)
 	end
 	player:SetAttribute("Coins", d.coins)
 	player:SetAttribute("Bag", d.bagCount)
-	player:SetAttribute("BagMax", BAGS[d.bag].capacity)
+	player:SetAttribute("BagMax", capacity(player))
 	player:SetAttribute("BagValue", math.floor(d.bagValue))
 	player:SetAttribute("Pick", d.pick)
 	player:SetAttribute("Pack", d.bag)
@@ -1494,6 +1720,19 @@ local function sync(player)
 	player:SetAttribute("Treasures", HttpService:JSONEncode(d.treasures))
 	player:SetAttribute("Mult", valueMult(player))
 	player:SetAttribute("Asc", d.asc or 0)
+	player:SetAttribute("Level", d.level)
+	player:SetAttribute("XP", d.xp)
+	player:SetAttribute("XPNeed", xpForLevel(d.level))
+	player:SetAttribute("SwingMult", swingMult(player))
+	player:SetAttribute("SpinAt", d.spinAt)
+	player:SetAttribute("Starter", d.starter)
+	player:SetAttribute("FirstJoin", d.firstJoin)
+	for name, expiry in d.potions do
+		player:SetAttribute("Potion_" .. name, expiry)
+	end
+	for _, pass in PASSES do
+		player:SetAttribute("Pass_" .. pass.key, owns(player, pass.key))
+	end
 	local stats = player:FindFirstChild("leaderstats")
 	if stats then
 		stats.Depth.Value = d.best
@@ -1509,6 +1748,8 @@ end
 --------------------------------------------------------------------------------
 -- CHARACTER: pickaxe tool, backpack on your back, headlamp
 --------------------------------------------------------------------------------
+local updateNameplate
+
 local function givePick(player)
 	local d = sessions[player]
 	local char = player.Character
@@ -1550,6 +1791,14 @@ local function givePick(player)
 		end
 	end
 	model:Destroy()
+	if owns(player, "VIP") then
+		local head = tool:FindFirstChild("Head")
+		if head then
+			local sparkle = Instance.new("Sparkles")
+			sparkle.SparkleColor = Color3.fromRGB(255, 214, 90)
+			sparkle.Parent = head
+		end
+	end
 	tool.Parent = char -- parenting to the character equips it
 end
 
@@ -1566,7 +1815,7 @@ local function updateBagFill(player)
 		return
 	end
 	local s = bag:GetAttribute("Scale") or 1
-	local f = math.clamp(d.bagCount / BAGS[d.bag].capacity, 0, 1)
+	local f = math.clamp(d.bagCount / capacity(player), 0, 1)
 	local h = math.max(0.05, f * 1.1 * s)
 	fill.Transparency = if f <= 0 then 1 else 0
 	fill.Size = Vector3.new(1.7 * s, h, 0.85 * s)
@@ -1650,6 +1899,47 @@ local function addHeadlamp(char)
 	glow.Parent = head
 end
 
+-- Level / VIP / Ascension tag over the player's head, like every simulator has.
+updateNameplate = function(player)
+	local d = sessions[player]
+	local char = player.Character
+	local head = char and char:FindFirstChild("Head")
+	if not d or not head then
+		return
+	end
+	local gui = head:FindFirstChild("DigNameplate")
+	if not gui then
+		gui = Instance.new("BillboardGui")
+		gui.Name = "DigNameplate"
+		gui.Size = UDim2.fromOffset(220, 30)
+		gui.StudsOffset = Vector3.new(0, 2.7, 0)
+		gui.MaxDistance = 90
+		gui.LightInfluence = 0
+		local label = Instance.new("TextLabel")
+		label.Name = "Text"
+		label.BackgroundTransparency = 1
+		label.Size = UDim2.fromScale(1, 1)
+		label.Font = Enum.Font.FredokaOne
+		label.TextSize = 20
+		label.RichText = true
+		label.TextColor3 = Color3.new(1, 1, 1)
+		local stroke = Instance.new("UIStroke")
+		stroke.Thickness = 2.5
+		stroke.Color = Color3.fromRGB(20, 18, 26)
+		stroke.Parent = label
+		label.Parent = gui
+		gui.Parent = head
+	end
+	local parts = { `<font color="#FFD24A">Lv {d.level}</font>` }
+	if owns(player, "VIP") then
+		table.insert(parts, `<font color="#FFC83C">👑 VIP</font>`)
+	end
+	if (d.asc or 0) > 0 then
+		table.insert(parts, `<font color="#D7AFFF">⭐{d.asc}</font>`)
+	end
+	gui.Text.Text = table.concat(parts, "  ")
+end
+
 local function teleportTo(player, position)
 	local char = player.Character
 	if not char then
@@ -1681,6 +1971,7 @@ local function onCharacter(player, char)
 	givePick(player)
 	attachBag(player)
 	addHeadlamp(char)
+	updateNameplate(player)
 end
 
 --------------------------------------------------------------------------------
@@ -1753,7 +2044,7 @@ local function breakBlock(player, part, info)
 				sync(hitter)
 			end
 		end
-	elseif d.bagCount < BAGS[d.bag].capacity then
+	elseif d.bagCount < capacity(player) then
 		d.bagCount += 1
 		d.bagValue += info.value * valueMult(player)
 		collected = true
@@ -1769,10 +2060,21 @@ local function breakBlock(player, part, info)
 	end
 
 	for _, T in TREASURE_ROLL do
-		if depth >= T.depth and rng:NextNumber() < T.chance then
+		if depth >= T.depth and rng:NextNumber() < T.chance * luckMult(player) then
 			awardTreasure(player, T, info.pos, depth)
 			break
 		end
+	end
+
+	-- XP: deeper layers are worth more
+	d.xp += table.find(LAYERS, layerAt(info.y)) or 1
+	while d.xp >= xpForLevel(d.level) do
+		d.xp -= xpForLevel(d.level)
+		d.level += 1
+		local reward = math.floor(INCOME[d.pick] * 2 * (1 + (d.asc or 0) * ASCEND_BONUS))
+		d.coins += reward
+		Remotes.LevelUp:FireClient(player, d.level, reward)
+		updateNameplate(player)
 	end
 
 	sync(player)
@@ -1790,7 +2092,7 @@ Remotes.Hit.OnServerEvent:Connect(function(player, part)
 	end
 	local pick = PICKS[d.pick]
 	local now = os.clock()
-	if now - (lastHit[player] or 0) < pick.speed * 0.75 then
+	if now - (lastHit[player] or 0) < pick.speed * swingMult(player) * 0.75 then
 		return
 	end
 	local char = player.Character
@@ -1848,6 +2150,388 @@ sellPad.Touched:Connect(function(hit)
 	local player = model and Players:GetPlayerFromCharacter(model)
 	if player then
 		trySell(player)
+	end
+end)
+
+--------------------------------------------------------------------------------
+-- SIM FEATURES: pets, eggs, potions, codes, spin wheel, passes and products
+--------------------------------------------------------------------------------
+local function coinMinutes(player, minutes)
+	local d = sessions[player]
+	local amount = math.floor(INCOME[d.pick] * minutes * (1 + (d.asc or 0) * ASCEND_BONUS))
+	d.coins += amount
+	d.earned += amount
+	return amount
+end
+
+local function addPotion(player, name, minutes)
+	local d = sessions[player]
+	local now = os.time()
+	d.potions[name] = math.min(math.max(now, d.potions[name] or 0) + minutes * 60, now + 3 * 3600)
+end
+
+local function syncPets(player)
+	local d = sessions[player]
+	local list, equippedIds = {}, {}
+	for _, pet in d.pets do
+		local on = table.find(d.equipped, pet.uid) ~= nil
+		table.insert(list, { u = pet.uid, id = pet.id, e = on })
+		if on then
+			table.insert(equippedIds, pet.id)
+		end
+	end
+	player:SetAttribute("Pets", HttpService:JSONEncode(list))
+	player:SetAttribute("PetsEquipped", HttpService:JSONEncode(equippedIds))
+	player:SetAttribute("PetSlots", petSlots(player))
+end
+
+local function findPet(d, uid)
+	for i, pet in d.pets do
+		if pet.uid == uid then
+			return pet, i
+		end
+	end
+	return nil, nil
+end
+
+local function equipBest(player)
+	local d = sessions[player]
+	local sorted = table.clone(d.pets)
+	table.sort(sorted, function(a, b)
+		return (PETS[a.id] and PETS[a.id].boost or 0) > (PETS[b.id] and PETS[b.id].boost or 0)
+	end)
+	d.equipped = {}
+	for i = 1, math.min(petSlots(player), #sorted) do
+		table.insert(d.equipped, sorted[i].uid)
+	end
+end
+
+local function givePet(player, id)
+	local d = sessions[player]
+	d.petUid += 1
+	table.insert(d.pets, { uid = d.petUid, id = id })
+	-- New players shouldn't have to manage pets: a better pet slots itself in.
+	if #d.equipped < petSlots(player) then
+		table.insert(d.equipped, d.petUid)
+	else
+		local weakest, weakestBoost = nil, math.huge
+		for i, uid in d.equipped do
+			local pet = findPet(d, uid)
+			local b = pet and PETS[pet.id] and PETS[pet.id].boost or 0
+			if b < weakestBoost then
+				weakest, weakestBoost = i, b
+			end
+		end
+		if weakest and PETS[id].boost > weakestBoost then
+			d.equipped[weakest] = d.petUid
+		end
+	end
+	return d.petUid
+end
+
+local lastHatch = {}
+local function hatch(player, index, free)
+	local d = sessions[player]
+	local egg = EGGS[index]
+	if not d or not egg then
+		return
+	end
+	if not free then
+		if os.clock() - (lastHatch[player] or 0) < 1.2 then
+			return
+		end
+		if d.best < egg.depth then
+			notify(player, `Reach {egg.depth}m to unlock the {egg.name}`, Color3.fromRGB(255, 180, 120))
+			return
+		end
+		if d.coins < egg.price then
+			notify(player, `You need 💰 {fmt(egg.price - d.coins)} more`, Color3.fromRGB(255, 130, 110))
+			return
+		end
+	end
+	if #d.pets >= MAX_PETS then
+		notify(player, "Your pet inventory is full! Delete some pets first.", Color3.fromRGB(255, 130, 110))
+		return
+	end
+	lastHatch[player] = os.clock()
+	if not free then
+		d.coins -= egg.price
+	end
+	local luck = luckMult(player)
+	local total = 0
+	for i, entry in egg.pets do
+		total += entry[2] * (if i > 1 then luck else 1)
+	end
+	local roll = rng:NextNumber() * total
+	local chosen = egg.pets[1][1]
+	for i, entry in egg.pets do
+		roll -= entry[2] * (if i > 1 then luck else 1)
+		if roll <= 0 then
+			chosen = entry[1]
+			break
+		end
+	end
+	givePet(player, chosen)
+	syncPets(player)
+	sync(player)
+	Remotes.Hatched:FireClient(player, chosen, egg.id)
+	if PETS[chosen].rarity == "Legendary" then
+		announce(`🐾 {player.DisplayName} hatched a LEGENDARY {PETS[chosen].name}!`, rgb(RARITY_COLORS.Legendary))
+	end
+end
+
+local function pickSpin()
+	local total = 0
+	for _, seg in SPIN do
+		total += seg.weight
+	end
+	local roll = rng:NextNumber() * total
+	for i, seg in SPIN do
+		roll -= seg.weight
+		if roll <= 0 then
+			return i
+		end
+	end
+	return 1
+end
+
+local function bestUnlockedEgg(d)
+	local best = 1
+	for i, egg in EGGS do
+		if d.best >= egg.depth then
+			best = i
+		end
+	end
+	return best
+end
+
+local function spin(player)
+	local d = sessions[player]
+	if not d then
+		return
+	end
+	if os.time() < d.spinAt then
+		notify(player, "The wheel is still recharging", Color3.fromRGB(220, 220, 230))
+		return
+	end
+	d.spinAt = os.time() + SPIN_COOLDOWN
+	local index = pickSpin()
+	local seg = SPIN[index]
+	local text
+	if seg.coinMinutes then
+		text = "+ 💰 " .. fmt(coinMinutes(player, seg.coinMinutes))
+	elseif seg.potion then
+		addPotion(player, seg.potion, seg.minutes)
+		text = `{seg.label} potion · {seg.minutes} min`
+	else
+		text = "A free egg!"
+	end
+	sync(player)
+	Remotes.SpinResult:FireClient(player, index, text)
+	if seg.egg then
+		-- hatch after the wheel animation has had time to land
+		task.delay(4.5, function()
+			if sessions[player] then
+				hatch(player, bestUnlockedEgg(d), true)
+			end
+		end)
+	end
+	if seg.label == "JACKPOT" then
+		task.delay(4.2, announce, `💎 {player.DisplayName} hit the JACKPOT on the spin wheel!`, Color3.fromRGB(255, 90, 90))
+	end
+end
+
+local function redeem(player, code)
+	local d = sessions[player]
+	if not d or type(code) ~= "string" then
+		return
+	end
+	code = string.upper((string.gsub(code, "%s", "")))
+	local reward = CODES[code]
+	if not reward then
+		Remotes.Purchased:FireClient(player, "code", false, "That code doesn't exist")
+		return
+	end
+	if d.codes[code] then
+		Remotes.Purchased:FireClient(player, "code", false, "You already used this code")
+		return
+	end
+	d.codes[code] = true
+	local text
+	if reward.coinMinutes then
+		text = "+ 💰 " .. fmt(coinMinutes(player, reward.coinMinutes))
+	else
+		addPotion(player, reward.potion, reward.minutes)
+		text = `{reward.potion} potion · {reward.minutes} min`
+	end
+	sync(player)
+	Remotes.Purchased:FireClient(player, "code", true, text)
+end
+
+local function applyPass(player, key)
+	local d = sessions[player]
+	if not d then
+		return
+	end
+	d._passes = d._passes or {}
+	if d._passes[key] then
+		return
+	end
+	d._passes[key] = true
+	if key == "VIP" then
+		givePick(player)
+		updateNameplate(player)
+	elseif key == "MorePets" then
+		equipBest(player)
+		syncPets(player)
+	end
+	sync(player)
+	updateBagFill(player)
+end
+
+local function grantProduct(player, key)
+	local d = sessions[player]
+	local product = PRODUCT_BY_KEY[key]
+	if not d or not product then
+		return false
+	end
+	local text
+	if product.starter then
+		if not d.starter then
+			d.starter = true
+			givePet(player, "StarterPup")
+			syncPets(player)
+		end
+		for _, potion in { "Coins", "Luck", "Speed" } do
+			addPotion(player, potion, 15)
+		end
+		text = "Starter Pup + potions + 💰 " .. fmt(coinMinutes(player, 30))
+	elseif product.coinMinutes then
+		text = "+ 💰 " .. fmt(coinMinutes(player, product.coinMinutes))
+	elseif product.potion then
+		addPotion(player, product.potion, product.minutes)
+		text = `{product.name} · {product.minutes} min`
+	elseif key == "NextPick" then
+		if d.pick < #PICKS then
+			d.pick += 1
+			givePick(player)
+			text = "Equipped the " .. PICKS[d.pick].name .. "!"
+		else
+			text = "+ 💰 " .. fmt(coinMinutes(player, 120))
+		end
+	end
+	sync(player)
+	Remotes.Purchased:FireClient(player, key, true, text or product.name)
+	return true
+end
+
+MarketplaceService.ProcessReceipt = function(receipt)
+	local player = Players:GetPlayerByUserId(receipt.PlayerId)
+	local d = player and sessions[player]
+	if not d then
+		return Enum.ProductPurchaseDecision.NotProcessedYet
+	end
+	if table.find(d.receipts, receipt.PurchaseId) then
+		return Enum.ProductPurchaseDecision.PurchaseGranted
+	end
+	local product = PRODUCT_BY_ID[receipt.ProductId]
+	if not product then
+		return Enum.ProductPurchaseDecision.NotProcessedYet
+	end
+	local ok = pcall(grantProduct, player, product.key)
+	if not ok then
+		return Enum.ProductPurchaseDecision.NotProcessedYet
+	end
+	table.insert(d.receipts, receipt.PurchaseId)
+	while #d.receipts > 50 do
+		table.remove(d.receipts, 1)
+	end
+	saveData(player)
+	return Enum.ProductPurchaseDecision.PurchaseGranted
+end
+
+MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, passId, purchased)
+	local pass = PASS_BY_ID[passId]
+	if purchased and pass then
+		applyPass(player, pass.key)
+		Remotes.Purchased:FireClient(player, pass.key, true, pass.name .. " unlocked!")
+	end
+end)
+
+local function loadPasses(player)
+	for _, pass in PASSES do
+		if pass.id ~= 0 then
+			local ok, has = pcall(function()
+				return MarketplaceService:UserOwnsGamePassAsync(player.UserId, pass.id)
+			end)
+			if ok and has then
+				applyPass(player, pass.key)
+			end
+		end
+	end
+end
+
+local lastAction = {}
+Remotes.Action.OnServerEvent:Connect(function(player, action, arg, arg2)
+	local d = sessions[player]
+	if not d or type(action) ~= "string" then
+		return
+	end
+	if os.clock() - (lastAction[player] or 0) < 0.15 then
+		return
+	end
+	lastAction[player] = os.clock()
+	if action == "Sell" then
+		if owns(player, "SellAnywhere") then
+			trySell(player)
+		end
+	elseif action == "Equip" or action == "Unequip" then
+		local pet = findPet(d, arg)
+		if not pet then
+			return
+		end
+		local at = table.find(d.equipped, pet.uid)
+		if action == "Unequip" and at then
+			table.remove(d.equipped, at)
+		elseif action == "Equip" and not at then
+			if #d.equipped >= petSlots(player) then
+				Remotes.Notify:FireClient(player, "All pet slots are full. Unequip one first.", Color3.fromRGB(255, 180, 120))
+				return
+			end
+			table.insert(d.equipped, pet.uid)
+		end
+		syncPets(player)
+		sync(player)
+	elseif action == "EquipBest" then
+		equipBest(player)
+		syncPets(player)
+		sync(player)
+	elseif action == "Delete" then
+		local pet, i = findPet(d, arg)
+		if pet and i then
+			table.remove(d.pets, i)
+			local at = table.find(d.equipped, pet.uid)
+			if at then
+				table.remove(d.equipped, at)
+			end
+			syncPets(player)
+			sync(player)
+		end
+	elseif action == "Redeem" then
+		redeem(player, arg)
+	elseif action == "Spin" then
+		spin(player)
+	elseif action == "DevGrant" then
+		-- Studio-only test purchases for items whose id is still 0
+		if not RunService:IsStudio() then
+			return
+		end
+		if arg == "Pass" and PASS_BY_KEY[arg2] and PASS_BY_KEY[arg2].id == 0 then
+			applyPass(player, arg2)
+			Remotes.Purchased:FireClient(player, arg2, true, PASS_BY_KEY[arg2].name .. " unlocked! (Studio test)")
+		elseif arg == "Product" and PRODUCT_BY_KEY[arg2] and PRODUCT_BY_KEY[arg2].id == 0 then
+			grantProduct(player, arg2)
+		end
 	end
 end)
 
@@ -1983,6 +2667,8 @@ ProximityPromptService.PromptTriggered:Connect(function(p, player)
 		claimDaily(player)
 	elseif kind == "Ascend" then
 		ascend(player)
+	elseif kind == "Egg" then
+		hatch(player, p:GetAttribute("Egg"), false)
 	end
 end)
 
@@ -2042,7 +2728,17 @@ local function onJoin(player)
 		return
 	end
 	sessions[player] = d
+	d._passes = {}
+	if d.firstJoin == 0 then
+		d.firstJoin = os.time()
+	end
 	sync(player)
+	syncPets(player)
+	task.spawn(function()
+		loadPasses(player)
+		sync(player)
+		syncPets(player)
+	end)
 	player.CharacterAdded:Connect(function(char)
 		onCharacter(player, char)
 	end)
@@ -2063,6 +2759,8 @@ Players.PlayerRemoving:Connect(function(player)
 	lastHit[player] = nil
 	lastSell[player] = nil
 	lastSurface[player] = nil
+	lastHatch[player] = nil
+	lastAction[player] = nil
 	for _, info in blockInfo do
 		if info.hitters then
 			info.hitters[player] = nil
