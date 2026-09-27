@@ -42,6 +42,7 @@ function DataTemplate.new(): Types.ProfileData
 			PlaySeconds = 0,
 			DecorationsPlaced = 0,
 			BestPetScore = 0,
+			IndexCount = 0,
 		},
 		Daily = { Streak = 0, LastClaimDay = -1 },
 		Quests = { DailyDay = -1, Daily = {}, WeeklyWeek = -1, Weekly = {} },
@@ -58,6 +59,8 @@ function DataTemplate.new(): Types.ProfileData
 		LoginCount = 0,
 		TradeHistory = {},
 		EventProgress = {},
+		BestPet = "",
+		BestPetTier = 0,
 	}
 end
 

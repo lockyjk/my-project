@@ -278,6 +278,8 @@ export type ProfileData = {
 	LoginCount: number,
 	TradeHistory: { { with: number, at: number, gave: { string }, got: { string } } },
 	EventProgress: { [string]: { [string]: number } },
+	BestPet: string, -- rarest Stormling ever owned (leaderboard)
+	BestPetTier: number,
 }
 
 return {}

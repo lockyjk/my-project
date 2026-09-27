@@ -14,6 +14,9 @@ local order = {
 	"UpgradeService",
 	"ZoneService",
 	"IslandService",
+	"PetService",
+	"RewardService",
+	"RebirthService",
 	"TutorialService",
 }
 
