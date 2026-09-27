@@ -1,0 +1,17 @@
+{
+  "name": "DigDeep",
+  "tree": {
+    "$className": "DataModel",
+    "ServerScriptService": {
+      "DigDeepServer": { "$path": "DigDeepServer.server.luau" }
+    },
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "DigDeepClient": { "$path": "DigDeepClient.client.luau" }
+      }
+    },
+    "Workspace": {
+      "$properties": { "FallenPartsDestroyHeight": -500 }
+    }
+  }
+}
