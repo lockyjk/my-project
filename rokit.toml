@@ -1,0 +1,7 @@
+# Toolchain pins (https://github.com/rojo-rbx/rokit). `rokit install` fetches these.
+[tools]
+rojo = "rojo-rbx/rojo@7.4.4"
+selene = "Kampfkarren/selene@0.27.1"
+stylua = "JohnnyMorganz/StyLua@0.20.0"
+lune = "lune-org/lune@0.8.9"
+luau-lsp = "JohnnyMorganz/luau-lsp@1.70.0"

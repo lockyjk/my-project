@@ -1,0 +1,5 @@
+{
+	"luau-lsp.sourcemap.enabled": true,
+	"luau-lsp.types.roblox": true,
+	"luau-lsp.ignoreGlobs": ["scripts/**"]
+}
