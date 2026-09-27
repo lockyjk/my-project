@@ -22,7 +22,10 @@ local order = {
 	"StormPassService",
 	"LeaderboardService",
 	"TradeService",
+	"ShopService",
+	"AnalyticsService",
 	"TutorialService",
+	"DevService",
 }
 
 Net.Server.init()

@@ -121,6 +121,7 @@ local defs: { [string]: RemoteDef } = {
 	PromptProduct = { kind = "Function", args = { t.id }, rate = 2 },
 	PromptPass = { kind = "Function", args = { t.id }, rate = 2 },
 	GetShopInfo = { kind = "Function", args = {}, rate = 1 },
+	MarkStarterOffered = { kind = "Event", args = {}, rate = 1 },
 	-- Trading
 	TradeRequest = { kind = "Function", args = { t.int }, rate = 1 },
 	TradeRespond = { kind = "Function", args = { t.int, t.boolean }, rate = 2 },

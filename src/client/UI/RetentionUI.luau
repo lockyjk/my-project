@@ -4,7 +4,9 @@
 --   right:     quest tracker (daily quests at a glance)
 --   windows:   Daily streak, Gifts, Quests (daily / weekly / achievements), Leaderboards
 
+local CollectionService = game:GetService("CollectionService")
 local MarketplaceService = game:GetService("MarketplaceService")
+local ProximityPromptService = game:GetService("ProximityPromptService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
@@ -632,6 +634,12 @@ function RetentionUI.start()
 	giftsWindow()
 	questsWindow()
 	leaderboardWindow()
+	ProximityPromptService.PromptTriggered:Connect(function(prompt)
+		local parent = prompt.Parent
+		if parent and CollectionService:HasTag(parent, "GroupPad") then
+			call("ClaimGroupReward")
+		end
+	end)
 end
 
 return RetentionUI
