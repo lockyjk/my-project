@@ -232,7 +232,7 @@ function EconomyMath.pickFromOdds(odds: { Odds }, u: number): string
 	return odds[#odds].pet
 end
 
-function EconomyMath.pickWeighted(entries: { { weight: number } }, u: number): number
+function EconomyMath.pickWeighted(entries: { any }, u: number): number
 	local total = 0
 	for _, e in entries do
 		total += e.weight

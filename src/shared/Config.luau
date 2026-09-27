@@ -61,7 +61,7 @@ Config.Upgrades = {
 		id = "JarCapacity",
 		name = "Storm Jar",
 		description = "Hold more Static before you need to sell.",
-		icon = "JAR",
+		icon = "Jar",
 		maxLevel = 60,
 		baseCost = 15,
 		costGrowth = 1.62,
@@ -74,7 +74,7 @@ Config.Upgrades = {
 		id = "CatchSpeed",
 		name = "Catch Rod",
 		description = "Catch spirits faster. Level 2 unlocks hold-to-catch.",
-		icon = "ROD",
+		icon = "Rod",
 		maxLevel = 30,
 		baseCost = 20,
 		costGrowth = 1.9,
@@ -88,7 +88,7 @@ Config.Upgrades = {
 		id = "WalkSpeed",
 		name = "Storm Boots",
 		description = "Run faster between spirits.",
-		icon = "BOOT",
+		icon = "Boot",
 		maxLevel = 20,
 		baseCost = 30,
 		costGrowth = 2.1,
@@ -102,7 +102,7 @@ Config.Upgrades = {
 		id = "CatchRange",
 		name = "Vacuum Nozzle",
 		description = "Reach spirits from further away.",
-		icon = "RANGE",
+		icon = "Range",
 		maxLevel = 20,
 		baseCost = 40,
 		costGrowth = 2.2,
@@ -116,7 +116,7 @@ Config.Upgrades = {
 		id = "Luck",
 		name = "Lucky Charm",
 		description = "More shiny spirits and rare pet drops.",
-		icon = "LUCK",
+		icon = "Luck",
 		maxLevel = 25,
 		baseCost = 75,
 		costGrowth = 2.3,
@@ -972,7 +972,6 @@ Config.Island = {
 		{ cells = 14, cost = 1.5e10 },
 	},
 	MaxPlaced = 60,
-	SellRefund = 0.5,
 }
 
 Config.Decorations = {
@@ -1003,10 +1002,10 @@ Config.MaxBoostSeconds = 4 * 3600
 -- Storm Pass (seasonal battle pass)
 -------------------------------------------------------------------------------
 Config.StormPass = {
-	Season = "S1",
-	SeasonName = "Season 1: First Flash",
+	-- Seasons roll automatically every `Days` days from StartUnix (Season 1, 2, ...).
 	StartUnix = 1788220800, -- 2026-09-01 00:00 UTC
 	Days = 30,
+	SeasonNames = { [1] = "First Flash", [2] = "Frostbite", [3] = "Aurora Nights" } :: { [number]: string },
 	Tiers = 50,
 	XPBase = 400, -- XP for tier t = XPBase + XPStep*(t-1)
 	XPStep = 20,

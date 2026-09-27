@@ -52,12 +52,46 @@ Theme.UI = {
 	PanelWidth = 720,
 	PanelHeight = 520,
 	-- Base design resolution; UIScale adapts to the real viewport (mobile first)
-	DesignSize = Vector2.new(1280, 720),
+	DesignSize = Vector2.new(1100, 620),
 	MinScale = 0.55,
 	MaxScale = 1.35,
 	PopupRise = 90, -- px the "+Charge" number popups float up
 	PressScale = 0.9, -- buttons squash on press
 	BounceTime = 0.18,
+}
+
+-- Text glyph icons (placeholders: swap for uploaded image ids later - UIKit.icon handles both)
+Theme.Icons = {
+	Charge = "⚡",
+	Static = "💧",
+	Tokens = "🌀",
+	Jar = "🫙",
+	Rod = "🎣",
+	Boot = "👟",
+	Range = "🎯",
+	Luck = "🍀",
+	Upgrades = "⬆️",
+	Pets = "🐾",
+	Shop = "🛒",
+	Quests = "📜",
+	Pass = "🎟️",
+	Build = "🏝️",
+	Index = "📖",
+	Trade = "🤝",
+	Ascend = "✨",
+	Home = "🏠",
+	Back = "↩️",
+	Travel = "🧭",
+	Gift = "🎁",
+	Streak = "🔥",
+	Settings = "⚙️",
+	Egg = "🥚",
+	Lock = "🔒",
+	Close = "✕",
+	Storm = "⛈️",
+	Star = "⭐",
+	Check = "✔",
+	Leaderboard = "🏆",
 }
 
 -- Button face gradient: top is 18% lighter, bottom 18% darker (the "toy plastic" look)
