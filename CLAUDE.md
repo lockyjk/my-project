@@ -33,6 +33,11 @@ tight core loop, a visible next goal, reasons to return (daily rewards, offline 
 quests, timed events), social hooks, mobile-friendly controls, and fair, policy-safe
 monetization (no Robux-bought random items).
 
+**Constant rewards** (the "+1 ___ Per Click" hook): every click visibly gives something (a big
+"+1" popup at the cursor with a pop sound), the first free reward lands within 10 seconds,
+timed free gifts keep coming every few minutes, milestone bursts pay out often, and a rebirth
+gives a permanent multiplier.
+
 ## Dig Deep (`dig-deep/`)
 - Two scripts: `DigDeepServer.server.luau` and `DigDeepClient.client.luau`. Build a
   ready-to-play place with `rojo build dig-deep/default.project.json -o dig-deep/DigDeep.rbxlx`.

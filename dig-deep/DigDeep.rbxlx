@@ -99,17 +99,17 @@ local ORES = {
 local LAYERS = {
 	{ name = "Topsoil", band = { 220, 160, 90 }, alt = { material = "Mud", color = { 176, 108, 56 } }, from = 0, hp = 3, value = 1, color = { 196, 128, 70 }, material = "Ground", tint = { 255, 244, 228 },
 		ores = { { id = "Coal", chance = 0.06 }, { id = "Copper", chance = 0.03 } } },
-	{ name = "Stone", band = { 196, 196, 208 }, alt = { material = "Rock", color = { 140, 142, 158 } }, from = 20, hp = 8, value = 2, color = { 160, 162, 176 }, material = "Slate", tint = { 236, 240, 255 },
+	{ name = "Stone", band = { 196, 196, 208 }, alt = { material = "Rock", color = { 140, 142, 158 } }, from = 20, hp = 16, value = 2, color = { 160, 162, 176 }, material = "Slate", tint = { 236, 240, 255 },
 		ores = { { id = "Coal", chance = 0.04 }, { id = "Copper", chance = 0.04 }, { id = "Iron", chance = 0.04 }, { id = "Silver", chance = 0.015 } } },
-	{ name = "Deepstone", band = { 124, 140, 200 }, alt = { material = "Slate", color = { 80, 92, 142 } }, from = 60, hp = 16, value = 5, color = { 96, 110, 162 }, material = "Basalt", tint = { 214, 224, 255 },
+	{ name = "Deepstone", band = { 124, 140, 200 }, alt = { material = "Slate", color = { 80, 92, 142 } }, from = 60, hp = 40, value = 5, color = { 96, 110, 162 }, material = "Basalt", tint = { 214, 224, 255 },
 		ores = { { id = "Iron", chance = 0.04 }, { id = "Silver", chance = 0.03 }, { id = "Gold", chance = 0.025 }, { id = "Ruby", chance = 0.008 }, { id = "Sapphire", chance = 0.008 } } },
-	{ name = "Magma Rock", band = { 244, 124, 52 }, alt = { material = "Basalt", color = { 170, 56, 30 } }, from = 120, hp = 50, value = 12, color = { 212, 80, 40 }, material = "CrackedLava", tint = { 255, 212, 186 },
+	{ name = "Magma Rock", band = { 244, 124, 52 }, alt = { material = "Basalt", color = { 170, 56, 30 } }, from = 120, hp = 150, value = 12, color = { 212, 80, 40 }, material = "CrackedLava", tint = { 255, 212, 186 },
 		ores = { { id = "Gold", chance = 0.03 }, { id = "Obsidian", chance = 0.03 }, { id = "Emerald", chance = 0.015 }, { id = "Firestone", chance = 0.007 } } },
-	{ name = "Crystal Caves", band = { 172, 212, 255 }, alt = { material = "Ice", color = { 100, 140, 222 } }, from = 200, hp = 160, value = 30, color = { 122, 170, 242 }, material = "Glacier", tint = { 206, 224, 255 },
+	{ name = "Crystal Caves", band = { 172, 212, 255 }, alt = { material = "Ice", color = { 100, 140, 222 } }, from = 200, hp = 560, value = 30, color = { 122, 170, 242 }, material = "Glacier", tint = { 206, 224, 255 },
 		ores = { { id = "Amethyst", chance = 0.03 }, { id = "Diamond", chance = 0.01 }, { id = "Moonstone", chance = 0.004 } } },
-	{ name = "The Void", band = { 134, 84, 206 }, alt = { material = "Basalt", color = { 70, 36, 122 } }, from = 300, hp = 520, value = 80, color = { 92, 52, 152 }, material = "Slate", tint = { 222, 196, 255 },
+	{ name = "The Void", band = { 134, 84, 206 }, alt = { material = "Basalt", color = { 70, 36, 122 } }, from = 300, hp = 2000, value = 80, color = { 92, 52, 152 }, material = "Slate", tint = { 222, 196, 255 },
 		ores = { { id = "Voidstone", chance = 0.03 }, { id = "Starshard", chance = 0.008 }, { id = "Singularity", chance = 0.0008 } } },
-	{ name = "The Core", band = { 255, 172, 60 }, alt = { material = "CrackedLava", color = { 200, 70, 20 } }, from = 420, hp = 1500, value = 240, color = { 240, 112, 32 }, material = "Basalt", tint = { 255, 200, 170 },
+	{ name = "The Core", band = { 255, 172, 60 }, alt = { material = "CrackedLava", color = { 200, 70, 20 } }, from = 420, hp = 6000, value = 240, color = { 240, 112, 32 }, material = "Basalt", tint = { 255, 200, 170 },
 		ores = { { id = "Starshard", chance = 0.01 }, { id = "Corium", chance = 0.02 }, { id = "Singularity", chance = 0.002 } } },
 }
 
@@ -236,10 +236,40 @@ local QUEST_POOL = {
 	{ id = "play", text = "Play for %d minutes", goal = 15 },
 	{ id = "geode", text = "Break %d geode", goal = 1 },
 	{ id = "deep", text = "Dig %d new rows deeper", goal = 10 },
+	{ id = "train", text = "Swing your pickaxe %d times", goal = 400 },
 }
 local QUEST_REWARD_MINUTES = 6
 local OFFLINE_RATE = 0.15 -- share of normal income earned while away
 local OFFLINE_CAP_MINUTES = 8 * 60
+
+-- +1 STRENGTH EVERY CLICK (the "+1 Mine Per Click" loop): every swing, even at thin air, trains
+-- Strength. Strength multiplies pickaxe damage, so deeper, tougher layers need more of it.
+local STRENGTH_DAMAGE = 0.1 -- pickaxe damage x (1 + sqrt(Strength) * this)
+local REBIRTH_BASE, REBIRTH_GROWTH = 250, 2.6 -- Strength needed for rebirth r is BASE * GROWTH^r
+local REBIRTH_STRENGTH, REBIRTH_CASH = 0.5, 0.2 -- each rebirth: +0.5x Strength per click, +0.2x cash
+local OFFLINE_STRENGTH_PER_MINUTE = 15
+local TRAIN_TICK = 0.4 -- seconds between automatic swings on a training rock
+local TRAINING_ROCKS = {
+	{ name = "Pebble Rock", mult = 1, rebirths = 0, color = { 150, 150, 160 } },
+	{ name = "Boulder", mult = 3, rebirths = 1, color = { 196, 136, 84 } },
+	{ name = "Crystal Rock", mult = 10, rebirths = 10, color = { 120, 190, 255 }, gem = { 90, 230, 255 } },
+	{ name = "Star Rock", mult = 25, rebirths = 25, color = { 170, 110, 255 }, gem = { 255, 230, 90 } },
+}
+-- Free gifts for playing: the first one after 10 seconds, then every few minutes (resets each session)
+local GIFTS = {
+	{ at = 10, icon = "💪", strengthMinutes = 1 },
+	{ at = 30, icon = "💰", coinMinutes = 2 },
+	{ at = 60, icon = "⚡", potion = "Speed", minutes = 5 },
+	{ at = 120, icon = "💪", strengthMinutes = 3 },
+	{ at = 180, icon = "💰", coinMinutes = 5 },
+	{ at = 300, icon = "🍀", potion = "Luck", minutes = 10 },
+	{ at = 420, icon = "💪", strengthMinutes = 6 },
+	{ at = 600, icon = "🥚", egg = true },
+	{ at = 780, icon = "💰", coinMinutes = 12 },
+	{ at = 960, icon = "🧪", potion = "Coins", minutes = 15 },
+	{ at = 1200, icon = "💪", strengthMinutes = 15 },
+	{ at = 1500, icon = "💎", coinMinutes = 30 },
+}
 
 -- Codes are case-insensitive. Post new ones in your group/social to bring players back.
 local CODES = {
@@ -558,7 +588,7 @@ treasureFolder.Parent = ReplicatedStorage
 local remoteFolder = Instance.new("Folder")
 remoteFolder.Name = "DigRemotes"
 local Remotes = {}
-for _, name in { "Hit", "Surface", "Mined", "Treasure", "Geode", "Sold", "Notify", "Announce", "Bought", "Reward", "Action", "Hatched", "LevelUp", "SpinResult", "Purchased", "Welcome" } do
+for _, name in { "Hit", "Surface", "Mined", "Treasure", "Geode", "Sold", "Notify", "Announce", "Bought", "Reward", "Action", "Hatched", "LevelUp", "SpinResult", "Purchased", "Welcome", "Milestone", "Gift" } do
 	local r = Instance.new("RemoteEvent")
 	r.Name = name
 	r.Parent = remoteFolder
@@ -573,6 +603,7 @@ do
 		passes = PASSES, products = PRODUCTS, pets = PETS, eggs = EGGS, rarityColors = RARITY_COLORS,
 		petSlots = PET_SLOTS, maxPets = MAX_PETS, spin = SPIN, spinCooldown = SPIN_COOLDOWN, income = INCOME,
 		levelBonus = LEVEL_BONUS, ascendBonus = ASCEND_BONUS, questRewardMinutes = QUEST_REWARD_MINUTES,
+		strengthDamage = STRENGTH_DAMAGE, rebirthStrength = REBIRTH_STRENGTH, rebirthCash = REBIRTH_CASH, trainingRocks = TRAINING_ROCKS, gifts = GIFTS,
 		petCount = (function()
 			local n = 0
 			for _ in PETS do
@@ -1211,6 +1242,9 @@ local function buildWorld()
 		if x > PIT and x < PIT + 26 and z > -46 and z < -14 then
 			return true
 		end
+		if x < -84 + pad and x > -142 - pad and math.abs(z) < 76 + pad then
+			return true -- training area
+		end
 		if math.abs(x) > 146 - pad or z > 112 - pad or z < -196 + pad then
 			return true
 		end
@@ -1317,6 +1351,28 @@ local function buildWorld()
 	glowPad(W(-16, 0, -121), 5, Color3.fromRGB(110, 255, 110))
 	glowPad(W(44, 0, -84), 6)
 	glowPad(W(78, 0, -150), 9, Color3.fromRGB(200, 140, 255))
+
+	-- Training Area (west of the mine): stand on a rock's pad and you train Strength by yourself
+	title(W(-112, 30, 0), "🏋️ TRAINING AREA", Color3.fromRGB(255, 200, 80), 32)
+	for i, R in TRAINING_ROCKS do
+		local x, z = -112, -54 + (i - 1) * 36
+		local c = Color3.fromRGB(R.color[1], R.color[2], R.color[3])
+		local rock = newPart({ Name = "TrainingRock", Size = Vector3.new(9, 6, 8), Position = W(x, 3, z), Color = c, Material = Enum.Material.SmoothPlastic }, town)
+		newPart({ Name = "RockTop", Size = Vector3.new(6, 4, 6), CFrame = CFrame.new(W(x + 0.5, 7, z - 0.4)) * CFrame.Angles(0, math.rad(20), 0), Color = c:Lerp(Color3.new(1, 1, 1), 0.15), Material = Enum.Material.SmoothPlastic }, town)
+		newPart({ Name = "RockChip", Size = Vector3.new(3, 2.4, 3), CFrame = CFrame.new(W(x - 3.4, 1.2, z + 3.2)) * CFrame.Angles(0, math.rad(35), 0), Color = c:Lerp(Color3.new(0, 0, 0), 0.12), Material = Enum.Material.SmoothPlastic }, town)
+		if R.gem then
+			local g = Color3.fromRGB(R.gem[1], R.gem[2], R.gem[3])
+			for k = 0, 2 do
+				local crystal = newPart({ Name = "RockGem", Size = Vector3.new(1.4, 4 - k, 1.4), CFrame = CFrame.new(W(x + (k - 1) * 1.8, 10 + (k == 1 and 0.6 or 0), z)) * CFrame.Angles(0, 0, math.rad((k - 1) * -22)), Color = g, Material = Enum.Material.Neon }, town)
+				crystal.CanCollide = false
+			end
+		end
+		rock:SetAttribute("Rock", i)
+		CollectionService:AddTag(rock, "TrainingRock")
+		glowPad(W(x, 0, z), 10, if R.rebirths == 0 then Color3.fromRGB(110, 255, 110) else Color3.fromRGB(255, 232, 60))
+		title(W(x, 17, z), `💪 x{R.mult}`, if R.rebirths == 0 then Color3.fromRGB(110, 255, 110) else Color3.fromRGB(255, 214, 70), 12)
+		billboard(rock, 9, { { "Sub", if R.rebirths == 0 then "FREE! Stand on the pad to train" else `🔒 Needs {R.rebirths} Rebirth{if R.rebirths == 1 then "" else "s"}`, 16, Color3.fromRGB(240, 240, 240) } }, 90)
+	end
 
 	-- Cartoon pass: flat, saturated plastic everywhere (Neon and Glass stay as they are)
 	for _, part in town:GetDescendants() do
@@ -1652,6 +1708,7 @@ pcall(function()
 end)
 
 local sessions = {}
+local addStrength, strengthMult, damageMult, rebirth, claimGift -- the Strength system (defined further down)
 local postScore -- defined with the leaderboard below
 
 local function newData()
@@ -1662,6 +1719,7 @@ local function newData()
 		pets = {}, equipped = {}, petUid = 0, xp = 0, level = 1,
 		potions = {}, codes = {}, spinAt = 0, starter = false, firstJoin = 0, receipts = {}, settings = {},
 		quests = {}, lastSeen = 0, petIndex = {}, sells = 0,
+		strength = 0, rebirths = 0, strMile = 0,
 	}
 end
 
@@ -1810,6 +1868,7 @@ local function valueMult(player)
 	local m = (1 + uniqueTreasures(d) * TREASURE_BONUS) * (1 + (d.asc or 0) * ASCEND_BONUS)
 	m *= 1 + (d.level - 1) * LEVEL_BONUS
 	m *= 1 + petBoost(d)
+	m *= 1 + (d.rebirths or 0) * REBIRTH_CASH
 	if player:GetAttribute("FriendBonus") then
 		m *= 1 + FRIEND_BONUS
 	end
@@ -1851,6 +1910,10 @@ local function sync(player)
 	player:SetAttribute("SpinAt", d.spinAt)
 	player:SetAttribute("Starter", d.starter)
 	player:SetAttribute("FirstJoin", d.firstJoin)
+	player:SetAttribute("Strength", d.strength)
+	player:SetAttribute("Rebirths", d.rebirths)
+	player:SetAttribute("RebirthReq", math.floor(REBIRTH_BASE * REBIRTH_GROWTH ^ d.rebirths))
+	player:SetAttribute("StrMult", strengthMult(player))
 	for name, expiry in d.potions do
 		player:SetAttribute("Potion_" .. name, expiry)
 	end
@@ -1859,9 +1922,10 @@ local function sync(player)
 	end
 	local stats = player:FindFirstChild("leaderstats")
 	if stats then
+		stats.Strength.Value = d.strength
 		stats.Depth.Value = d.best
 		stats.Coins.Value = d.coins
-		stats.Ascensions.Value = d.asc or 0
+		stats.Rebirths.Value = d.rebirths
 	end
 end
 
@@ -2145,6 +2209,9 @@ updateNameplate = function(player)
 	if owns(player, "VIP") then
 		table.insert(parts, `<font color="#FFC83C">👑 VIP</font>`)
 	end
+	if (d.rebirths or 0) > 0 then
+		table.insert(parts, `<font color="#7CF0FF">🔁{d.rebirths}</font>`)
+	end
 	if (d.asc or 0) > 0 then
 		table.insert(parts, `<font color="#D7AFFF">⭐{d.asc}</font>`)
 	end
@@ -2322,11 +2389,12 @@ Remotes.Hit.OnServerEvent:Connect(function(player, part)
 		return
 	end
 	lastHit[player] = now
+	addStrength(player, strengthMult(player))
 
 	if info.hitters then
 		info.hitters[player] = true
 	end
-	info.hp -= pick.dmg
+	info.hp -= pick.dmg * damageMult(d)
 	if info.hp > 0 then
 		part:SetAttribute("HP", info.hp)
 		part.Color = info.color:Lerp(Color3.new(0, 0, 0), 0.45 * (1 - info.hp / info.maxHp))
@@ -2700,17 +2768,190 @@ local function loadPasses(player)
 	end
 end
 
+--------------------------------------------------------------------------------
+-- +1 STRENGTH EVERY CLICK: training, training rocks, milestones, rebirth, free gifts
+--------------------------------------------------------------------------------
+do
+	strengthMult = function(player)
+		local d = sessions[player]
+		if not d then
+			return 1
+		end
+		local m = 1 + (d.rebirths or 0) * REBIRTH_STRENGTH
+		if owns(player, "VIP") then
+			m *= 1.25
+		end
+		return m
+	end
+
+	damageMult = function(d)
+		return 1 + math.sqrt(math.max(0, d.strength or 0)) * STRENGTH_DAMAGE
+	end
+
+	-- Strength milestones 25, 50, 100, 250, 500, 1K, 2.5K ... each one pays out on the spot
+	local function milestone(k)
+		local steps = { 2.5, 5, 10 }
+		return steps[(k - 1) % 3 + 1] * 10 ^ (math.floor((k - 1) / 3) + 1)
+	end
+
+	local dirty = {}
+	addStrength = function(player, amount)
+		local d = sessions[player]
+		if not d then
+			return
+		end
+		d.strength += amount
+		player:SetAttribute("Strength", d.strength)
+		dirty[player] = true
+		questProgress(player, "train")
+		local k = (d.strMile or 0) + 1
+		if d.strength >= milestone(k) then
+			-- skip past any milestones a big gift jumped over, but only pay for the highest
+			while d.strength >= milestone(k + 1) do
+				k += 1
+			end
+			d.strMile = k
+			local reward = coinMinutes(player, 1 + k * 0.5)
+			sync(player)
+			Remotes.Milestone:FireClient(player, milestone(k), reward)
+		end
+	end
+
+	rebirth = function(player)
+		local d = sessions[player]
+		if not d then
+			return
+		end
+		local need = math.floor(REBIRTH_BASE * REBIRTH_GROWTH ^ d.rebirths)
+		if d.strength < need then
+			notify(player, `You need 💪 {fmt(need - d.strength)} more Strength to rebirth`, Color3.fromRGB(255, 130, 110))
+			return
+		end
+		d.rebirths += 1
+		d.strength = 0
+		d.strMile = 0 -- strength milestones pay out again on every run
+		sync(player)
+		updateNameplate(player)
+		Remotes.Milestone:FireClient(player, "Rebirth", d.rebirths)
+		if d.rebirths == 1 or d.rebirths % 5 == 0 then
+			announce(`🔁 {player.DisplayName} reached Rebirth {d.rebirths}!`, Color3.fromRGB(124, 240, 255))
+		end
+	end
+
+	local POTION_NAMES = { Coins = "2x Coins", Luck = "Luck", Speed = "Speed" }
+	claimGift = function(player, index)
+		local d = sessions[player]
+		local g = if type(index) == "number" then GIFTS[index] else nil
+		if not d or not g or not d._gifts or d._gifts[index] then
+			return
+		end
+		if os.clock() - d._giftStart < g.at - 1 then
+			return
+		end
+		d._gifts[index] = true
+		local claimed = {}
+		for i in d._gifts do
+			table.insert(claimed, i)
+		end
+		player:SetAttribute("GiftsClaimed", HttpService:JSONEncode(claimed))
+		local text
+		if g.strengthMinutes then
+			local n = math.floor(150 * g.strengthMinutes * strengthMult(player))
+			addStrength(player, n)
+			text = `+ 💪 {fmt(n)} Strength`
+		elseif g.coinMinutes then
+			text = "+ 💰 " .. fmt(coinMinutes(player, g.coinMinutes))
+		elseif g.potion then
+			addPotion(player, g.potion, g.minutes)
+			text = `{POTION_NAMES[g.potion] or g.potion} potion · {g.minutes} min`
+		else
+			text = "A free egg!"
+			task.delay(1.2, function()
+				if sessions[player] then
+					hatch(player, bestUnlockedEgg(d), true)
+				end
+			end)
+		end
+		sync(player)
+		Remotes.Gift:FireClient(player, index, text)
+	end
+
+	-- Training rocks: standing on a rock's pad swings for you every TRAIN_TICK seconds
+	task.spawn(function()
+		local warned = {}
+		local rocks = CollectionService:GetTagged("TrainingRock") -- built once with the world
+		while true do
+			task.wait(TRAIN_TICK)
+			for player, d in sessions do
+				local char = player.Character
+				local root = char and char:FindFirstChild("HumanoidRootPart")
+				local hum = char and char:FindFirstChildOfClass("Humanoid")
+				local on = 0
+				if root and root:IsA("BasePart") and hum and hum.Health > 0 then
+					for _, rock in rocks do
+						if rock:IsA("BasePart") then
+							local offset = root.Position - rock.Position
+							if Vector3.new(offset.X, 0, offset.Z).Magnitude < 11 and math.abs(offset.Y) < 10 then
+								on = rock:GetAttribute("Rock") or 0
+								break
+							end
+						end
+					end
+				end
+				local R = TRAINING_ROCKS[on]
+				if R and (d.rebirths or 0) < R.rebirths then
+					if not warned[player] or os.clock() - warned[player] > 4 then
+						warned[player] = os.clock()
+						notify(player, `🔒 The {R.name} needs {R.rebirths} Rebirth{if R.rebirths == 1 then "" else "s"}`, Color3.fromRGB(255, 180, 120))
+					end
+					R = nil
+					on = 0
+				end
+				if player:GetAttribute("Training") ~= on then
+					player:SetAttribute("Training", on)
+				end
+				if R then
+					addStrength(player, strengthMult(player) * R.mult)
+				end
+			end
+			-- keep the player-list column fresh without touching it on every swing
+			for player in dirty do
+				local d = sessions[player]
+				local stats = player:FindFirstChild("leaderstats")
+				if d and stats and stats:FindFirstChild("Strength") then
+					stats.Strength.Value = d.strength
+				end
+			end
+			table.clear(dirty)
+		end
+	end)
+end
+
 local lastAction = {}
 Remotes.Action.OnServerEvent:Connect(function(player, action, arg, arg2)
 	local d = sessions[player]
 	if not d or type(action) ~= "string" then
 		return
 	end
+	if action == "Train" then
+		-- a swing at thin air: same rate limit as mining, +Strength every click
+		local now = os.clock()
+		if now - (lastHit[player] or 0) < PICKS[d.pick].speed * swingMult(player) * 0.75 then
+			return
+		end
+		lastHit[player] = now
+		addStrength(player, strengthMult(player))
+		return
+	end
 	if os.clock() - (lastAction[player] or 0) < 0.15 then
 		return
 	end
 	lastAction[player] = os.clock()
-	if action == "Sell" then
+	if action == "Rebirth" then
+		rebirth(player)
+	elseif action == "ClaimGift" then
+		claimGift(player, arg)
+	elseif action == "Sell" then
 		if owns(player, "SellAnywhere") then
 			trySell(player)
 		end
@@ -2988,15 +3229,18 @@ end
 local function onJoin(player)
 	local stats = Instance.new("Folder")
 	stats.Name = "leaderstats"
+	local strength = Instance.new("NumberValue")
+	strength.Name = "Strength"
+	strength.Parent = stats
 	local depth = Instance.new("IntValue")
 	depth.Name = "Depth"
 	depth.Parent = stats
 	local coins = Instance.new("NumberValue")
 	coins.Name = "Coins"
 	coins.Parent = stats
-	local asc = Instance.new("IntValue")
-	asc.Name = "Ascensions"
-	asc.Parent = stats
+	local rebirths = Instance.new("IntValue")
+	rebirths.Name = "Rebirths"
+	rebirths.Parent = stats
 	stats.Parent = player
 
 	local d = loadData(player)
@@ -3010,22 +3254,29 @@ local function onJoin(player)
 	end
 	player:SetAttribute("Settings", HttpService:JSONEncode(d.settings or {}))
 	d.petIndex = d.petIndex or {}
+	d._giftStart = os.clock()
+	d._gifts = {}
+	player:SetAttribute("GiftStart", workspace:GetServerTimeNow())
+	player:SetAttribute("GiftsClaimed", "[]")
 	syncQuests(player)
 	-- Offline earnings and "welcome back" (the main reason to come back tomorrow)
 	do
 		local now = os.time()
 		local away = if (d.lastSeen or 0) > 0 then now - d.lastSeen else 0
-		local amount, minutes = 0, 0
+		local amount, minutes, strengthAway = 0, 0, 0
 		if away >= 300 then
 			minutes = math.min(away / 60, OFFLINE_CAP_MINUTES)
 			amount = math.floor(INCOME[d.pick] * minutes * OFFLINE_RATE * (1 + (d.asc or 0) * ASCEND_BONUS))
+			-- Strength trains while you're away too
+			strengthAway = math.floor(minutes * OFFLINE_STRENGTH_PER_MINUTE * (1 + d.rebirths * REBIRTH_STRENGTH))
+			d.strength += strengthAway
 		end
 		d._offline = amount
 		local dailyReady = d.lastDay ~= math.floor(now / 86400)
 		if amount > 0 or dailyReady then
 			task.delay(3, function()
 				if player.Parent then
-					Remotes.Welcome:FireClient(player, amount, math.floor(minutes), dailyReady, d.streak)
+					Remotes.Welcome:FireClient(player, amount, math.floor(minutes), dailyReady, d.streak, strengthAway)
 				end
 			end)
 		end
@@ -4194,6 +4445,7 @@ local function findTarget()
 	return part, result.Position
 end
 
+local trainFx = { at = 0 } -- when you last swung, so Strength popups appear at your cursor
 local function updateMining()
 	local hum = getHumanoid()
 	local holding = mouseHeld or (activeTouch ~= nil and not touchDragged)
@@ -4241,6 +4493,14 @@ local function updateMining()
 		selection.LineThickness = 0.12
 		tween(selection, 0.15, { LineThickness = 0.04 })
 		kick(0.06)
+		trainFx.at = now
+	elseif holding and not target and hum and hum.Health > 0 and now - lastSwing >= swingTime() then
+		-- +1 Strength every click: swinging at thin air still trains
+		lastSwing = now
+		Remotes.Action:FireServer("Train")
+		playSwing()
+		playSound("Swing", 0.95 + math.random() * 0.25)
+		trainFx.at = now
 	end
 end
 
@@ -4930,9 +5190,9 @@ end
 -- Left button stack -----------------------------------------------------------
 local stack = create("Frame", {
 	Name = "Stack",
-	AnchorPoint = Vector2.new(0, 0.5),
-	Position = UDim2.new(0, 14, 0.5, 0),
-	Size = UDim2.fromOffset(160, 380),
+	AnchorPoint = Vector2.new(0, 0),
+	Position = UDim2.new(0, 14, 0, 200),
+	Size = UDim2.fromOffset(160, 470),
 	BackgroundTransparency = 1,
 	Parent = gui,
 }, {
@@ -6216,7 +6476,7 @@ do
 end
 
 -- WELCOME BACK popup (offline earnings + daily chest reminder) -----------------------
-Remotes.Welcome.OnClientEvent:Connect(function(amount, minutes, dailyReady, streak)
+Remotes.Welcome.OnClientEvent:Connect(function(amount, minutes, dailyReady, streak, strengthAway)
 	local panel = create("Frame", {
 		Name = "WelcomePopup",
 		AnchorPoint = Vector2.new(0.5, 0.5),
@@ -6233,8 +6493,8 @@ Remotes.Welcome.OnClientEvent:Connect(function(amount, minutes, dailyReady, stre
 	local y = 62
 	if amount > 0 then
 		local hours = math.floor(minutes / 60)
-		label({ parent = panel, text = `Your pets kept digging for {if hours > 0 then hours .. "h " else ""}{minutes % 60}m`, size = 18, color = INK, outline = false, sz = UDim2.new(1, 0, 0, 24), pos = UDim2.fromOffset(0, y), z = 31 })
-		label({ parent = panel, text = "+ 💰 " .. fmt(amount), size = 40, color = GOLD, sz = UDim2.new(1, 0, 0, 50), pos = UDim2.fromOffset(0, y + 28), z = 31 })
+		label({ parent = panel, text = `You kept digging and training for {if hours > 0 then hours .. "h " else ""}{minutes % 60}m`, size = 18, color = INK, outline = false, sz = UDim2.new(1, 0, 0, 24), pos = UDim2.fromOffset(0, y), z = 31 })
+		label({ parent = panel, text = "+ 💰 " .. fmt(amount) .. (if (strengthAway or 0) > 0 then "   + 💪 " .. fmt(strengthAway) else ""), size = 36, color = GOLD, sz = UDim2.new(1, 0, 0, 50), pos = UDim2.fromOffset(0, y + 28), z = 31 })
 		y += 86
 	end
 	if dailyReady then
@@ -6371,6 +6631,259 @@ do
 	player:GetAttributeChangedSignal("Settings"):Once(loadSaved)
 	loadSaved()
 end
+
+-- +1 STRENGTH EVERY CLICK -------------------------------------------------------------
+-- Strength counter, "+1 💪" popups at your cursor, milestone rewards, Rebirth and free gifts.
+;(function()
+	local STRENGTH_RED = Color3.fromRGB(255, 96, 70)
+
+	-- Strength pill under the level bar
+	local pill = create("Frame", {
+		Name = "Strength",
+		Position = UDim2.new(0, 14, 0, 150),
+		Size = UDim2.fromOffset(0, 42),
+		AutomaticSize = Enum.AutomaticSize.X,
+		BackgroundColor3 = WHITE,
+		Parent = gui,
+	}, {
+		corner(),
+		stroke(4, Color3.fromRGB(120, 24, 16)),
+		create("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 16) }),
+		create("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
+	})
+	create("UIGradient", { Color = bevel(Color3.fromRGB(255, 130, 90), Color3.fromRGB(226, 50, 40)), Rotation = 90, Parent = pill })
+	local pillScale = create("UIScale", { Parent = pill })
+	label({ parent = pill, text = "💪", size = 28, outline = false, order = 1, sz = UDim2.fromOffset(32, 36) })
+	local strengthText = label({ parent = pill, text = "0", size = 30, order = 2, sz = UDim2.fromOffset(0, 36) })
+	strengthText.AutomaticSize = Enum.AutomaticSize.X
+	local multText = label({ parent = pill, text = "", size = 17, color = Color3.fromRGB(255, 240, 150), order = 3, sz = UDim2.fromOffset(0, 36) })
+	multText.AutomaticSize = Enum.AutomaticSize.X
+
+	local shown = create("NumberValue", { Value = attr("Strength", 0) })
+	strengthText.Text = fmt(shown.Value)
+	shown.Changed:Connect(function(v)
+		strengthText.Text = fmt(math.floor(v))
+	end)
+	local function refreshMult()
+		multText.Text = `x{attr("StrMult", 1)}/click`
+	end
+	player:GetAttributeChangedSignal("StrMult"):Connect(refreshMult)
+	refreshMult()
+
+	-- "+N 💪" pops up where you clicked (or over the counter when a rock trains you)
+	local combo, lastGain = 0, 0
+	local function popAt(screenPos, text)
+		local l = label({
+			parent = overlayGui,
+			text = text,
+			size = 30,
+			color = Color3.fromRGB(255, 120, 90),
+			sz = UDim2.fromOffset(160, 36),
+			anchor = Vector2.new(0.5, 0.5),
+			pos = UDim2.fromOffset(screenPos.X + math.random(-18, 18), screenPos.Y - 20),
+			z = 45,
+		})
+		l.Rotation = math.random(-12, 12)
+		local sc = create("UIScale", { Scale = 0.4, Parent = l })
+		tween(sc, 0.18, { Scale = 1.15 }, Enum.EasingStyle.Back)
+		tween(l, 0.8, { Position = l.Position - UDim2.fromOffset(0, 70), TextTransparency = 1 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+		local st = l:FindFirstChildOfClass("UIStroke")
+		if st then
+			tween(st, 0.8, { Transparency = 1 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+		end
+		Debris:AddItem(l, 0.85)
+	end
+	local last = attr("Strength", 0)
+	player:GetAttributeChangedSignal("Strength"):Connect(function()
+		local now = attr("Strength", 0)
+		local gain = now - last
+		last = now
+		if gain <= 0 then
+			shown.Value = now -- rebirth reset
+			return
+		end
+		tween(shown, 0.25, { Value = now })
+		pulse(pillScale, 1.1)
+		local t = os.clock()
+		combo = if t - lastGain < 1.2 then math.min(combo + 1, 24) else 0
+		lastGain = t
+		local where
+		if t - trainFx.at < 0.6 and UserInputService.MouseEnabled then
+			where = UserInputService:GetMouseLocation()
+		elseif t - trainFx.at < 0.6 and touchPos then
+			where = touchPos
+		else
+			-- a training rock (or gift) gave it: pop over the counter and swing for the player
+			local pos = pill.AbsolutePosition + pill.AbsoluteSize * Vector2.new(0.8, 0.5)
+			where = Vector2.new(pos.X + 60, pos.Y)
+			if attr("Training", 0) ~= 0 then
+				playSwing()
+				playSound("Swing", 0.9 + math.random() * 0.2)
+			end
+		end
+		popAt(where, "+" .. fmt(gain) .. " 💪")
+		-- a soft pop that climbs in pitch while you keep clicking
+		playSound("Pop", 0.8 + combo * 0.03)
+	end)
+
+	-- Milestones and rebirths: a big burst in the middle of the screen
+	local function celebrate(title, sub, color)
+		local big = label({ parent = overlayGui, text = title, size = 60, color = color, sz = UDim2.fromOffset(700, 76), pos = UDim2.fromScale(0.5, 0.3), anchor = Vector2.new(0.5, 0.5), z = 40 })
+		local small = label({ parent = overlayGui, text = sub, size = 28, color = GOLD, sz = UDim2.fromOffset(700, 36), pos = UDim2.fromScale(0.5, 0.37), anchor = Vector2.new(0.5, 0.5), z = 40 })
+		local sc = create("UIScale", { Scale = 0.3, Parent = big })
+		tween(sc, 0.4, { Scale = 1 }, Enum.EasingStyle.Back)
+		task.delay(2, function()
+			tween(sc, 0.25, { Scale = 0 })
+			tween(small, 0.25, { TextTransparency = 1 })
+			task.wait(0.3)
+			big:Destroy()
+			small:Destroy()
+		end)
+	end
+	Remotes.Milestone.OnClientEvent:Connect(function(value, reward)
+		if value == "Rebirth" then
+			celebrate(`🔁 REBIRTH {reward}!`, `Now x{1 + reward * CFG.rebirthStrength} Strength per click · +{math.floor(reward * CFG.rebirthCash * 100 + 0.5)}% cash`, Color3.fromRGB(124, 240, 255))
+			confetti(90)
+			playSound("LevelUp", 0.9)
+			return
+		end
+		celebrate(`💪 {fmt(value)} STRENGTH!`, "+ 💰 " .. fmt(reward), STRENGTH_RED)
+		confetti(35)
+		playSound("Buy", 1.1)
+	end)
+
+	-- REBIRTH window ------------------------------------------------------------------
+	local _, rbody = makeWindow("Rebirth", "🔁 REBIRTH", Color3.fromRGB(130, 236, 255), Color3.fromRGB(40, 150, 230))
+	local info = label({ parent = rbody, text = "", size = 22, wrap = true, sz = UDim2.new(1, 0, 0, 84), pos = UDim2.fromOffset(0, 4) })
+	local cards = create("Frame", { Size = UDim2.new(1, 0, 0, 120), Position = UDim2.fromOffset(0, 96), BackgroundTransparency = 1, Parent = rbody }, {
+		create("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0, 18) }),
+	})
+	local function statCard(order, title, top, bottom)
+		local c = create("Frame", { LayoutOrder = order, Size = UDim2.fromOffset(220, 116), BackgroundColor3 = WHITE, Parent = cards }, { corner(UDim.new(0, 14)), stroke(4, INK) })
+		gradient(c, top, bottom)
+		decorate(c, 6)
+		label({ parent = c, text = title, size = 20, sz = UDim2.new(1, 0, 0, 30), pos = UDim2.fromOffset(0, 8), z = 2 })
+		return label({ parent = c, text = "", size = 26, wrap = true, sz = UDim2.new(1, -12, 0, 66), pos = UDim2.fromOffset(6, 40), z = 2 })
+	end
+	local nowText = statCard(1, "NOW", Color3.fromRGB(150, 160, 190), Color3.fromRGB(90, 100, 130))
+	label({ parent = cards, text = "➜", size = 48, order = 2, sz = UDim2.fromOffset(40, 116) })
+	local nextText = statCard(3, "AFTER REBIRTH", Color3.fromRGB(120, 240, 150), Color3.fromRGB(30, 170, 80))
+	local barBack = create("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 232), Size = UDim2.new(0.9, 0, 0, 34), BackgroundColor3 = Color3.fromRGB(40, 30, 70), Parent = rbody }, { corner(), stroke(4, INK) })
+	local barFill = create("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = WHITE, Parent = barBack }, { corner() })
+	gradient(barFill, Color3.fromRGB(255, 140, 100), Color3.fromRGB(230, 50, 40))
+	local barText = label({ parent = barBack, text = "", size = 20, z = 2 })
+	local rebirthButton, rebirthGrad = cartoonButton(rbody, {
+		sz = UDim2.fromOffset(300, 64),
+		anchor = Vector2.new(0.5, 0),
+		pos = UDim2.new(0.5, 0, 0, 284),
+		top = Color3.fromRGB(130, 236, 255),
+		bottom = Color3.fromRGB(40, 150, 230),
+		text = "🔁 REBIRTH",
+		textSize = 32,
+		onClick = function()
+			Remotes.Action:FireServer("Rebirth")
+		end,
+	})
+	local function refreshRebirth()
+		local r, strength, need = attr("Rebirths", 0), attr("Strength", 0), attr("RebirthReq", 250)
+		info.Text = `Rebirth resets your 💪 Strength, but every rebirth makes each click stronger forever. You have {r} rebirth{if r == 1 then "" else "s"}.`
+		nowText.Text = `💪 x{1 + r * CFG.rebirthStrength}\n💰 +{math.floor(r * CFG.rebirthCash * 100 + 0.5)}%`
+		nextText.Text = `💪 x{1 + (r + 1) * CFG.rebirthStrength}\n💰 +{math.floor((r + 1) * CFG.rebirthCash * 100 + 0.5)}%`
+		local f = math.clamp(strength / math.max(1, need), 0, 1)
+		barFill.Size = UDim2.fromScale(f, 1)
+		barText.Text = `💪 {fmt(strength)} / {fmt(need)}`
+		local ready = strength >= need
+		rebirthGrad.Color = if ready then bevel(Color3.fromRGB(130, 236, 255), Color3.fromRGB(40, 150, 230)) else bevel(Color3.fromRGB(200, 204, 215), Color3.fromRGB(140, 146, 165))
+		stackButtons.Rebirth.Badge.Visible = ready
+		local _ = rebirthButton
+	end
+	stackButton(-1, "Rebirth", "🔁", "REBIRTH", Color3.fromRGB(130, 236, 255), Color3.fromRGB(40, 150, 230))
+	for _, name in { "Strength", "Rebirths", "RebirthReq" } do
+		player:GetAttributeChangedSignal(name):Connect(refreshRebirth)
+	end
+	refreshRebirth()
+
+	-- FREE GIFTS window: a reward every few minutes, the first after 10 seconds -------------
+	local _, gbody = makeWindow("Gifts", "🎁 FREE GIFTS", Color3.fromRGB(255, 140, 190), Color3.fromRGB(226, 50, 120))
+	label({ parent = gbody, text = "Keep playing to unlock every gift!", size = 20, sz = UDim2.new(1, 0, 0, 26) })
+	local grid = create("Frame", { Position = UDim2.fromOffset(0, 34), Size = UDim2.new(1, 0, 1, -34), BackgroundTransparency = 1, Parent = gbody }, {
+		create("UIGridLayout", { CellSize = UDim2.new(0.25, -10, 0.333, -10), CellPadding = UDim2.fromOffset(10, 10), SortOrder = Enum.SortOrder.LayoutOrder }),
+	})
+	local GIFT_NAMES = { strengthMinutes = "Strength", coinMinutes = "Coins", potion = "Potion", egg = "Free Egg" }
+	local tiles = {}
+	for i, g in CFG.gifts do
+		local t = create("Frame", { LayoutOrder = i, BackgroundColor3 = WHITE, Parent = grid }, { corner(UDim.new(0, 12)), stroke(3.5, INK) })
+		local tgrad = create("UIGradient", { Color = bevel(Color3.fromRGB(255, 226, 92), Color3.fromRGB(255, 160, 30)), Rotation = 90, Parent = t })
+		label({ parent = t, text = g.icon, size = 34, outline = false, sz = UDim2.new(1, 0, 0.45, 0), pos = UDim2.fromScale(0, 0.02), z = 2 })
+		local kind = if g.strengthMinutes then "strengthMinutes" elseif g.coinMinutes then "coinMinutes" elseif g.potion then "potion" else "egg"
+		label({ parent = t, text = if g.potion then (if g.potion == "Coins" then "2x Coins" else g.potion) else GIFT_NAMES[kind], size = 16, sz = UDim2.new(1, 0, 0.2, 0), pos = UDim2.fromScale(0, 0.44), z = 2 })
+		local state = label({ parent = t, text = "", size = 18, sz = UDim2.new(1, -8, 0.3, 0), pos = UDim2.new(0, 4, 0.66, 0), z = 3 })
+		local claim = create("TextButton", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "", ZIndex = 4, Parent = t })
+		claim.Activated:Connect(function()
+			Remotes.Action:FireServer("ClaimGift", i)
+		end)
+		tiles[i] = { frame = t, grad = tgrad, state = state }
+	end
+	stackButton(-2, "Gifts", "🎁", "GIFTS", Color3.fromRGB(255, 140, 190), Color3.fromRGB(226, 50, 120))
+	local timerLabel
+	for _, c in stackButtons.Gifts:GetChildren() do
+		if c:IsA("TextLabel") and c.Text == "GIFTS" then
+			timerLabel = c
+		end
+	end
+	local readyBefore = {}
+	local function refreshGifts()
+		local start = attr("GiftStart", 0)
+		local elapsed = if start > 0 then workspace:GetServerTimeNow() - start else 0
+		local claimed = {}
+		local ok, list = pcall(function()
+			return HttpService:JSONDecode(attr("GiftsClaimed", "[]"))
+		end)
+		if ok and type(list) == "table" then
+			for _, i in list do
+				claimed[i] = true
+			end
+		end
+		local anyReady, nextIn = false, nil
+		for i, g in CFG.gifts do
+			local tile = tiles[i]
+			if claimed[i] then
+				tile.state.Text = "✔ CLAIMED"
+				tile.grad.Color = bevel(Color3.fromRGB(200, 204, 215), Color3.fromRGB(140, 146, 165))
+			elseif elapsed >= g.at then
+				anyReady = true
+				tile.state.Text = "CLAIM!"
+				tile.grad.Color = bevel(Color3.fromRGB(140, 244, 90), Color3.fromRGB(36, 176, 50))
+				if not readyBefore[i] then
+					readyBefore[i] = true
+					toast(`🎁 Free gift ready! Tap GIFTS`, Color3.fromRGB(255, 170, 220))
+					playSound("Pickup", 1.2)
+					pulse(stackButtons.Gifts:FindFirstChildOfClass("UIScale"), 1.25)
+				end
+			else
+				tile.state.Text = clock(g.at - elapsed)
+				tile.grad.Color = bevel(Color3.fromRGB(255, 226, 92), Color3.fromRGB(255, 160, 30))
+				nextIn = if nextIn then math.min(nextIn, g.at - elapsed) else g.at - elapsed
+			end
+		end
+		stackButtons.Gifts.Badge.Visible = anyReady
+		if timerLabel then
+			timerLabel.Text = if anyReady then "CLAIM!" elseif nextIn then clock(nextIn) else "GIFTS"
+		end
+	end
+	Remotes.Gift.OnClientEvent:Connect(function(_, text)
+		celebrate("🎁 FREE GIFT!", text, Color3.fromRGB(255, 150, 210))
+		confetti(50)
+		playSound("Treasure", 1.1)
+		refreshGifts()
+	end)
+	task.spawn(function()
+		while true do
+			refreshGifts()
+			task.wait(0.5)
+		end
+	end)
+end)()
 
 -- HATCH animation ------------------------------------------------------------------
 local hatching = false
@@ -6557,7 +7070,7 @@ do
 		return nil
 	end
 
-	local TUTORIAL_STEPS = 7
+	local TUTORIAL_STEPS = 9
 	local current, currentTarget = "", nil
 	-- returns: text, target (part or position), tutorial step number (or nil)
 	local function pick(depth)
@@ -6579,48 +7092,60 @@ do
 			end
 			return `⛏ {goalText} ({fmt(have)}/{fmt(price)})`, mineCenter, step
 		end
+		local strength = attr("Strength", 0)
+		if mined < 5 and strength < 25 then
+			return `💪 Click to train Strength! ({fmt(strength)}/25)`, nil, 1
+		end
 		if mined < 5 then
-			return "⛏ Dig into the ground!", mineCenter, 1
+			return "⛏ Dig into the ground!", mineCenter, 2
 		end
 		if tut < 2 then
 			if bag >= math.min(10, bagMax) then
-				return sellStep(2)
+				return sellStep(3)
 			end
-			return `🎒 Fill your backpack! ({bag}/{math.min(10, bagMax)})`, mineCenter, 2
+			return `🎒 Fill your backpack! ({bag}/{math.min(10, bagMax)})`, mineCenter, 3
 		end
 		local p2 = CFG.picks[2]
 		if pickTier < 2 then
 			if coins >= p2.price then
-				return `⛏ Buy the {p2.name}!`, pedestal("Pick", 2), 3
+				return `⛏ Buy the {p2.name}!`, pedestal("Pick", 2), 4
 			end
-			return earn(3, "Dig coins for a " .. p2.name, p2.price)
+			return earn(4, "Dig coins for a " .. p2.name, p2.price)
 		end
 		local b2 = CFG.bags[2]
 		if pack < 2 then
 			if coins >= b2.price then
-				return `🎒 Buy the {b2.name}!`, pedestal("Bag", 2), 4
+				return `🎒 Buy the {b2.name}!`, pedestal("Bag", 2), 5
 			end
-			return earn(4, "Dig coins for a " .. b2.name, b2.price)
+			return earn(5, "Dig coins for a " .. b2.name, b2.price)
 		end
 		local egg = CFG.eggs[1]
 		if attr("PetIndex", 0) == 0 then
 			if coins >= egg.price then
 				return "🥚 Hatch your first pet!", tagged("EggStand", function(e)
 					return e:GetAttribute("Egg") == 1
-				end), 5
+				end), 6
 			end
-			return earn(5, "Dig coins for a pet egg", egg.price)
+			return earn(6, "Dig coins for a pet egg", egg.price)
 		end
 		if best < 20 then
 			if full then
-				return sellStep(6)
+				return sellStep(7)
 			end
-			return `⬇ Dig down to 20m! ({best}m)`, mineCenter, 6
+			return `⬇ Dig down to 20m! ({best}m)`, mineCenter, 7
+		end
+		if strength < 150 and attr("Rebirths", 0) == 0 then
+			return `🏋️ Train on the FREE rock! ({fmt(strength)}/150 💪)`, tagged("TrainingRock", function(r)
+				return r:GetAttribute("Rock") == 1
+			end), 8
 		end
 		if attr("LastDay", -1) ~= math.floor(workspace:GetServerTimeNow() / 86400) then
-			return "🎁 Open your FREE daily chest!", tagged("DailyChest"), 7
+			return "🎁 Open your FREE daily chest!", tagged("DailyChest"), 9
 		end
 		-- after the tutorial: always the next goal
+		if strength >= attr("RebirthReq", math.huge) then
+			return `🔁 REBIRTH for x{1 + (attr("Rebirths", 0) + 1) * CFG.rebirthStrength} Strength!`, nil, nil
+		end
 		if full then
 			return sellStep(nil)
 		end

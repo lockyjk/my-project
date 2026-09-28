@@ -942,6 +942,7 @@ local function findTarget()
 	return part, result.Position
 end
 
+local trainFx = { at = 0 } -- when you last swung, so Strength popups appear at your cursor
 local function updateMining()
 	local hum = getHumanoid()
 	local holding = mouseHeld or (activeTouch ~= nil and not touchDragged)
@@ -989,6 +990,14 @@ local function updateMining()
 		selection.LineThickness = 0.12
 		tween(selection, 0.15, { LineThickness = 0.04 })
 		kick(0.06)
+		trainFx.at = now
+	elseif holding and not target and hum and hum.Health > 0 and now - lastSwing >= swingTime() then
+		-- +1 Strength every click: swinging at thin air still trains
+		lastSwing = now
+		Remotes.Action:FireServer("Train")
+		playSwing()
+		playSound("Swing", 0.95 + math.random() * 0.25)
+		trainFx.at = now
 	end
 end
 
@@ -1678,9 +1687,9 @@ end
 -- Left button stack -----------------------------------------------------------
 local stack = create("Frame", {
 	Name = "Stack",
-	AnchorPoint = Vector2.new(0, 0.5),
-	Position = UDim2.new(0, 14, 0.5, 0),
-	Size = UDim2.fromOffset(160, 380),
+	AnchorPoint = Vector2.new(0, 0),
+	Position = UDim2.new(0, 14, 0, 200),
+	Size = UDim2.fromOffset(160, 470),
 	BackgroundTransparency = 1,
 	Parent = gui,
 }, {
@@ -2964,7 +2973,7 @@ do
 end
 
 -- WELCOME BACK popup (offline earnings + daily chest reminder) -----------------------
-Remotes.Welcome.OnClientEvent:Connect(function(amount, minutes, dailyReady, streak)
+Remotes.Welcome.OnClientEvent:Connect(function(amount, minutes, dailyReady, streak, strengthAway)
 	local panel = create("Frame", {
 		Name = "WelcomePopup",
 		AnchorPoint = Vector2.new(0.5, 0.5),
@@ -2981,8 +2990,8 @@ Remotes.Welcome.OnClientEvent:Connect(function(amount, minutes, dailyReady, stre
 	local y = 62
 	if amount > 0 then
 		local hours = math.floor(minutes / 60)
-		label({ parent = panel, text = `Your pets kept digging for {if hours > 0 then hours .. "h " else ""}{minutes % 60}m`, size = 18, color = INK, outline = false, sz = UDim2.new(1, 0, 0, 24), pos = UDim2.fromOffset(0, y), z = 31 })
-		label({ parent = panel, text = "+ 💰 " .. fmt(amount), size = 40, color = GOLD, sz = UDim2.new(1, 0, 0, 50), pos = UDim2.fromOffset(0, y + 28), z = 31 })
+		label({ parent = panel, text = `You kept digging and training for {if hours > 0 then hours .. "h " else ""}{minutes % 60}m`, size = 18, color = INK, outline = false, sz = UDim2.new(1, 0, 0, 24), pos = UDim2.fromOffset(0, y), z = 31 })
+		label({ parent = panel, text = "+ 💰 " .. fmt(amount) .. (if (strengthAway or 0) > 0 then "   + 💪 " .. fmt(strengthAway) else ""), size = 36, color = GOLD, sz = UDim2.new(1, 0, 0, 50), pos = UDim2.fromOffset(0, y + 28), z = 31 })
 		y += 86
 	end
 	if dailyReady then
@@ -3119,6 +3128,259 @@ do
 	player:GetAttributeChangedSignal("Settings"):Once(loadSaved)
 	loadSaved()
 end
+
+-- +1 STRENGTH EVERY CLICK -------------------------------------------------------------
+-- Strength counter, "+1 💪" popups at your cursor, milestone rewards, Rebirth and free gifts.
+;(function()
+	local STRENGTH_RED = Color3.fromRGB(255, 96, 70)
+
+	-- Strength pill under the level bar
+	local pill = create("Frame", {
+		Name = "Strength",
+		Position = UDim2.new(0, 14, 0, 150),
+		Size = UDim2.fromOffset(0, 42),
+		AutomaticSize = Enum.AutomaticSize.X,
+		BackgroundColor3 = WHITE,
+		Parent = gui,
+	}, {
+		corner(),
+		stroke(4, Color3.fromRGB(120, 24, 16)),
+		create("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 16) }),
+		create("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
+	})
+	create("UIGradient", { Color = bevel(Color3.fromRGB(255, 130, 90), Color3.fromRGB(226, 50, 40)), Rotation = 90, Parent = pill })
+	local pillScale = create("UIScale", { Parent = pill })
+	label({ parent = pill, text = "💪", size = 28, outline = false, order = 1, sz = UDim2.fromOffset(32, 36) })
+	local strengthText = label({ parent = pill, text = "0", size = 30, order = 2, sz = UDim2.fromOffset(0, 36) })
+	strengthText.AutomaticSize = Enum.AutomaticSize.X
+	local multText = label({ parent = pill, text = "", size = 17, color = Color3.fromRGB(255, 240, 150), order = 3, sz = UDim2.fromOffset(0, 36) })
+	multText.AutomaticSize = Enum.AutomaticSize.X
+
+	local shown = create("NumberValue", { Value = attr("Strength", 0) })
+	strengthText.Text = fmt(shown.Value)
+	shown.Changed:Connect(function(v)
+		strengthText.Text = fmt(math.floor(v))
+	end)
+	local function refreshMult()
+		multText.Text = `x{attr("StrMult", 1)}/click`
+	end
+	player:GetAttributeChangedSignal("StrMult"):Connect(refreshMult)
+	refreshMult()
+
+	-- "+N 💪" pops up where you clicked (or over the counter when a rock trains you)
+	local combo, lastGain = 0, 0
+	local function popAt(screenPos, text)
+		local l = label({
+			parent = overlayGui,
+			text = text,
+			size = 30,
+			color = Color3.fromRGB(255, 120, 90),
+			sz = UDim2.fromOffset(160, 36),
+			anchor = Vector2.new(0.5, 0.5),
+			pos = UDim2.fromOffset(screenPos.X + math.random(-18, 18), screenPos.Y - 20),
+			z = 45,
+		})
+		l.Rotation = math.random(-12, 12)
+		local sc = create("UIScale", { Scale = 0.4, Parent = l })
+		tween(sc, 0.18, { Scale = 1.15 }, Enum.EasingStyle.Back)
+		tween(l, 0.8, { Position = l.Position - UDim2.fromOffset(0, 70), TextTransparency = 1 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+		local st = l:FindFirstChildOfClass("UIStroke")
+		if st then
+			tween(st, 0.8, { Transparency = 1 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+		end
+		Debris:AddItem(l, 0.85)
+	end
+	local last = attr("Strength", 0)
+	player:GetAttributeChangedSignal("Strength"):Connect(function()
+		local now = attr("Strength", 0)
+		local gain = now - last
+		last = now
+		if gain <= 0 then
+			shown.Value = now -- rebirth reset
+			return
+		end
+		tween(shown, 0.25, { Value = now })
+		pulse(pillScale, 1.1)
+		local t = os.clock()
+		combo = if t - lastGain < 1.2 then math.min(combo + 1, 24) else 0
+		lastGain = t
+		local where
+		if t - trainFx.at < 0.6 and UserInputService.MouseEnabled then
+			where = UserInputService:GetMouseLocation()
+		elseif t - trainFx.at < 0.6 and touchPos then
+			where = touchPos
+		else
+			-- a training rock (or gift) gave it: pop over the counter and swing for the player
+			local pos = pill.AbsolutePosition + pill.AbsoluteSize * Vector2.new(0.8, 0.5)
+			where = Vector2.new(pos.X + 60, pos.Y)
+			if attr("Training", 0) ~= 0 then
+				playSwing()
+				playSound("Swing", 0.9 + math.random() * 0.2)
+			end
+		end
+		popAt(where, "+" .. fmt(gain) .. " 💪")
+		-- a soft pop that climbs in pitch while you keep clicking
+		playSound("Pop", 0.8 + combo * 0.03)
+	end)
+
+	-- Milestones and rebirths: a big burst in the middle of the screen
+	local function celebrate(title, sub, color)
+		local big = label({ parent = overlayGui, text = title, size = 60, color = color, sz = UDim2.fromOffset(700, 76), pos = UDim2.fromScale(0.5, 0.3), anchor = Vector2.new(0.5, 0.5), z = 40 })
+		local small = label({ parent = overlayGui, text = sub, size = 28, color = GOLD, sz = UDim2.fromOffset(700, 36), pos = UDim2.fromScale(0.5, 0.37), anchor = Vector2.new(0.5, 0.5), z = 40 })
+		local sc = create("UIScale", { Scale = 0.3, Parent = big })
+		tween(sc, 0.4, { Scale = 1 }, Enum.EasingStyle.Back)
+		task.delay(2, function()
+			tween(sc, 0.25, { Scale = 0 })
+			tween(small, 0.25, { TextTransparency = 1 })
+			task.wait(0.3)
+			big:Destroy()
+			small:Destroy()
+		end)
+	end
+	Remotes.Milestone.OnClientEvent:Connect(function(value, reward)
+		if value == "Rebirth" then
+			celebrate(`🔁 REBIRTH {reward}!`, `Now x{1 + reward * CFG.rebirthStrength} Strength per click · +{math.floor(reward * CFG.rebirthCash * 100 + 0.5)}% cash`, Color3.fromRGB(124, 240, 255))
+			confetti(90)
+			playSound("LevelUp", 0.9)
+			return
+		end
+		celebrate(`💪 {fmt(value)} STRENGTH!`, "+ 💰 " .. fmt(reward), STRENGTH_RED)
+		confetti(35)
+		playSound("Buy", 1.1)
+	end)
+
+	-- REBIRTH window ------------------------------------------------------------------
+	local _, rbody = makeWindow("Rebirth", "🔁 REBIRTH", Color3.fromRGB(130, 236, 255), Color3.fromRGB(40, 150, 230))
+	local info = label({ parent = rbody, text = "", size = 22, wrap = true, sz = UDim2.new(1, 0, 0, 84), pos = UDim2.fromOffset(0, 4) })
+	local cards = create("Frame", { Size = UDim2.new(1, 0, 0, 120), Position = UDim2.fromOffset(0, 96), BackgroundTransparency = 1, Parent = rbody }, {
+		create("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0, 18) }),
+	})
+	local function statCard(order, title, top, bottom)
+		local c = create("Frame", { LayoutOrder = order, Size = UDim2.fromOffset(220, 116), BackgroundColor3 = WHITE, Parent = cards }, { corner(UDim.new(0, 14)), stroke(4, INK) })
+		gradient(c, top, bottom)
+		decorate(c, 6)
+		label({ parent = c, text = title, size = 20, sz = UDim2.new(1, 0, 0, 30), pos = UDim2.fromOffset(0, 8), z = 2 })
+		return label({ parent = c, text = "", size = 26, wrap = true, sz = UDim2.new(1, -12, 0, 66), pos = UDim2.fromOffset(6, 40), z = 2 })
+	end
+	local nowText = statCard(1, "NOW", Color3.fromRGB(150, 160, 190), Color3.fromRGB(90, 100, 130))
+	label({ parent = cards, text = "➜", size = 48, order = 2, sz = UDim2.fromOffset(40, 116) })
+	local nextText = statCard(3, "AFTER REBIRTH", Color3.fromRGB(120, 240, 150), Color3.fromRGB(30, 170, 80))
+	local barBack = create("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 232), Size = UDim2.new(0.9, 0, 0, 34), BackgroundColor3 = Color3.fromRGB(40, 30, 70), Parent = rbody }, { corner(), stroke(4, INK) })
+	local barFill = create("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = WHITE, Parent = barBack }, { corner() })
+	gradient(barFill, Color3.fromRGB(255, 140, 100), Color3.fromRGB(230, 50, 40))
+	local barText = label({ parent = barBack, text = "", size = 20, z = 2 })
+	local rebirthButton, rebirthGrad = cartoonButton(rbody, {
+		sz = UDim2.fromOffset(300, 64),
+		anchor = Vector2.new(0.5, 0),
+		pos = UDim2.new(0.5, 0, 0, 284),
+		top = Color3.fromRGB(130, 236, 255),
+		bottom = Color3.fromRGB(40, 150, 230),
+		text = "🔁 REBIRTH",
+		textSize = 32,
+		onClick = function()
+			Remotes.Action:FireServer("Rebirth")
+		end,
+	})
+	local function refreshRebirth()
+		local r, strength, need = attr("Rebirths", 0), attr("Strength", 0), attr("RebirthReq", 250)
+		info.Text = `Rebirth resets your 💪 Strength, but every rebirth makes each click stronger forever. You have {r} rebirth{if r == 1 then "" else "s"}.`
+		nowText.Text = `💪 x{1 + r * CFG.rebirthStrength}\n💰 +{math.floor(r * CFG.rebirthCash * 100 + 0.5)}%`
+		nextText.Text = `💪 x{1 + (r + 1) * CFG.rebirthStrength}\n💰 +{math.floor((r + 1) * CFG.rebirthCash * 100 + 0.5)}%`
+		local f = math.clamp(strength / math.max(1, need), 0, 1)
+		barFill.Size = UDim2.fromScale(f, 1)
+		barText.Text = `💪 {fmt(strength)} / {fmt(need)}`
+		local ready = strength >= need
+		rebirthGrad.Color = if ready then bevel(Color3.fromRGB(130, 236, 255), Color3.fromRGB(40, 150, 230)) else bevel(Color3.fromRGB(200, 204, 215), Color3.fromRGB(140, 146, 165))
+		stackButtons.Rebirth.Badge.Visible = ready
+		local _ = rebirthButton
+	end
+	stackButton(-1, "Rebirth", "🔁", "REBIRTH", Color3.fromRGB(130, 236, 255), Color3.fromRGB(40, 150, 230))
+	for _, name in { "Strength", "Rebirths", "RebirthReq" } do
+		player:GetAttributeChangedSignal(name):Connect(refreshRebirth)
+	end
+	refreshRebirth()
+
+	-- FREE GIFTS window: a reward every few minutes, the first after 10 seconds -------------
+	local _, gbody = makeWindow("Gifts", "🎁 FREE GIFTS", Color3.fromRGB(255, 140, 190), Color3.fromRGB(226, 50, 120))
+	label({ parent = gbody, text = "Keep playing to unlock every gift!", size = 20, sz = UDim2.new(1, 0, 0, 26) })
+	local grid = create("Frame", { Position = UDim2.fromOffset(0, 34), Size = UDim2.new(1, 0, 1, -34), BackgroundTransparency = 1, Parent = gbody }, {
+		create("UIGridLayout", { CellSize = UDim2.new(0.25, -10, 0.333, -10), CellPadding = UDim2.fromOffset(10, 10), SortOrder = Enum.SortOrder.LayoutOrder }),
+	})
+	local GIFT_NAMES = { strengthMinutes = "Strength", coinMinutes = "Coins", potion = "Potion", egg = "Free Egg" }
+	local tiles = {}
+	for i, g in CFG.gifts do
+		local t = create("Frame", { LayoutOrder = i, BackgroundColor3 = WHITE, Parent = grid }, { corner(UDim.new(0, 12)), stroke(3.5, INK) })
+		local tgrad = create("UIGradient", { Color = bevel(Color3.fromRGB(255, 226, 92), Color3.fromRGB(255, 160, 30)), Rotation = 90, Parent = t })
+		label({ parent = t, text = g.icon, size = 34, outline = false, sz = UDim2.new(1, 0, 0.45, 0), pos = UDim2.fromScale(0, 0.02), z = 2 })
+		local kind = if g.strengthMinutes then "strengthMinutes" elseif g.coinMinutes then "coinMinutes" elseif g.potion then "potion" else "egg"
+		label({ parent = t, text = if g.potion then (if g.potion == "Coins" then "2x Coins" else g.potion) else GIFT_NAMES[kind], size = 16, sz = UDim2.new(1, 0, 0.2, 0), pos = UDim2.fromScale(0, 0.44), z = 2 })
+		local state = label({ parent = t, text = "", size = 18, sz = UDim2.new(1, -8, 0.3, 0), pos = UDim2.new(0, 4, 0.66, 0), z = 3 })
+		local claim = create("TextButton", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "", ZIndex = 4, Parent = t })
+		claim.Activated:Connect(function()
+			Remotes.Action:FireServer("ClaimGift", i)
+		end)
+		tiles[i] = { frame = t, grad = tgrad, state = state }
+	end
+	stackButton(-2, "Gifts", "🎁", "GIFTS", Color3.fromRGB(255, 140, 190), Color3.fromRGB(226, 50, 120))
+	local timerLabel
+	for _, c in stackButtons.Gifts:GetChildren() do
+		if c:IsA("TextLabel") and c.Text == "GIFTS" then
+			timerLabel = c
+		end
+	end
+	local readyBefore = {}
+	local function refreshGifts()
+		local start = attr("GiftStart", 0)
+		local elapsed = if start > 0 then workspace:GetServerTimeNow() - start else 0
+		local claimed = {}
+		local ok, list = pcall(function()
+			return HttpService:JSONDecode(attr("GiftsClaimed", "[]"))
+		end)
+		if ok and type(list) == "table" then
+			for _, i in list do
+				claimed[i] = true
+			end
+		end
+		local anyReady, nextIn = false, nil
+		for i, g in CFG.gifts do
+			local tile = tiles[i]
+			if claimed[i] then
+				tile.state.Text = "✔ CLAIMED"
+				tile.grad.Color = bevel(Color3.fromRGB(200, 204, 215), Color3.fromRGB(140, 146, 165))
+			elseif elapsed >= g.at then
+				anyReady = true
+				tile.state.Text = "CLAIM!"
+				tile.grad.Color = bevel(Color3.fromRGB(140, 244, 90), Color3.fromRGB(36, 176, 50))
+				if not readyBefore[i] then
+					readyBefore[i] = true
+					toast(`🎁 Free gift ready! Tap GIFTS`, Color3.fromRGB(255, 170, 220))
+					playSound("Pickup", 1.2)
+					pulse(stackButtons.Gifts:FindFirstChildOfClass("UIScale"), 1.25)
+				end
+			else
+				tile.state.Text = clock(g.at - elapsed)
+				tile.grad.Color = bevel(Color3.fromRGB(255, 226, 92), Color3.fromRGB(255, 160, 30))
+				nextIn = if nextIn then math.min(nextIn, g.at - elapsed) else g.at - elapsed
+			end
+		end
+		stackButtons.Gifts.Badge.Visible = anyReady
+		if timerLabel then
+			timerLabel.Text = if anyReady then "CLAIM!" elseif nextIn then clock(nextIn) else "GIFTS"
+		end
+	end
+	Remotes.Gift.OnClientEvent:Connect(function(_, text)
+		celebrate("🎁 FREE GIFT!", text, Color3.fromRGB(255, 150, 210))
+		confetti(50)
+		playSound("Treasure", 1.1)
+		refreshGifts()
+	end)
+	task.spawn(function()
+		while true do
+			refreshGifts()
+			task.wait(0.5)
+		end
+	end)
+end)()
 
 -- HATCH animation ------------------------------------------------------------------
 local hatching = false
@@ -3305,7 +3567,7 @@ do
 		return nil
 	end
 
-	local TUTORIAL_STEPS = 7
+	local TUTORIAL_STEPS = 9
 	local current, currentTarget = "", nil
 	-- returns: text, target (part or position), tutorial step number (or nil)
 	local function pick(depth)
@@ -3327,48 +3589,60 @@ do
 			end
 			return `⛏ {goalText} ({fmt(have)}/{fmt(price)})`, mineCenter, step
 		end
+		local strength = attr("Strength", 0)
+		if mined < 5 and strength < 25 then
+			return `💪 Click to train Strength! ({fmt(strength)}/25)`, nil, 1
+		end
 		if mined < 5 then
-			return "⛏ Dig into the ground!", mineCenter, 1
+			return "⛏ Dig into the ground!", mineCenter, 2
 		end
 		if tut < 2 then
 			if bag >= math.min(10, bagMax) then
-				return sellStep(2)
+				return sellStep(3)
 			end
-			return `🎒 Fill your backpack! ({bag}/{math.min(10, bagMax)})`, mineCenter, 2
+			return `🎒 Fill your backpack! ({bag}/{math.min(10, bagMax)})`, mineCenter, 3
 		end
 		local p2 = CFG.picks[2]
 		if pickTier < 2 then
 			if coins >= p2.price then
-				return `⛏ Buy the {p2.name}!`, pedestal("Pick", 2), 3
+				return `⛏ Buy the {p2.name}!`, pedestal("Pick", 2), 4
 			end
-			return earn(3, "Dig coins for a " .. p2.name, p2.price)
+			return earn(4, "Dig coins for a " .. p2.name, p2.price)
 		end
 		local b2 = CFG.bags[2]
 		if pack < 2 then
 			if coins >= b2.price then
-				return `🎒 Buy the {b2.name}!`, pedestal("Bag", 2), 4
+				return `🎒 Buy the {b2.name}!`, pedestal("Bag", 2), 5
 			end
-			return earn(4, "Dig coins for a " .. b2.name, b2.price)
+			return earn(5, "Dig coins for a " .. b2.name, b2.price)
 		end
 		local egg = CFG.eggs[1]
 		if attr("PetIndex", 0) == 0 then
 			if coins >= egg.price then
 				return "🥚 Hatch your first pet!", tagged("EggStand", function(e)
 					return e:GetAttribute("Egg") == 1
-				end), 5
+				end), 6
 			end
-			return earn(5, "Dig coins for a pet egg", egg.price)
+			return earn(6, "Dig coins for a pet egg", egg.price)
 		end
 		if best < 20 then
 			if full then
-				return sellStep(6)
+				return sellStep(7)
 			end
-			return `⬇ Dig down to 20m! ({best}m)`, mineCenter, 6
+			return `⬇ Dig down to 20m! ({best}m)`, mineCenter, 7
+		end
+		if strength < 150 and attr("Rebirths", 0) == 0 then
+			return `🏋️ Train on the FREE rock! ({fmt(strength)}/150 💪)`, tagged("TrainingRock", function(r)
+				return r:GetAttribute("Rock") == 1
+			end), 8
 		end
 		if attr("LastDay", -1) ~= math.floor(workspace:GetServerTimeNow() / 86400) then
-			return "🎁 Open your FREE daily chest!", tagged("DailyChest"), 7
+			return "🎁 Open your FREE daily chest!", tagged("DailyChest"), 9
 		end
 		-- after the tutorial: always the next goal
+		if strength >= attr("RebirthReq", math.huge) then
+			return `🔁 REBIRTH for x{1 + (attr("Rebirths", 0) + 1) * CFG.rebirthStrength} Strength!`, nil, nil
+		end
 		if full then
 			return sellStep(nil)
 		end
