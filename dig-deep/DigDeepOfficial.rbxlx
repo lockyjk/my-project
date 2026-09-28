@@ -357,7 +357,18 @@ local function fmt(n)
 	return s .. SUFFIX[i]
 end
 
+-- The world is built from thousands of parts. Studio stops a script that runs too long without
+-- a break, so while the world is being built we yield for a frame every few hundred parts.
+local BUILD_YIELD_EVERY = 300
+local building, builtParts = false, 0
+
 local function newPart(props, parent)
+	if building then
+		builtParts += 1
+		if builtParts % BUILD_YIELD_EVERY == 0 then
+			task.wait()
+		end
+	end
 	local p = Instance.new("Part")
 	p.Anchored = true
 	p.TopSurface = Enum.SurfaceType.Smooth
@@ -1454,7 +1465,7 @@ local function buildWorld()
 		end
 		local flowerColors = { Color3.fromRGB(255, 90, 140), Color3.fromRGB(255, 220, 60), Color3.fromRGB(255, 255, 255), Color3.fromRGB(180, 120, 255), Color3.fromRGB(255, 140, 60) }
 		placed, tries = 0, 0
-		while placed < 130 and tries < 9000 do
+		while placed < 70 and tries < 9000 do
 			tries += 1
 			local x, z = sr:NextNumber(-MAP_X + 12, MAP_X - 12), sr:NextNumber(MAP_Z0 + 12, MAP_Z1 - 12)
 			if not blocked(x, z) then
@@ -1697,7 +1708,10 @@ local function buildWorld()
 	end
 
 	-- Cartoon pass: flat, saturated plastic everywhere (Neon and Glass stay as they are)
-	for _, part in town:GetDescendants() do
+	for n, part in town:GetDescendants() do
+		if n % (BUILD_YIELD_EVERY * 4) == 0 then
+			task.wait()
+		end
 		if part:IsA("BasePart") and part.Material ~= Enum.Material.Neon and part.Material ~= Enum.Material.Glass then
 			part.Material = Enum.Material.SmoothPlastic
 			local h, sat, v = part.Color:ToHSV()
@@ -1708,7 +1722,9 @@ local function buildWorld()
 	return pad
 end
 
+building = true
 local sellPad = buildWorld()
+building = false
 remoteFolder.Parent = ReplicatedStorage
 
 --------------------------------------------------------------------------------
