@@ -599,18 +599,18 @@ local function buildWorld()
 	local darkWood = Color3.fromRGB(84, 58, 40)
 	local stone = Color3.fromRGB(150, 150, 156)
 
-	-- Lighting: bright, sunny and saturated (the cartoony front-page look)
+	-- Lighting: sunny and saturated, but not blown out (the cartoony front-page look)
 	Lighting.ClockTime = 13.5
 	Lighting.GeographicLatitude = 30
-	Lighting.Brightness = 3.2
-	Lighting.Ambient = Color3.fromRGB(150, 150, 155)
-	Lighting.OutdoorAmbient = Color3.fromRGB(175, 175, 180)
-	Lighting.ColorShift_Top = Color3.fromRGB(255, 244, 225)
-	Lighting.ExposureCompensation = 0.1
+	Lighting.Brightness = 2.2
+	Lighting.Ambient = Color3.fromRGB(95, 100, 110)
+	Lighting.OutdoorAmbient = Color3.fromRGB(128, 132, 140)
+	Lighting.ColorShift_Top = Color3.fromRGB(255, 250, 240)
+	Lighting.ExposureCompensation = -0.25
 	Lighting.GlobalShadows = true
 	Lighting.ShadowSoftness = 0.45
-	Lighting.EnvironmentDiffuseScale = 0.5
-	Lighting.EnvironmentSpecularScale = 0.35
+	Lighting.EnvironmentDiffuseScale = 0.3
+	Lighting.EnvironmentSpecularScale = 0.2
 	for _, c in Lighting:GetChildren() do
 		if c:IsA("PostEffect") or c:IsA("Atmosphere") or c:IsA("Sky") then
 			c:Destroy()
@@ -622,21 +622,21 @@ local function buildWorld()
 	atmo.Color = Color3.fromRGB(190, 225, 255)
 	atmo.Decay = Color3.fromRGB(150, 190, 240)
 	atmo.Glare = 0
-	atmo.Haze = 0.4
+	atmo.Haze = 0.2
 	atmo.Parent = Lighting
 	local sky = Instance.new("Sky")
 	sky.SunAngularSize = 16
 	sky.Parent = Lighting
 	local bloom = Instance.new("BloomEffect")
-	bloom.Intensity = 0.4
-	bloom.Size = 24
-	bloom.Threshold = 1.4
+	bloom.Intensity = 0.12
+	bloom.Size = 16
+	bloom.Threshold = 2.4
 	bloom.Parent = Lighting
 	local grade = Instance.new("ColorCorrectionEffect")
 	grade.Name = "WorldGrade"
-	grade.Saturation = 0.25
-	grade.Contrast = 0.1
-	grade.Brightness = 0.02
+	grade.Saturation = 0.08
+	grade.Contrast = 0.06
+	grade.Brightness = -0.02
 	grade.Parent = Lighting
 	local terrain = workspace.Terrain
 	terrain:Clear()
@@ -704,7 +704,7 @@ local function buildWorld()
 	wallRun(-wallX, MAP_Z0, -wallX, MAP_Z1)
 
 	-- Light sandy paths so the town reads at a glance
-	local sand = Color3.fromRGB(246, 222, 160)
+	local sand = Color3.fromRGB(236, 206, 146)
 	for _, pth in { { 0, -113, 264, 12 }, { 0, -100, 16, 26 }, { 0, -90, 120, 12 }, { 0, -130, 36, 20 }, { 0, -142, 20, 8 }, { 78, -131, 10, 26 }, { -83, -131, 10, 26 } } do
 		newPart({ Name = "Path", Size = Vector3.new(pth[3], 0.3, pth[4]), Position = W(pth[1], 0.15, pth[2]), Color = sand, Material = Enum.Material.SmoothPlastic, CanCollide = false }, town)
 	end
@@ -840,7 +840,7 @@ local function buildWorld()
 	local pad = newPart({ Name = "SellPad", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.5, 15, 15), CFrame = CFrame.new(SELL_POS + Vector3.new(0, 0.25, 0)) * CFrame.Angles(0, 0, math.rad(90)), Color = Color3.fromRGB(255, 196, 60), Material = Enum.Material.Neon, Transparency = 0.35, CanCollide = false }, town)
 	CollectionService:AddTag(pad, "SellPad")
 	addLight(pad, Color3.fromRGB(255, 200, 90), 14, 0.8)
-	billboard(pad, 7, { { "Title", "💰 SELL", 30, Color3.fromRGB(255, 214, 90) }, { "Sub", "Step on the pad to sell your ore", 15, Color3.fromRGB(240, 240, 240) } }, 90)
+	billboard(pad, 7, { { "Sub", "Step on the pad to sell your ore", 15, Color3.fromRGB(240, 240, 240) } }, 90)
 	do
 		local k = SELL_POS + Vector3.new(-13, 0, 0)
 		local plank = Color3.fromRGB(140, 98, 60)
@@ -958,7 +958,7 @@ local function buildWorld()
 	newPart({ Name = "ElevatorTop", Size = Vector3.new(8.8, 0.8, 8.8), Position = W(ex, 14.2, ez), Color = Color3.fromRGB(60, 60, 66), Material = Enum.Material.Metal }, town)
 	newPart({ Name = "ElevatorWheel", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.6, 4, 4), CFrame = CFrame.new(W(ex, 16.4, ez)), Color = Color3.fromRGB(150, 110, 60), Material = Enum.Material.Metal }, town)
 	CollectionService:AddTag(platform, "Elevator")
-	billboard(platform, 16, { { "Title", "⬇ ELEVATOR", 24, Color3.fromRGB(255, 214, 90) }, { "Sub", "Unlocks at " .. ELEVATOR_STEP .. "m", 15, Color3.fromRGB(240, 240, 240) } }, 80)
+	billboard(platform, 16, { { "Sub", "Unlocks at " .. ELEVATOR_STEP .. "m", 15, Color3.fromRGB(240, 240, 240) } }, 80)
 	prompt(platform, "Elevator", "Ride down", "Elevator", 0.4)
 
 	-- Daily chest
@@ -1026,7 +1026,7 @@ local function buildWorld()
 		CollectionService:AddTag(star, "Spin")
 		star.Parent = town
 		CollectionService:AddTag(altar, "Shrine")
-		billboard(altar, 9, { { "Title", "⭐ ASCENSION", 22, Color3.fromRGB(215, 175, 255) }, { "Sub", "Reach bedrock (" .. MAX_DEPTH .. "m) to unlock", 14, Color3.fromRGB(235, 235, 245) } }, 70)
+		billboard(altar, 9, { { "Sub", "Reach bedrock (" .. MAX_DEPTH .. "m) to unlock", 14, Color3.fromRGB(235, 235, 245) } }, 70)
 		prompt(altar, "Ascend", "Ascend", "Ascension Shrine", 2)
 	end
 
@@ -1302,7 +1302,7 @@ local function buildWorld()
 		if part:IsA("BasePart") and part.Material ~= Enum.Material.Neon and part.Material ~= Enum.Material.Glass then
 			part.Material = Enum.Material.SmoothPlastic
 			local h, sat, v = part.Color:ToHSV()
-			part.Color = Color3.fromHSV(h, math.min(1, sat * 1.3 + 0.04), math.min(1, v * 1.08 + 0.02))
+			part.Color = Color3.fromHSV(h, math.min(1, sat * 1.15 + 0.03), v)
 		end
 	end
 

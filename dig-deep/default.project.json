@@ -23,7 +23,7 @@
     "Lighting": {
       "$properties": {
         "Technology": "ShadowMap",
-        "Brightness": 3.2,
+        "Brightness": 2.2,
         "ClockTime": 13.5,
         "GlobalShadows": true,
         "EnvironmentDiffuseScale": 1,

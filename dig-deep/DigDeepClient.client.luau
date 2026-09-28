@@ -121,6 +121,9 @@ local function create(className, props, children)
 	end
 	if children then
 		for _, c in children do
+			if c:IsA("UIStroke") and inst:IsA("TextButton") then
+				c.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+			end
 			c.Parent = inst
 		end
 	end
@@ -1445,8 +1448,47 @@ local function label(props)
 	return l
 end
 
--- A chunky, bouncy button with a vertical gradient and a thick outline.
+-- Chunky 3D look: a light top, the main colour, then a darker "lip" along the bottom edge.
+local function bevel(top, bottom)
+	local lip = bottom:Lerp(Color3.new(0, 0, 0), 0.3)
+	return ColorSequence.new({
+		ColorSequenceKeypoint.new(0, top:Lerp(WHITE, 0.2)),
+		ColorSequenceKeypoint.new(0.45, top),
+		ColorSequenceKeypoint.new(0.8, bottom),
+		ColorSequenceKeypoint.new(0.815, lip),
+		ColorSequenceKeypoint.new(1, lip),
+	})
+end
+
+-- Soft floating bubbles drawn behind a panel's content (the "inside" of windows and cards).
+local function decorate(parent, count)
+	local deco = create("Frame", {
+		Name = "Deco",
+		Position = UDim2.fromOffset(6, 6),
+		Size = UDim2.new(1, -12, 1, -12),
+		BackgroundTransparency = 1,
+		ClipsDescendants = true,
+		ZIndex = 0,
+		Parent = parent,
+	})
+	for _ = 1, count do
+		local s = math.random(8, 34)
+		create("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(math.random(), math.random()),
+			Size = UDim2.fromOffset(s, s),
+			BackgroundColor3 = WHITE,
+			BackgroundTransparency = 0.8 + math.random() * 0.12,
+			ZIndex = 0,
+			Parent = deco,
+		}, { corner(), create("UIStroke", { Color = WHITE, Thickness = 1.5, Transparency = 0.5 }) })
+	end
+	return deco
+end
+
+-- A chunky, bouncy 3D button: bevelled gradient, glossy top, thick outline.
 local function cartoonButton(parent, props)
+	local radius = props.radius or UDim.new(0.25, 0)
 	local b = create("TextButton", {
 		Name = props.name or "Button",
 		Size = props.sz,
@@ -1458,8 +1500,17 @@ local function cartoonButton(parent, props)
 		LayoutOrder = props.order or 0,
 		ZIndex = props.z or 1,
 		Parent = parent,
-	}, { corner(props.radius or UDim.new(0.25, 0)), stroke(props.strokeSize or 3.5, INK) })
-	local grad = gradient(b, props.top, props.bottom)
+	}, { corner(radius), stroke(props.strokeSize or 3.5, INK) })
+	local grad = create("UIGradient", { Color = bevel(props.top, props.bottom), Rotation = 90, Parent = b })
+	create("Frame", {
+		Name = "Gloss",
+		Position = UDim2.new(0, 5, 0, 3),
+		Size = UDim2.new(1, -10, 0.34, 0),
+		BackgroundColor3 = WHITE,
+		BackgroundTransparency = 0.72,
+		ZIndex = props.z or 1,
+		Parent = b,
+	}, { corner(radius) })
 	local sc = create("UIScale", { Parent = b })
 	b.MouseEnter:Connect(function()
 		tween(sc, 0.12, { Scale = 1.07 })
@@ -1474,7 +1525,7 @@ local function cartoonButton(parent, props)
 		tween(sc, 0.25, { Scale = 1.05 }, Enum.EasingStyle.Back)
 	end)
 	if props.text then
-		label({ parent = b, text = props.text, size = props.textSize or 20, z = (props.z or 1) + 1 })
+		label({ parent = b, text = props.text, size = props.textSize or 20, pos = UDim2.fromScale(0, -0.06), z = (props.z or 1) + 1 })
 	end
 	if props.onClick then
 		b.Activated:Connect(function()
@@ -1508,35 +1559,44 @@ local function makeWindow(key, title, top, bottom)
 	local w = create("Frame", {
 		Name = key,
 		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(0.5, 0.52),
-		Size = UDim2.new(0.62, 0, 0.66, 0),
-		BackgroundColor3 = Color3.fromRGB(255, 250, 240),
+		Position = UDim2.fromScale(0.5, 0.53),
+		Size = UDim2.new(0.62, 0, 0.68, 0),
+		BackgroundColor3 = WHITE,
 		Visible = false,
 		Parent = windowsGui,
 	}, {
-		corner(UDim.new(0, 26)),
+		corner(UDim.new(0, 16)),
 		stroke(5, INK),
-		create("UISizeConstraint", { MaxSize = Vector2.new(780, 520), MinSize = Vector2.new(320, 300) }),
+		create("UISizeConstraint", { MaxSize = Vector2.new(800, 560), MinSize = Vector2.new(330, 320) }),
 		create("UIScale", {}),
 	})
-	gradient(w, Color3.fromRGB(255, 252, 244), Color3.fromRGB(236, 226, 210))
+	gradient(w, Color3.fromRGB(84, 158, 250), Color3.fromRGB(42, 86, 196))
+	decorate(w, 22)
+	-- Big bevelled header bar, a tilted icon and a red square close button (like the top sims)
 	local header = create("Frame", {
-		Size = UDim2.new(1, 0, 0, 62),
+		Name = "Header",
+		Position = UDim2.fromOffset(-6, -10),
+		Size = UDim2.new(1, 12, 0, 72),
 		BackgroundColor3 = WHITE,
+		ZIndex = 2,
 		Parent = w,
-	}, { corner(UDim.new(0, 26)), stroke(5, INK) })
-	gradient(header, top, bottom)
-	label({ parent = header, text = title, size = 34, z = 2 })
+	}, { corner(UDim.new(0, 12)), stroke(5, INK) })
+	create("UIGradient", { Color = bevel(top, bottom), Rotation = 90, Parent = header })
+	create("Frame", { Position = UDim2.fromOffset(8, 4), Size = UDim2.new(1, -16, 0, 22), BackgroundColor3 = WHITE, BackgroundTransparency = 0.7, ZIndex = 2, Parent = header }, { corner(UDim.new(0, 8)) })
+	local icon, text = string.match(title, "^(%S+)%s+(.+)$")
+	local iconLabel = label({ parent = header, text = icon or "", size = 50, outline = false, sz = UDim2.fromOffset(70, 70), pos = UDim2.new(0, 8, 0.5, -6), anchor = Vector2.new(0, 0.5), z = 3 })
+	iconLabel.Rotation = -10
+	label({ parent = header, text = text or title, size = 40, alignX = Enum.TextXAlignment.Left, sz = UDim2.new(1, -170, 1, -12), pos = UDim2.fromOffset(84, 0), z = 3 })
 	cartoonButton(header, {
 		name = "Close",
-		sz = UDim2.fromOffset(50, 50),
-		anchor = Vector2.new(0.5, 0.5),
-		pos = UDim2.new(1, -14, 0, 8),
-		top = Color3.fromRGB(255, 110, 100),
-		bottom = Color3.fromRGB(220, 40, 50),
-		radius = UDim.new(1, 0),
-		text = "✖",
-		textSize = 26,
+		sz = UDim2.fromOffset(58, 58),
+		anchor = Vector2.new(1, 0.5),
+		pos = UDim2.new(1, -10, 0.5, -4),
+		top = Color3.fromRGB(255, 96, 84),
+		bottom = Color3.fromRGB(214, 30, 40),
+		radius = UDim.new(0.18, 0),
+		text = "X",
+		textSize = 38,
 		z = 3,
 		onClick = closeWindows,
 	})
@@ -1711,20 +1771,23 @@ autoButton.Visible = false
 autoButton.Activated:Connect(function()
 	autoMine = not autoMine
 	autoGrad.Color = if autoMine
-		then ColorSequence.new(Color3.fromRGB(120, 235, 120), Color3.fromRGB(40, 170, 70))
-		else ColorSequence.new(Color3.fromRGB(200, 200, 210), Color3.fromRGB(130, 130, 145))
+		then bevel(Color3.fromRGB(120, 235, 120), Color3.fromRGB(40, 170, 70))
+		else bevel(Color3.fromRGB(200, 200, 210), Color3.fromRGB(130, 130, 145))
 	toast(if autoMine then "🤖 Auto Mine ON" else "Auto Mine OFF", if autoMine then GREEN else WHITE)
 end)
 
 -- SHOP window -------------------------------------------------------------------
-do
-	local _, body = makeWindow("Shop", "🛒 SHOP", Color3.fromRGB(255, 226, 92), Color3.fromRGB(255, 150, 30))
-	local tabs = create("Frame", { Size = UDim2.new(1, 0, 0, 46), BackgroundTransparency = 1, Parent = body }, {
+-- Wide, colourful offer cards with a spinning 3D model of each item (like the big sims).
+local buildPet, animatePet
+-- its own function so its many locals don't count against the script's 200-register limit
+;(function()
+	local _, body = makeWindow("Shop", "🛒 SHOP", Color3.fromRGB(255, 226, 70), Color3.fromRGB(255, 168, 20))
+	local tabs = create("Frame", { Size = UDim2.new(1, 0, 0, 52), BackgroundTransparency = 1, Parent = body }, {
 		create("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 10), HorizontalAlignment = Enum.HorizontalAlignment.Center }),
 	})
 	local scroll = create("ScrollingFrame", {
-		Position = UDim2.fromOffset(0, 58),
-		Size = UDim2.new(1, 0, 1, -58),
+		Position = UDim2.fromOffset(0, 62),
+		Size = UDim2.new(1, 0, 1, -62),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		ScrollBarThickness = 8,
@@ -1733,79 +1796,354 @@ do
 		CanvasSize = UDim2.new(),
 		Parent = body,
 	}, {
-		create("UIGridLayout", { CellSize = UDim2.fromOffset(172, 200), CellPadding = UDim2.fromOffset(12, 12), HorizontalAlignment = Enum.HorizontalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder }),
-		create("UIPadding", { PaddingTop = UDim.new(0, 6), PaddingBottom = UDim.new(0, 6) }),
+		create("UIListLayout", { Padding = UDim.new(0, 14), HorizontalAlignment = Enum.HorizontalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder }),
+		create("UIPadding", { PaddingTop = UDim.new(0, 6), PaddingBottom = UDim.new(0, 10), PaddingLeft = UDim.new(0, 4), PaddingRight = UDim.new(0, 12) }),
 	})
+
+	local function c3(r, g, b)
+		return Color3.fromRGB(r, g, b)
+	end
+	local CARD_COLORS = {
+		VIP = { c3(255, 214, 60), c3(232, 112, 20) },
+		DoubleCoins = { c3(130, 232, 90), c3(24, 150, 56) },
+		AutoMine = { c3(120, 196, 255), c3(40, 86, 214) },
+		SellAnywhere = { c3(255, 176, 70), c3(222, 84, 30) },
+		Lucky = { c3(150, 240, 110), c3(30, 160, 80) },
+		FastMine = { c3(196, 146, 255), c3(108, 56, 214) },
+		InfiniteBag = { c3(255, 128, 204), c3(196, 36, 136) },
+		MorePets = { c3(255, 156, 184), c3(224, 64, 110) },
+		Starter = { c3(255, 96, 90), c3(176, 18, 40) },
+		CoinsS = { c3(255, 226, 96), c3(226, 146, 20) },
+		CoinsM = { c3(255, 206, 70), c3(214, 110, 16) },
+		CoinsL = { c3(255, 186, 60), c3(196, 76, 14) },
+		PotionCoins = { c3(255, 186, 76), c3(218, 104, 20) },
+		PotionLuck = { c3(130, 232, 110), c3(26, 146, 60) },
+		PotionSpeed = { c3(176, 136, 255), c3(96, 48, 206) },
+		NextPick = { c3(124, 206, 255), c3(38, 98, 208) },
+	}
+	local TAGS = { Starter = "ONE TIME!", VIP = "POPULAR", CoinsL = "BEST VALUE", InfiniteBag = "🔥 HOT" }
+	local DESC_COLORS = { Starter = c3(255, 236, 90), VIP = c3(255, 255, 255) }
+
+	-- Tiny part-built models for the 3D previews ------------------------------------
+	local function part(m, shape, size, cf, color, material)
+		local p = Instance.new("Part")
+		p.Shape = shape or Enum.PartType.Block
+		p.Size = size
+		p.CFrame = cf
+		p.Color = color
+		p.Material = material or Enum.Material.SmoothPlastic
+		p.Anchored = true
+		p.CanCollide = false
+		p.TopSurface = Enum.SurfaceType.Smooth
+		p.BottomSurface = Enum.SurfaceType.Smooth
+		p.Parent = m
+		return p
+	end
+	local CYL, BALL = Enum.PartType.Cylinder, Enum.PartType.Ball
+	local GOLD, GOLD_HI = c3(255, 200, 40), c3(255, 232, 120)
+	local function coin(m, cf, r)
+		part(m, CYL, Vector3.new(0.45, r * 2, r * 2), cf, GOLD)
+		part(m, CYL, Vector3.new(0.5, r * 1.45, r * 1.45), cf, GOLD_HI)
+	end
+	local FLAT = CFrame.Angles(0, 0, math.rad(90)) -- cylinder axis pointing up
+	local FACE = CFrame.Angles(0, math.rad(90), 0) -- cylinder axis pointing at the camera
+	local function pile(m, n)
+		for i = 1, n do
+			local a = i * 2.4
+			local ring = if i == 1 then 0 else 0.9 + (i % 3) * 0.55
+			coin(m, CFrame.new(math.cos(a) * ring, -1.3 + math.floor((i - 1) / 4) * 0.42 + (i % 2) * 0.2, math.sin(a) * ring * 0.6) * FLAT, 0.8)
+		end
+		coin(m, CFrame.new(0, 0.2 + n * 0.04, -0.4) * FACE * CFrame.Angles(math.rad(12), 0, 0), 1.1)
+	end
+	local function pickaxe(m, head)
+		local tilt = CFrame.Angles(0, 0, math.rad(-35))
+		part(m, nil, Vector3.new(0.42, 4.6, 0.42), tilt * CFrame.new(0, -0.4, 0), c3(150, 96, 50))
+		part(m, nil, Vector3.new(0.5, 0.7, 0.5), tilt * CFrame.new(0, -2.5, 0), c3(90, 56, 30))
+		part(m, nil, Vector3.new(3.6, 0.8, 0.7), tilt * CFrame.new(0, 1.8, 0), head)
+		part(m, BALL, Vector3.new(0.9, 0.9, 0.9), tilt * CFrame.new(-1.8, 1.6, 0), head:Lerp(WHITE, 0.3))
+		part(m, BALL, Vector3.new(0.9, 0.9, 0.9), tilt * CFrame.new(1.8, 1.6, 0), head:Lerp(WHITE, 0.3))
+	end
+	local function potion(m, color)
+		part(m, BALL, Vector3.new(2.8, 2.8, 2.8), CFrame.new(0, -0.6, 0), color)
+		part(m, BALL, Vector3.new(0.7, 0.7, 0.7), CFrame.new(-0.6, -0.1, -1.05), WHITE)
+		part(m, CYL, Vector3.new(1.1, 0.9, 0.9), CFrame.new(0, 1.1, 0) * FLAT, color:Lerp(WHITE, 0.45))
+		part(m, CYL, Vector3.new(0.6, 1.05, 1.05), CFrame.new(0, 1.75, 0) * FLAT, c3(170, 110, 60))
+	end
+	local function clover(m)
+		for i = 0, 3 do
+			local a = i * math.pi / 2 + math.pi / 4
+			part(m, BALL, Vector3.new(1.7, 1.7, 0.7), CFrame.new(math.cos(a) * 0.8, 0.4 + math.sin(a) * 0.8, 0), c3(70, 200, 80))
+		end
+		part(m, nil, Vector3.new(0.3, 1.8, 0.3), CFrame.new(0.3, -1.2, 0) * CFrame.Angles(0, 0, math.rad(-15)), c3(60, 150, 60))
+	end
+	local function bolt(m)
+		local yellow = c3(255, 226, 60)
+		part(m, nil, Vector3.new(0.8, 2.2, 0.6), CFrame.new(0.3, 1, 0) * CFrame.Angles(0, 0, math.rad(-25)), yellow)
+		part(m, nil, Vector3.new(1.8, 0.6, 0.6), CFrame.new(0, 0, 0), yellow)
+		part(m, nil, Vector3.new(0.8, 2.2, 0.6), CFrame.new(-0.3, -1, 0) * CFrame.Angles(0, 0, math.rad(-25)), yellow)
+	end
+	local function crown(m)
+		part(m, CYL, Vector3.new(1.3, 3.4, 3.4), CFrame.new(0, -0.6, 0) * FLAT, GOLD)
+		for i = 0, 4 do
+			local a = i * math.pi * 2 / 5
+			local pos = Vector3.new(math.cos(a) * 1.35, 0.5, math.sin(a) * 1.35)
+			part(m, nil, Vector3.new(0.55, 1.4, 0.55), CFrame.new(pos) * CFrame.Angles(0, -a, 0), GOLD)
+			part(m, BALL, Vector3.new(0.6, 0.6, 0.6), CFrame.new(pos + Vector3.new(0, 0.85, 0)), GOLD_HI)
+		end
+		part(m, BALL, Vector3.new(0.8, 0.8, 0.8), CFrame.new(0, -0.5, -1.65), c3(240, 40, 60))
+	end
+	local function robot(m)
+		local grey = c3(190, 196, 210)
+		part(m, nil, Vector3.new(2.8, 2.2, 2.2), CFrame.new(0, 0, 0), grey)
+		part(m, nil, Vector3.new(2.2, 1.2, 0.2), CFrame.new(0, 0.1, -1.1), c3(40, 50, 70))
+		part(m, BALL, Vector3.new(0.55, 0.55, 0.55), CFrame.new(-0.5, 0.1, -1.2), c3(80, 240, 255), Enum.Material.Neon)
+		part(m, BALL, Vector3.new(0.55, 0.55, 0.55), CFrame.new(0.5, 0.1, -1.2), c3(80, 240, 255), Enum.Material.Neon)
+		part(m, nil, Vector3.new(0.2, 0.9, 0.2), CFrame.new(0, 1.5, 0), grey)
+		part(m, BALL, Vector3.new(0.55, 0.55, 0.55), CFrame.new(0, 2.05, 0), c3(255, 70, 70))
+		part(m, CYL, Vector3.new(0.3, 0.9, 0.9), CFrame.new(-1.5, 0, 0), c3(255, 170, 40))
+		part(m, CYL, Vector3.new(0.3, 0.9, 0.9), CFrame.new(1.5, 0, 0), c3(255, 170, 40))
+	end
+	local function moneyBag(m)
+		local sack = c3(214, 176, 110)
+		part(m, BALL, Vector3.new(3, 2.8, 3), CFrame.new(0, -0.6, 0), sack)
+		part(m, CYL, Vector3.new(0.6, 1.1, 1.1), CFrame.new(0, 0.9, 0) * FLAT, sack:Lerp(Color3.new(0, 0, 0), 0.15))
+		part(m, BALL, Vector3.new(1.3, 0.8, 1.3), CFrame.new(0, 1.35, 0), sack)
+		coin(m, CFrame.new(0.2, -0.5, -1.45) * FACE, 0.75)
+	end
+	local function backpack(m)
+		local pink = c3(255, 110, 190)
+		part(m, nil, Vector3.new(2.6, 3, 1.6), CFrame.new(0, 0, 0), pink)
+		part(m, BALL, Vector3.new(2.6, 1.2, 1.6), CFrame.new(0, 1.5, 0), pink)
+		part(m, nil, Vector3.new(1.8, 1.2, 0.5), CFrame.new(0, -0.6, -0.9), pink:Lerp(WHITE, 0.3))
+		part(m, nil, Vector3.new(0.3, 0.3, 0.3), CFrame.new(0, -0.1, -1.2), GOLD)
+		part(m, nil, Vector3.new(0.35, 2.6, 0.2), CFrame.new(-0.8, 0.2, 0.85), pink:Lerp(Color3.new(0, 0, 0), 0.3))
+		part(m, nil, Vector3.new(0.35, 2.6, 0.2), CFrame.new(0.8, 0.2, 0.85), pink:Lerp(Color3.new(0, 0, 0), 0.3))
+	end
+	local function gift(m)
+		local red = c3(235, 50, 60)
+		part(m, nil, Vector3.new(2.6, 2.2, 2.6), CFrame.new(0, -0.7, 0), red)
+		part(m, nil, Vector3.new(2.9, 0.6, 2.9), CFrame.new(0, 0.55, 0), red:Lerp(WHITE, 0.1))
+		part(m, nil, Vector3.new(0.6, 2.95, 2.95), CFrame.new(0, -0.3, 0), GOLD)
+		part(m, nil, Vector3.new(2.95, 2.95, 0.6), CFrame.new(0, -0.3, 0), GOLD)
+		part(m, BALL, Vector3.new(1, 0.8, 1), CFrame.new(-0.45, 1.15, 0), GOLD_HI)
+		part(m, BALL, Vector3.new(1, 0.8, 1), CFrame.new(0.45, 1.15, 0), GOLD_HI)
+	end
+	local function petModel(m, id, offset)
+		if not buildPet then
+			return
+		end
+		local pet = buildPet(id)
+		pet:PivotTo(CFrame.new(offset) * CFrame.Angles(0, math.rad(200), 0))
+		for _, d in pet:GetDescendants() do
+			if d:IsA("Light") or d:IsA("Sparkles") then
+				d:Destroy()
+			end
+		end
+		pet.Parent = m
+	end
+	local MODELS = {
+		VIP = crown,
+		DoubleCoins = function(m)
+			pile(m, 8)
+		end,
+		AutoMine = robot,
+		SellAnywhere = moneyBag,
+		Lucky = clover,
+		FastMine = bolt,
+		InfiniteBag = backpack,
+		MorePets = function(m)
+			petModel(m, "Bunny", Vector3.new(-1.1, 0, 0.3))
+			petModel(m, "PebblePup", Vector3.new(1.1, 0, -0.3))
+		end,
+		Starter = function(m)
+			gift(m)
+			petModel(m, "StarterPup", Vector3.new(0, 2.1, -0.4))
+		end,
+		CoinsS = function(m)
+			pile(m, 4)
+		end,
+		CoinsM = function(m)
+			pile(m, 9)
+		end,
+		CoinsL = function(m)
+			pile(m, 16)
+		end,
+		PotionCoins = function(m)
+			potion(m, c3(255, 170, 40))
+		end,
+		PotionLuck = function(m)
+			potion(m, c3(80, 210, 90))
+		end,
+		PotionSpeed = function(m)
+			potion(m, c3(160, 110, 255))
+		end,
+		NextPick = function(m)
+			pickaxe(m, c3(90, 220, 255))
+		end,
+	}
+	-- Fits the camera to the model using part positions (rough, but no engine bounds needed)
+	local function fillViewport(vp, key)
+		local m = Instance.new("Model")
+		local builder = MODELS[key]
+		if builder then
+			builder(m)
+		end
+		local lo, hi = Vector3.new(math.huge, math.huge, math.huge), Vector3.new(-math.huge, -math.huge, -math.huge)
+		for _, p in m:GetDescendants() do
+			if p:IsA("BasePart") and p.Transparency < 1 then
+				local half = Vector3.one * (math.max(p.Size.X, p.Size.Y, p.Size.Z) / 2)
+				lo = lo:Min(p.CFrame.Position - half)
+				hi = hi:Max(p.CFrame.Position + half)
+			end
+		end
+		local centre, extent = Vector3.zero, 4
+		if lo.X < hi.X then
+			centre = (lo + hi) / 2
+			extent = (hi - lo).Magnitude
+		end
+		m.WorldPivot = CFrame.new(centre)
+		m.Parent = vp
+		local cam = Instance.new("Camera")
+		cam.FieldOfView = 38
+		cam.CFrame = CFrame.lookAt(centre + Vector3.new(0, extent * 0.3, -extent * 1.35), centre)
+		cam.Parent = vp
+		vp.CurrentCamera = cam
+		return m, centre
+	end
+
 	local cards = {}
 	local function card(kind, item, order, tab)
-		local c = create("Frame", { LayoutOrder = order, BackgroundColor3 = WHITE, Parent = scroll }, { corner(UDim.new(0, 18)), stroke(3.5, INK) })
-		gradient(c, Color3.fromRGB(255, 255, 255), Color3.fromRGB(226, 234, 255))
-		label({ parent = c, text = item.icon, size = 46, outline = false, sz = UDim2.new(1, 0, 0, 58), pos = UDim2.fromOffset(0, 6) })
-		label({ parent = c, text = item.name, size = 19, sz = UDim2.new(1, -10, 0, 24), pos = UDim2.fromOffset(5, 64) })
-		local desc = label({ parent = c, text = item.desc or "", size = 13, color = Color3.fromRGB(70, 70, 90), outline = false, wrap = true, sz = UDim2.new(1, -16, 0, 58), pos = UDim2.fromOffset(8, 88) })
-		local btn = cartoonButton(c, {
-			sz = UDim2.new(1, -24, 0, 38),
-			pos = UDim2.new(0.5, 0, 1, -10),
-			anchor = Vector2.new(0.5, 1),
-			top = Color3.fromRGB(120, 235, 120),
-			bottom = Color3.fromRGB(40, 170, 70),
+		local cols = CARD_COLORS[item.key] or { c3(120, 200, 255), c3(50, 110, 230) }
+		local featured = item.starter or item.key == "VIP"
+		local c = create("Frame", {
+			Name = item.key,
+			LayoutOrder = order,
+			Size = UDim2.new(1, -6, 0, if featured then 164 else 138),
+			BackgroundColor3 = WHITE,
+			Parent = scroll,
+		}, { corner(UDim.new(0, 14)), stroke(4, INK) })
+		gradient(c, cols[1], cols[2], 90)
+		decorate(c, 14)
+		create("Frame", { Name = "Rim", Position = UDim2.fromOffset(4, 4), Size = UDim2.new(1, -8, 1, -8), BackgroundTransparency = 1, Parent = c }, {
+			corner(UDim.new(0, 11)),
+			create("UIStroke", { Color = WHITE, Thickness = 2.5, Transparency = 0.35 }),
+		})
+		local vp = create("ViewportFrame", {
+			Name = "Preview",
+			Position = UDim2.fromOffset(6, 4),
+			Size = UDim2.new(0, 150, 1, -8),
+			BackgroundTransparency = 1,
+			Ambient = c3(175, 175, 185),
+			LightColor = WHITE,
+			LightDirection = Vector3.new(-0.6, -1, 0.8),
+			ZIndex = 2,
+			Parent = c,
+		})
+		local titleLabel = label({ parent = c, text = item.name, size = if featured then 42 else 34, color = if featured then c3(255, 214, 40) else WHITE, alignX = Enum.TextXAlignment.Right, sz = UDim2.new(1, -180, 0, 46), pos = UDim2.fromOffset(160, 8), z = 3 })
+		titleLabel.TextScaled = true
+		create("UITextSizeConstraint", { MaxTextSize = if featured then 42 else 34, Parent = titleLabel })
+		local desc = label({ parent = c, text = item.desc or "", size = 19, color = DESC_COLORS[item.key] or c3(255, 246, 170), alignX = Enum.TextXAlignment.Right, wrap = true, sz = UDim2.new(1, -180, 0, 44), pos = UDim2.fromOffset(160, 54), z = 3 })
+		local btn, bgrad = cartoonButton(c, {
+			sz = UDim2.fromOffset(186, 50),
+			anchor = Vector2.new(1, 1),
+			pos = UDim2.new(1, -14, 1, -12),
+			top = c3(140, 244, 90),
+			bottom = c3(36, 176, 50),
+			radius = UDim.new(0.2, 0),
+			z = 3,
 			onClick = function()
 				buy(kind, item)
 			end,
 		})
-		local priceLabel = label({ parent = btn, text = "R$ " .. item.price, size = 19, z = 2 })
-		table.insert(cards, { frame = c, kind = kind, item = item, tab = tab, price = priceLabel, button = btn, desc = desc })
+		-- Robux icon: a white rounded "hexagon" with a square hole
+		local robux = create("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, 30, 0.44, 0), Size = UDim2.fromOffset(26, 26), Rotation = 45, BackgroundColor3 = WHITE, ZIndex = 4, Parent = btn }, {
+			corner(UDim.new(0.3, 0)),
+			stroke(2, INK),
+		})
+		create("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(10, 10), BackgroundColor3 = c3(60, 190, 70), ZIndex = 5, Parent = robux }, { corner(UDim.new(0.2, 0)) })
+		local priceLabel = label({ parent = btn, text = tostring(item.price), size = 28, sz = UDim2.new(1, -52, 1, -6), pos = UDim2.fromOffset(48, 0), z = 4 })
+		if TAGS[item.key] then
+			local tag = create("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(62, 10), Size = UDim2.fromOffset(118, 30), Rotation = -8, BackgroundColor3 = c3(255, 56, 70), ZIndex = 5, Parent = c }, {
+				corner(UDim.new(0.3, 0)),
+				stroke(3, INK),
+			})
+			label({ parent = tag, text = TAGS[item.key], size = 17, z = 6 })
+		end
+		table.insert(cards, { frame = c, kind = kind, item = item, tab = tab, price = priceLabel, button = btn, grad = bgrad, robux = robux, desc = desc, vp = vp })
 	end
 	for i, pass in CFG.passes do
-		card("Pass", pass, i, "Passes")
+		card("Pass", pass, if pass.key == "VIP" then 0 else i, "Passes")
 	end
 	for i, product in CFG.products do
 		card("Product", product, i, if product.coinMinutes then "Coins" else "Boosts")
 	end
+
 	local current = "Passes"
 	local tabButtons = {}
+	local spinners = {}
 	local function refresh()
-		local pick = CFG.picks[attr("Pick", 1)] or CFG.picks[1]
 		for _, c in cards do
-			c.frame.Visible = c.tab == current
-			if c.kind == "Pass" and attr("Pass_" .. c.item.key, false) then
+			local show = c.tab == current
+			c.frame.Visible = show
+			-- models are built the first time their tab is seen, so opening the shop stays fast
+			if show and not c.model and windows.Shop.Visible then
+				c.model, c.centre = fillViewport(c.vp, c.item.key)
+				table.insert(spinners, c)
+			end
+			local owned = c.kind == "Pass" and attr("Pass_" .. c.item.key, false)
+			if owned then
 				c.price.Text = "OWNED ✔"
 				c.button.Active = false
-			elseif c.item.starter and attr("Starter", false) then
-				c.price.Text = "R$ " .. c.item.price
 			else
-				c.price.Text = if c.item.id == 0 and not RunService:IsStudio() then "Soon" else "R$ " .. c.item.price
+				c.price.Text = if c.item.id == 0 and not RunService:IsStudio() then "Soon" else tostring(c.item.price)
 			end
+			c.robux.Visible = not owned and c.price.Text ~= "Soon"
+			c.price.Position = UDim2.fromOffset(if c.robux.Visible then 48 else 26, 0)
+			c.grad.Color = if owned then bevel(c3(200, 204, 215), c3(140, 146, 165)) else bevel(c3(140, 244, 90), c3(36, 176, 50))
 			if c.item.coinMinutes then
 				local income = CFG.income[attr("Pick", 1)] or CFG.income[1]
-				c.desc.Text = "+ 💰 " .. fmt(income * c.item.coinMinutes * (1 + attr("Asc", 0) * CFG.ascendBonus))
+				c.desc.Text = "+ 💰 " .. fmt(income * c.item.coinMinutes * (1 + attr("Asc", 0) * CFG.ascendBonus)) .. " coins"
 			elseif c.item.key == "NextPick" then
 				local nextPick = CFG.picks[attr("Pick", 1) + 1]
-				c.desc.Text = if nextPick then "Get the " .. nextPick.name .. " right now" else "You have the best pickaxe!"
+				c.desc.Text = if nextPick then "Get the " .. nextPick.name .. " right now!" else "You have the best pickaxe!"
 			elseif c.item.potion then
 				c.desc.Text = `{c.item.minutes} minutes. Stacks up to 3 hours`
 			end
 		end
 		for key, b in tabButtons do
-			b.BackgroundTransparency = if key == current then 0 else 0.35
+			b.grad.Color = if key == current then bevel(c3(130, 240, 80), c3(30, 170, 50)) else bevel(c3(255, 226, 70), c3(255, 168, 20))
+			b.button.Size = if key == current then UDim2.fromOffset(156, 48) else UDim2.fromOffset(146, 44)
 		end
-		local _ = pick
 	end
-	for i, t in { { "Passes", "⭐ PASSES" }, { "Boosts", "🧪 BOOSTS" }, { "Coins", "💰 COINS" } } do
-		local b = cartoonButton(tabs, {
-			sz = UDim2.fromOffset(150, 42),
+	for i, t in { { "Passes", "⭐ Passes" }, { "Boosts", "🧪 Boosts" }, { "Coins", "💰 Coins" } } do
+		local b, g = cartoonButton(tabs, {
+			sz = UDim2.fromOffset(146, 44),
 			order = i,
-			top = Color3.fromRGB(120, 200, 255),
-			bottom = Color3.fromRGB(50, 110, 230),
+			top = c3(255, 226, 70),
+			bottom = c3(255, 168, 20),
+			radius = UDim.new(0.16, 0),
 			text = t[2],
-			textSize = 18,
+			textSize = 24,
 			onClick = function()
 				current = t[1]
 				refresh()
 			end,
 		})
-		tabButtons[t[1]] = b
+		tabButtons[t[1]] = { button = b, grad = g }
 	end
+	-- Slowly turn the 3D previews while the shop is open
+	RunService.RenderStepped:Connect(function()
+		local w = windows.Shop
+		if not (w and w.Visible) then
+			return
+		end
+		local t = os.clock()
+		for _, c in spinners do
+			if c.frame.Visible then
+				c.model:PivotTo(CFrame.new(c.centre + Vector3.new(0, math.sin(t * 2) * 0.12, 0)) * CFrame.Angles(0, math.sin(t * 0.9) * 0.6, 0))
+			end
+		end
+	end)
 	windows.Shop_open = refresh
 	windows.Shop:SetAttribute("OnOpen", true)
 	for _, name in { "Pick", "Asc", "Starter" } do
@@ -1823,10 +2161,9 @@ do
 			openWindowByKey("Shop")
 		end
 	end)
-end
+end)()
 windows.Offer = nil
 
-local buildPet, animatePet
 do
 	-- PET MODELS (used by the pets that follow players and by the hatch reveal) -------
 	local function petPart(model, size, cf, color, mat, shape)
@@ -2590,28 +2927,28 @@ do
 				local done = q.progress >= q.goal
 				if q.claimed then
 					row.claimText.Text = "✔ DONE"
-					row.claimGrad.Color = ColorSequence.new(Color3.fromRGB(200, 200, 210), Color3.fromRGB(150, 150, 165))
+					row.claimGrad.Color = bevel(Color3.fromRGB(200, 200, 210), Color3.fromRGB(150, 150, 165))
 				elseif done then
 					row.claimText.Text = "CLAIM!"
-					row.claimGrad.Color = ColorSequence.new(Color3.fromRGB(120, 235, 120), Color3.fromRGB(40, 170, 70))
+					row.claimGrad.Color = bevel(Color3.fromRGB(120, 235, 120), Color3.fromRGB(40, 170, 70))
 					claimable = true
 				else
 					row.claimText.Text = `💰 {CFG.questRewardMinutes} min`
-					row.claimGrad.Color = ColorSequence.new(Color3.fromRGB(255, 226, 92), Color3.fromRGB(255, 150, 30))
+					row.claimGrad.Color = bevel(Color3.fromRGB(255, 226, 92), Color3.fromRGB(255, 150, 30))
 				end
 				allClaimed = allClaimed and q.claimed
 			end
 		end
 		if data.bonus then
 			bonusText.Text = "✔ Bonus claimed. New quests tomorrow!"
-			bonusGrad.Color = ColorSequence.new(Color3.fromRGB(200, 200, 210), Color3.fromRGB(150, 150, 165))
+			bonusGrad.Color = bevel(Color3.fromRGB(200, 200, 210), Color3.fromRGB(150, 150, 165))
 		elseif allClaimed then
 			bonusText.Text = "🎁 CLAIM BONUS: free egg + Luck potion!"
-			bonusGrad.Color = ColorSequence.new(Color3.fromRGB(255, 150, 200), Color3.fromRGB(230, 70, 140))
+			bonusGrad.Color = bevel(Color3.fromRGB(255, 150, 200), Color3.fromRGB(230, 70, 140))
 			claimable = true
 		else
 			bonusText.Text = "🎁 Finish all 3 for a free egg!"
-			bonusGrad.Color = ColorSequence.new(Color3.fromRGB(230, 220, 240), Color3.fromRGB(180, 170, 200))
+			bonusGrad.Color = bevel(Color3.fromRGB(230, 220, 240), Color3.fromRGB(180, 170, 200))
 		end
 		stackButtons.Quests.Badge.Visible = claimable
 	end
@@ -2725,8 +3062,8 @@ do
 			local on = settings[key]
 			toggleText.Text = if on then "ON" else "OFF"
 			toggleGrad.Color = if on
-				then ColorSequence.new(Color3.fromRGB(120, 235, 120), Color3.fromRGB(40, 170, 70))
-				else ColorSequence.new(Color3.fromRGB(255, 120, 110), Color3.fromRGB(220, 50, 50))
+				then bevel(Color3.fromRGB(120, 235, 120), Color3.fromRGB(40, 170, 70))
+				else bevel(Color3.fromRGB(255, 120, 110), Color3.fromRGB(220, 50, 50))
 			if volText then
 				volText.Text = `{math.floor(settings[volumeKey] * 100 + 0.5)}%`
 			end
@@ -3227,7 +3564,7 @@ RunService.RenderStepped:Connect(function(dt)
 	end
 	grade.TintColor = grade.TintColor:Lerp(tint, 1 - math.exp(-dt * 4))
 	grade.Contrast = 0.05 + 0.08 * dark
-	grade.Saturation = 0.12
+	grade.Saturation = 0
 
 	-- Camera shake (swings, finds and earthquakes)
 	local hum = getHumanoid()

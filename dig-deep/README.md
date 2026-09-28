@@ -6,14 +6,14 @@ A Roblox mining game made of two scripts. The server script builds the whole wor
 
 ## Play it
 
-Open **`DigDeep.rbxlx`** in Roblox Studio and press Play. The place file already contains both scripts, Future lighting, and a kill floor set low enough for the 500m mine.
+Open **`DigDeep.rbxlx`** in Roblox Studio and press Play. The place file already contains both scripts, ShadowMap lighting, and a kill floor set low enough for the 500m mine.
 
 ## Or put the scripts in your own place (2 minutes)
 
 1. In Roblox Studio, create a new **Baseplate** place. The script removes the baseplate and spawn for you.
 2. **ServerScriptService** → Insert Object → **Script**. Name it `DigDeepServer` and paste in [`DigDeepServer.server.luau`](DigDeepServer.server.luau).
 3. **StarterPlayer → StarterPlayerScripts** → Insert Object → **LocalScript**. Name it `DigDeepClient` and paste in [`DigDeepClient.client.luau`](DigDeepClient.client.luau).
-4. Set **Workspace → FallenPartsDestroyHeight** to `-4000`, because the mine goes 3000 studs down. Also set **Lighting → Technology** to **Future** for the intended look.
+4. Set **Workspace → FallenPartsDestroyHeight** to `-4000`, because the mine goes 3000 studs down. Also set **Lighting → Technology** to **ShadowMap** for the intended look.
 5. Press **Play**.
 
 To keep progress between sessions, turn on **Game Settings → Security → Enable Studio Access to API Services**. Without it the game still works, but progress resets when you stop.
@@ -66,7 +66,8 @@ While an ID is `0`, the item shows **"Soon"** in the live game. **In Studio, buy
 - **🎡 Spin wheel:** a free spin every 20 minutes (coins, potions, a free egg, or a 💎 jackpot).
 - **🎟️ Codes:** `RELEASE`, `DIGDEEP`, `GOLDRUSH`, `THANKYOU`. Add more in the `CODES` table and post them on your group or socials.
 - **Potions:** timers show under your coins.
-- **Cartoony UI:** a button stack on the left (Shop, Pets, Spin, Codes, Offer), chunky gradient buttons, bouncy windows, confetti, and a level-up burst.
+- **Cartoony UI:** a button stack on the left (Shop, Pets, Spin, Codes, Offer, Quests, Settings), chunky 3D buttons with a bevelled lip and gloss, bouncy windows with a big header bar and a red **X**, confetti, and a level-up burst.
+- **Shop:** wide, colourful offer cards like the top sims. Each has a slowly turning 3D model of the item (crown, coin piles, potions, robot, money bag, backpack, pickaxe, pets), a big title, and a green Robux price button. Some have tags such as ONE TIME!, POPULAR or BEST VALUE.
 
 ## Look and guidance
 
