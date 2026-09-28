@@ -40,6 +40,6 @@ gives a permanent multiplier.
 
 ## Dig Deep (`dig-deep/`)
 - Two scripts: `DigDeepServer.server.luau` and `DigDeepClient.client.luau`. Build a
-  ready-to-play place with `rojo build dig-deep/default.project.json -o dig-deep/DigDeep.rbxlx`.
+  ready-to-play place with `rojo build dig-deep/default.project.json -o dig-deep/DigDeepOfficial.rbxlx`.
 - Keep each script's top-level `local`s well under 200. Luau's register limit is 200 per
   function, and exceeding it stops the whole script from loading. Wrap subsystems in `do` blocks.

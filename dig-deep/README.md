@@ -6,7 +6,7 @@ A Roblox mining game made of two scripts. The server script builds the whole wor
 
 ## Play it
 
-Open **`DigDeep.rbxlx`** in Roblox Studio and press Play. There are 9 mines, so set **Game Settings → Places → Max Players** to 9 when you publish. The place file already contains both scripts, ShadowMap lighting, and a kill floor set low enough for the 500m mine.
+Open **`DigDeepOfficial.rbxlx`** in Roblox Studio and press Play. There are 9 mines, so set **Game Settings → Places → Max Players** to 9 when you publish. The place file already contains both scripts, ShadowMap lighting, and a kill floor set low enough for the 500m mine.
 
 ## Or put the scripts in your own place (2 minutes)
 
