@@ -2389,17 +2389,27 @@ do
 		end
 	end
 
+	-- Round boulder buddy: mossy head, glowing crystal heart and crystal spikes on its back
 	function BUILDERS.golem(m, P, c, acc, anims)
-		local rock = Enum.Material.Rock
-		petPart(m, Vector3.new(2.1, 1.8, 1.6), CFrame.new(0, -0.2, 0.2) * CFrame.Angles(0, 0.05, 0.04), c, rock)
-		petPart(m, Vector3.new(1.6, 1.2, 1.3), CFrame.new(0, 1.05, -0.05) * CFrame.Angles(0.05, -0.08, 0), lighter(c, 0.1), rock)
-		local core = petPart(m, Vector3.new(0.9, 0.9, 0.5), CFrame.new(0, -0.1, -0.62) * CFrame.Angles(0, 0, math.rad(45)), acc, Enum.Material.Neon)
+		local stone = lighter(c, 0.15)
+		blob(m, Vector3.new(2.5, 2.2, 2.2), CFrame.new(0, -0.25, 0.2), stone)
+		blob(m, Vector3.new(1.5, 1.3, 0.5), CFrame.new(0, -0.35, -0.8), lighter(c, 0.4))
+		blob(m, Vector3.new(1.9, 1.6, 1.7), CFrame.new(0, 1.05, -0.25), stone)
+		face(m, CFrame.new(0, 1.05, -1.08), 0.8)
+		for k = 0, 4 do
+			local a = k * 1.26
+			blob(m, Vector3.new(0.8, 0.45, 0.8), CFrame.new(math.cos(a) * 0.55, 1.78, -0.25 + math.sin(a) * 0.5), Color3.fromRGB(110, 205, 80))
+		end
+		blob(m, Vector3.new(0.35, 0.35, 0.35), CFrame.new(0.3, 2.05, -0.3), Color3.fromRGB(255, 120, 170))
+		local core = blob(m, Vector3.new(0.6, 0.75, 0.35), CFrame.new(0, -0.1, -1.02), acc, Enum.Material.Neon)
+		for k = -1, 1 do
+			petPart(m, Vector3.new(0.45, 1.1 - math.abs(k) * 0.3, 0.45), CFrame.new(k * 0.55, 0.9, 0.95) * CFrame.Angles(0.5, 0, k * -0.35), acc, Enum.Material.Neon)
+		end
 		for _, x in { -1, 1 } do
-			petPart(m, Vector3.new(0.34, 0.16, 0.1), CFrame.new(x * 0.34, 1.12, -0.72), acc, Enum.Material.Neon)
-			local arm = petPart(m, Vector3.new(0.7, 1.5, 0.8), CFrame.new(x * 1.45, -0.35, 0.1) * CFrame.Angles(0, 0, x * 0.12), darker(c, 0.1), rock)
-			table.insert(anims, { part = arm, kind = "swing", hinge = Vector3.new(x * 1.35, 0.35, 0.1), side = x })
-			petPart(m, Vector3.new(0.75, 0.6, 0.8), CFrame.new(x * 0.55, -1.3, 0.2), darker(c, 0.2), rock)
-			blob(m, Vector3.new(0.7, 0.25, 0.6), CFrame.new(x * 0.35, 1.68, 0.1), Color3.fromRGB(90, 160, 70), Enum.Material.Grass)
+			local arm = blob(m, Vector3.new(0.85, 1.35, 0.9), CFrame.new(x * 1.45, -0.3, -0.05) * CFrame.Angles(0, 0, x * 0.25), darker(c, 0.05))
+			table.insert(anims, { part = arm, kind = "swing", hinge = Vector3.new(x * 1.3, 0.3, 0), side = x })
+			blob(m, Vector3.new(0.8, 0.55, 0.95), CFrame.new(x * 0.62, -1.3, -0.05), darker(c, 0.18))
+			blob(m, Vector3.new(0.6, 0.45, 0.5), CFrame.new(x * 0.9, 0.35, 0.8), darker(c, 0.1))
 		end
 		local light = Instance.new("PointLight")
 		light.Color = acc
@@ -2489,11 +2499,22 @@ do
 		face(m, CFrame.new(0, 0.85, -1.2), 0.85, acc)
 		for k = 0, 2 do
 			wedge(m, Vector3.new(0.15, 0.5, 0.5), CFrame.new(0, 0.55 - k * 0.1, 0.35 + k * 0.5), acc, mat)
+			-- belly plates
+			blob(m, Vector3.new(1.05 - k * 0.15, 0.2, 0.3), CFrame.new(0, -0.25 - k * 0.3, -0.86 + k * 0.08), lighter(acc, 0.55))
+		end
+		-- wing bones along the top edge of each wing
+		for _, x in { -1, 1 } do
+			local bone = petPart(m, Vector3.new(0.2, 0.2, 1.9), CFrame.new(x * 1.35, 1.3, 0.45) * CFrame.Angles(0, 0, x * -0.6), darker(acc, 0.25), mat)
+			table.insert(anims, { part = bone, kind = "flap", hinge = Vector3.new(x * 0.85, 0.35, 0.55), side = x })
+			-- cheek frills
+			wedge(m, Vector3.new(0.12, 0.5, 0.45), CFrame.new(x * 0.85, 0.75, -0.75) * CFrame.Angles(0, x * 0.6, 0), acc, mat)
 		end
 		local tailSegs = { { Vector3.new(0, -0.55, 1.65), 0.8 }, { Vector3.new(0, -0.45, 2.3), 0.6 }, { Vector3.new(0, -0.2, 2.85), 0.45 } }
 		for _, seg in tailSegs do
 			local part = blob(m, Vector3.one * seg[2], CFrame.new(seg[1]), c, mat)
 			table.insert(anims, { part = part, kind = "wag", hinge = Vector3.new(0, -0.5, 1.3) })
+			local spike = wedge(m, Vector3.new(0.12, seg[2] * 0.5, seg[2] * 0.5), CFrame.new(seg[1] + Vector3.new(0, seg[2] * 0.55, 0)), acc, mat)
+			table.insert(anims, { part = spike, kind = "wag", hinge = Vector3.new(0, -0.5, 1.3) })
 		end
 		local spade = wedge(m, Vector3.new(0.12, 0.5, 0.5), CFrame.new(0, 0, 3.2) * CFrame.Angles(0, math.pi, 0), acc, mat)
 		table.insert(anims, { part = spade, kind = "wag", hinge = Vector3.new(0, -0.5, 1.3) })
@@ -2557,6 +2578,29 @@ do
 		local c, acc = rgb(P.color), rgb(P.accent)
 		local builder = BUILDERS[P.style or "critter"] or BUILDERS.critter
 		builder(m, P, c, acc, anims)
+		if P.rarity == "Legendary" or P.rarity == "Exclusive" then
+			local topY, topX, topZ = -math.huge, 0, 0
+			for _, part in m:GetChildren() do
+				if part:IsA("BasePart") and part.Transparency < 0.5 and math.abs(part.CFrame.Position.X) < 0.4 then
+					local y = part.CFrame.Position.Y + part.Size.Y / 2
+					if y > topY then
+						topY, topX, topZ = y, part.CFrame.Position.X, part.CFrame.Position.Z
+					end
+				end
+			end
+			if topY > -math.huge then
+				local crownGold = Color3.fromRGB(255, 206, 60)
+				local at = CFrame.new(topX, topY + 0.05, topZ) * CFrame.Angles(-0.2, 0, 0.12)
+				petPart(m, Vector3.new(0.3, 0.95, 0.95), at * CFrame.Angles(0, 0, math.rad(90)), crownGold, nil, Enum.PartType.Cylinder)
+				for k = 0, 4 do
+					local a = k * math.pi * 2 / 5
+					local tip = at * CFrame.new(math.cos(a) * 0.4, 0.3, math.sin(a) * 0.4)
+					petPart(m, Vector3.new(0.14, 0.34, 0.14), tip, crownGold)
+					petPart(m, Vector3.one * 0.16, tip * CFrame.new(0, 0.2, 0), crownGold, nil, Enum.PartType.Ball)
+				end
+				petPart(m, Vector3.one * 0.2, at * CFrame.new(0, 0.05, -0.47), Color3.fromRGB(255, 60, 90), Enum.Material.Neon, Enum.PartType.Ball)
+			end
+		end
 		if P.glow then
 			local anchorPart = m:FindFirstChildWhichIsA("BasePart")
 			if anchorPart then
@@ -2701,6 +2745,57 @@ do
 			end
 		end
 	end
+end
+
+-- Egg previews: the pets inside each egg float above its stand, bobbing and turning
+do
+	local previews = {}
+	local function buildPreviews()
+		for _, stand in CollectionService:GetTagged("EggStand") do
+			local index = stand:GetAttribute("Egg")
+			local egg = index and CFG.eggs[index]
+			if egg and not previews[stand] and stand:IsA("BasePart") then
+				local list = {}
+				for k, entry in egg.pets do
+					local model = buildPet(entry[1])
+					local ok = pcall(function()
+						model:ScaleTo(0.55)
+					end)
+					if ok then
+						model.Parent = workspace
+						table.insert(list, { model = model, k = k, count = #egg.pets })
+					else
+						model:Destroy()
+					end
+				end
+				previews[stand] = list
+			end
+		end
+	end
+	task.delay(2, buildPreviews)
+	CollectionService:GetInstanceAddedSignal("EggStand"):Connect(function()
+		task.defer(buildPreviews)
+	end)
+	RunService.Heartbeat:Connect(function()
+		local cam = workspace.CurrentCamera
+		if not cam then
+			return
+		end
+		local t = os.clock()
+		for stand, list in previews do
+			if not stand.Parent then
+				continue
+			end
+			local base = stand.CFrame.Position
+			if (cam.CFrame.Position - base).Magnitude < 140 then
+				for _, item in list do
+					local x = (item.k - (item.count + 1) / 2) * 2.5
+					local bob = math.sin(t * 2 + item.k) * 0.25
+					item.model:PivotTo(CFrame.new(base + Vector3.new(x, 11.5 + bob, 0)) * CFrame.Angles(0, math.pi + math.sin(t * 0.8 + item.k) * 0.5, 0))
+				end
+			end
+		end
+	end)
 end
 
 -- PETS window ---------------------------------------------------------------------
@@ -3458,17 +3553,30 @@ Remotes.Hatched.OnClientEvent:Connect(function(petId, eggId)
 	local rc = rgb(CFG.rarityColors[P.rarity] or { 200, 200, 210 })
 	local shade = create("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 1, ZIndex = 20, Parent = overlayGui })
 	tween(shade, 0.25, { BackgroundTransparency = 0.35 })
-	local eggFrame = create("Frame", {
+	-- the real 3D egg from the pet shop, shaking in the middle of the screen
+	local eggFrame = create("ViewportFrame", {
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.48),
-		Size = UDim2.fromOffset(170, 220),
-		BackgroundColor3 = WHITE,
+		Size = UDim2.fromOffset(260, 300),
+		BackgroundTransparency = 1,
+		Ambient = Color3.fromRGB(190, 190, 200),
+		LightColor = WHITE,
+		LightDirection = Vector3.new(-0.5, -1, -0.6),
 		ZIndex = 21,
 		Parent = overlayGui,
-	}, { corner(UDim.new(0.5, 0)), stroke(6, INK) })
-	gradient(eggFrame, rgb(egg.color):Lerp(WHITE, 0.25), rgb(egg.color))
-	for k = 1, 5 do
-		create("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.2 + (k * 0.37) % 0.7, 0.2 + (k * 0.23) % 0.6), Size = UDim2.fromOffset(28, 28), BackgroundColor3 = rgb(egg.spots), ZIndex = 22, Parent = eggFrame }, { corner() })
+	})
+	local town = workspace:FindFirstChild("Town")
+	local source = town and town:FindFirstChild(egg.id)
+	if source and source:IsA("Model") then
+		local copy = source:Clone()
+		CollectionService:RemoveTag(copy, "Spin")
+		copy:PivotTo(CFrame.new())
+		copy.Parent = eggFrame
+		local eggCam = Instance.new("Camera")
+		eggCam.FieldOfView = 40
+		eggCam.CFrame = CFrame.lookAt(Vector3.new(0, 0.6, -10), Vector3.new(0, 0, 0))
+		eggCam.Parent = eggFrame
+		eggFrame.CurrentCamera = eggCam
 	end
 	local sc = create("UIScale", { Scale = 0.2, Parent = eggFrame })
 	tween(sc, 0.4, { Scale = 1 }, Enum.EasingStyle.Back)

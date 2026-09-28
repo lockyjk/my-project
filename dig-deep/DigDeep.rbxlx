@@ -59,7 +59,7 @@ local MAX_DEPTH = 500 -- rows; bedrock below
 local REACH = 20 -- studs from your root part to a block's centre
 local SHAFT_SLOTS = 9 -- one personal shaft per player (set the server size to 9 or fewer)
 local SHAFT_W = 24 -- studs across the inside of a shaft
-local SHAFT_PITCH = 48 -- studs between shaft centres (3 x 3 grid)
+local SHAFT_PITCH = 60 -- studs between shaft centres (3 x 3 grid)
 local SLAB_LOOT = 3 -- each slab you break holds this many blocks' worth of loot
 local SLAB_HP = 4 -- slab health = layer hp x this
 local RUSH_EVERY = 12 * 60 -- a Gold Rush starts every 12 minutes on the UTC clock...
@@ -194,7 +194,7 @@ local PETS = {
 	Bunny = { style = "bunny", name = "Bunny", rarity = "Uncommon", boost = 0.1, color = { 240, 238, 242 }, accent = { 255, 170, 195 }, ears = "long", icon = "🐰" },
 	PebblePup = { style = "critter", variant = "dog", name = "Pebble Pup", rarity = "Rare", boost = 0.2, color = { 150, 150, 162 }, accent = { 90, 90, 104 }, ears = "pointy", tail = true, icon = "🐶" },
 	GoldenMole = { style = "critter", variant = "mole", name = "Golden Mole", rarity = "Legendary", boost = 0.5, color = { 255, 200, 60 }, accent = { 255, 240, 170 }, ears = "round", glow = true, icon = "🌟" },
-	Bat = { style = "bat", name = "Cave Bat", rarity = "Common", boost = 0.25, color = { 84, 64, 112 }, accent = { 255, 140, 200 }, ears = "pointy", wings = true, icon = "🦇" },
+	Bat = { style = "bat", name = "Cave Bat", rarity = "Common", boost = 0.25, color = { 118, 96, 160 }, accent = { 255, 140, 200 }, ears = "pointy", wings = true, icon = "🦇" },
 	Slime = { style = "slime", name = "Slime", rarity = "Uncommon", boost = 0.4, color = { 90, 222, 124 }, accent = { 40, 140, 70 }, ears = "none", jelly = true, icon = "🟢" },
 	RockGolem = { style = "golem", name = "Rock Golem", rarity = "Rare", boost = 0.7, color = { 124, 114, 104 }, accent = { 255, 170, 60 }, ears = "none", horns = true, icon = "🗿" },
 	LavaPup = { style = "fox", variant = "lava", name = "Lava Pup", rarity = "Legendary", boost = 1.5, color = { 255, 92, 32 }, accent = { 255, 222, 92 }, ears = "pointy", tail = true, glow = true, icon = "🔥" },
@@ -202,10 +202,10 @@ local PETS = {
 	GemOwl = { style = "owl", name = "Gem Owl", rarity = "Uncommon", boost = 1.5, color = { 170, 110, 255 }, accent = { 255, 222, 122 }, ears = "pointy", wings = true, icon = "🦉" },
 	PrismDragon = { style = "dragon", name = "Prism Dragon", rarity = "Rare", boost = 2.5, color = { 255, 122, 222 }, accent = { 122, 255, 240 }, ears = "none", horns = true, wings = true, tail = true, icon = "🐲" },
 	DiamondDragon = { style = "dragon", variant = "diamond", name = "Diamond Dragon", rarity = "Legendary", boost = 6, color = { 205, 245, 255 }, accent = { 120, 200, 255 }, ears = "none", horns = true, wings = true, tail = true, glow = true, icon = "💎" },
-	ShadowCat = { style = "fox", variant = "cat", name = "Shadow Cat", rarity = "Common", boost = 3, color = { 44, 34, 64 }, accent = { 182, 122, 255 }, ears = "pointy", tail = true, icon = "🐈‍⬛" },
+	ShadowCat = { style = "fox", variant = "cat", name = "Shadow Cat", rarity = "Common", boost = 3, color = { 84, 72, 138 }, accent = { 205, 150, 255 }, ears = "pointy", tail = true, icon = "🐈‍⬛" },
 	VoidWisp = { style = "wisp", name = "Void Wisp", rarity = "Uncommon", boost = 5, color = { 112, 42, 202 }, accent = { 232, 182, 255 }, ears = "none", glow = true, icon = "👻" },
-	NebulaSerpent = { style = "serpent", name = "Nebula Serpent", rarity = "Rare", boost = 8, color = { 62, 22, 122 }, accent = { 255, 122, 222 }, ears = "none", horns = true, tail = true, glow = true, icon = "🐍" },
-	SingularitySpirit = { style = "wisp", variant = "spirit", name = "Singularity Spirit", rarity = "Legendary", boost = 18, color = { 24, 24, 28 }, accent = { 255, 255, 255 }, ears = "none", wings = true, glow = true, icon = "✨" },
+	NebulaSerpent = { style = "serpent", name = "Nebula Serpent", rarity = "Rare", boost = 8, color = { 124, 74, 224 }, accent = { 255, 150, 230 }, ears = "none", horns = true, tail = true, glow = true, icon = "🐍" },
+	SingularitySpirit = { style = "wisp", variant = "spirit", name = "Singularity Spirit", rarity = "Legendary", boost = 18, color = { 62, 52, 104 }, accent = { 255, 255, 255 }, ears = "none", wings = true, glow = true, icon = "✨" },
 	StarterPup = { style = "critter", variant = "starter", name = "Starter Pup", rarity = "Exclusive", boost = 0.5, color = { 255, 202, 122 }, accent = { 255, 122, 82 }, ears = "round", tail = true, icon = "🐕" },
 }
 local RARITY_COLORS = { Common = { 200, 200, 210 }, Uncommon = { 110, 230, 130 }, Rare = { 80, 170, 255 }, Legendary = { 255, 200, 50 }, Exclusive = { 255, 110, 200 } }
@@ -439,6 +439,114 @@ local function piece(model, props)
 	return p
 end
 
+-- Themed eggs (about 4.6 x 6 studs, centred on the origin): each one hints at what's inside.
+local EGG_R, EGG_H = 2.3, 3
+local function eggPoint(angle, h, out)
+	local r = EGG_R * math.sqrt(math.max(0, 1 - h * h))
+	local p = Vector3.new(math.cos(angle) * r, h * EGG_H, math.sin(angle) * r)
+	local n = Vector3.new(p.X / (EGG_R * EGG_R), p.Y / (EGG_H * EGG_H), p.Z / (EGG_R * EGG_R)).Unit
+	return p + n * (out or 0), n
+end
+
+local function eggBlob(model, size, cf, color, mat, props)
+	local p = piece(model, { Size = size, CFrame = cf, Color = color, Material = mat or Enum.Material.SmoothPlastic })
+	local mesh = Instance.new("SpecialMesh")
+	mesh.MeshType = Enum.MeshType.Sphere
+	mesh.Parent = p
+	for k, v in props or {} do
+		p[k] = v
+	end
+	return p
+end
+
+-- A zig-zag line hugging the shell, for cracks
+local function eggCrack(model, color, mat, angle0, h, span, seed)
+	local r = Random.new(seed)
+	local prev = eggPoint(angle0, h, 0.02)
+	for k = 1, 6 do
+		local nextPoint = eggPoint(angle0 + span * k / 6, h + (if k % 2 == 0 then 0.1 else -0.1) + r:NextNumber(-0.04, 0.04), 0.02)
+		local mid, len = (prev + nextPoint) / 2, (nextPoint - prev).Magnitude
+		piece(model, { Name = "Crack", Size = Vector3.new(0.2, 0.2, len + 0.1), CFrame = CFrame.lookAt(mid, nextPoint), Color = color, Material = mat })
+		prev = nextPoint
+	end
+end
+
+local function crystal(model, base, normal, color, len, mat)
+	local tip = CFrame.lookAt(base, base + normal) * CFrame.Angles(-math.pi / 2, 0, 0)
+	piece(model, { Name = "Crystal", Size = Vector3.new(0.6, len, 0.6), CFrame = tip * CFrame.new(0, len * 0.35, 0) * CFrame.Angles(0, math.rad(45), 0), Color = color, Material = mat or Enum.Material.Neon })
+end
+
+local function buildEgg(egg, index)
+	local model = Instance.new("Model")
+	model.Name = egg.id
+	local shell
+	if egg.id == "DirtEgg" then
+		shell = eggBlob(model, Vector3.new(4.6, 6, 4.6), CFrame.new(), Color3.fromRGB(196, 142, 92))
+		-- a grassy cap with little flowers on top
+		eggBlob(model, Vector3.new(4.1, 2.6, 4.1), CFrame.new(0, 2.05, 0), Color3.fromRGB(110, 214, 70))
+		for k = 0, 7 do
+			local p = eggPoint(k * math.pi / 4, 0.42, 0.05)
+			eggBlob(model, Vector3.new(1.1, 0.8, 1.1), CFrame.new(p), Color3.fromRGB(96, 200, 60))
+		end
+		for k, c in { Color3.fromRGB(255, 90, 140), Color3.fromRGB(255, 230, 70), Color3.new(1, 1, 1) } do
+			local a = k * 2.1
+			local base = Vector3.new(math.cos(a) * 0.9, 3.05, math.sin(a) * 0.9)
+			piece(model, { Name = "Stem", Size = Vector3.new(0.15, 0.7, 0.15), CFrame = CFrame.new(base), Color = Color3.fromRGB(60, 160, 50), Material = Enum.Material.SmoothPlastic })
+			piece(model, { Name = "Flower", Shape = Enum.PartType.Ball, Size = Vector3.one * 0.55, CFrame = CFrame.new(base + Vector3.new(0, 0.45, 0)), Color = c, Material = Enum.Material.SmoothPlastic })
+		end
+		local r = Random.new(index * 17)
+		for _ = 1, 6 do
+			local p, n = eggPoint(r:NextNumber(0, math.pi * 2), r:NextNumber(-0.75, 0.15), -0.12)
+			eggBlob(model, Vector3.new(1.1, 1.1, 0.4), CFrame.lookAt(p, p + n), Color3.fromRGB(150, 100, 60))
+		end
+	elseif egg.id == "CaveEgg" then
+		shell = eggBlob(model, Vector3.new(4.6, 6, 4.6), CFrame.new(), Color3.fromRGB(128, 128, 148))
+		for k = 0, 3 do
+			local a = k * math.pi / 2 + 0.4
+			local h = if k % 2 == 0 then 0.35 else -0.2
+			local base, n = eggPoint(a, h, -0.2)
+			for j = 1, 3 do
+				crystal(model, base + Vector3.new(j * 0.25 - 0.5, 0, 0), (n + Vector3.new(j * 0.3 - 0.6, 0.4, 0)).Unit, Color3.fromRGB(255, 150, 50), 1.2 + j * 0.4)
+			end
+		end
+		eggCrack(model, Color3.fromRGB(60, 56, 70), Enum.Material.SmoothPlastic, 0, 0.05, math.pi * 1.2, index)
+		eggCrack(model, Color3.fromRGB(60, 56, 70), Enum.Material.SmoothPlastic, math.pi, -0.45, math.pi * 0.8, index + 3)
+		addLight(shell, Color3.fromRGB(255, 150, 60), 12, 1)
+	elseif egg.id == "CrystalEgg" then
+		shell = eggBlob(model, Vector3.new(4.6, 6, 4.6), CFrame.new(), Color3.fromRGB(170, 220, 255), Enum.Material.Glass, { Transparency = 0.35, Reflectance = 0.15 })
+		-- a pink crystal cluster glowing inside the glass
+		for k = 0, 5 do
+			local a = k * math.pi / 3
+			piece(model, { Name = "InnerCrystal", Size = Vector3.new(0.7, 2.2 - (k % 2) * 0.6, 0.7), CFrame = CFrame.new(0, -0.6, 0) * CFrame.Angles(math.cos(a) * 0.5, 0, math.sin(a) * 0.5) * CFrame.new(0, 0.9, 0), Color = Color3.fromRGB(255, 140, 230), Material = Enum.Material.Neon })
+		end
+		piece(model, { Name = "InnerCrystal", Size = Vector3.new(0.8, 2.6, 0.8), CFrame = CFrame.new(0, 0.2, 0), Color = Color3.fromRGB(255, 190, 245), Material = Enum.Material.Neon })
+		for k = 0, 4 do
+			crystal(model, Vector3.new(math.cos(k * 1.26) * 0.6, 2.7, math.sin(k * 1.26) * 0.6), Vector3.new(math.cos(k * 1.26) * 0.4, 1, math.sin(k * 1.26) * 0.4).Unit, Color3.fromRGB(150, 230, 255), 1 + (k % 2) * 0.6, Enum.Material.Glass)
+		end
+		local sparkles = Instance.new("Sparkles")
+		sparkles.SparkleColor = Color3.fromRGB(255, 190, 245)
+		sparkles.Parent = shell
+		addLight(shell, Color3.fromRGB(255, 160, 240), 14, 1.2)
+	else
+		shell = eggBlob(model, Vector3.new(4.6, 6, 4.6), CFrame.new(), Color3.fromRGB(52, 30, 88))
+		for k = 0, 2 do
+			eggCrack(model, Color3.fromRGB(210, 120, 255), Enum.Material.Neon, k * 2.1, -0.5 + k * 0.45, math.pi * 0.9, index * 7 + k)
+		end
+		-- little moons circling the egg (the whole egg slowly spins)
+		for k = 0, 2 do
+			local a = k * math.pi * 2 / 3
+			piece(model, { Name = "Orb", Shape = Enum.PartType.Ball, Size = Vector3.one * (0.7 + k * 0.15), CFrame = CFrame.new(math.cos(a) * 3.6, -1 + k * 1.1, math.sin(a) * 3.6), Color = Color3.fromRGB(230, 170, 255), Material = Enum.Material.Neon })
+		end
+		addLight(shell, Color3.fromRGB(190, 100, 255), 16, 1.6)
+	end
+	shell.Name = "Shell"
+	shell.Reflectance = math.max(shell.Reflectance, 0.06)
+	-- a shine highlight near the top, like a glossy toy
+	eggBlob(model, Vector3.new(0.9, 1.4, 0.3), CFrame.lookAt(eggPoint(-2.3, 0.45, 0.02), eggPoint(-2.3, 0.45, 1)), Color3.new(1, 1, 1), Enum.Material.SmoothPlastic, { Transparency = 0.35 })
+	model.PrimaryPart = shell
+	return model
+end
+
 -- Pickaxe built along +Z (handle) with the head across X, centred on the handle.
 local function buildPick(tier)
 	local P = PICKS[tier]
@@ -639,7 +747,7 @@ end
 --------------------------------------------------------------------------------
 -- WORLD
 --------------------------------------------------------------------------------
-local PIT = GRID * BLOCK / 2 -- half-width of the mine in studs (72)
+local PIT = SHAFT_PITCH + SHAFT_W / 2 + 12 -- half-width of the fenced mine yard in studs (84)
 local SELL_POS = W(0, 0, -90)
 local SPAWN_POS = W(0, 0, -122)
 local CHEST_POS = W(-16, 0, -121)
@@ -703,7 +811,7 @@ local function buildWorld()
 	-- Checkerboard grass: 12-stud tiles in two lime greens. One block thick, so the
 	-- mine's top row sits flush with it.
 	local TILE = 12
-	local MAP_X, MAP_Z0, MAP_Z1 = 156, -204, 120
+	local MAP_X, MAP_Z0, MAP_Z1 = 228, -300, 180
 	local grassA, grassB = Color3.fromRGB(126, 214, 52), Color3.fromRGB(112, 200, 44)
 	local tiles = Instance.new("Folder")
 	tiles.Name = "Ground"
@@ -725,7 +833,8 @@ local function buildWorld()
 		end
 	end
 	-- a grass skirt outside the walls so the edge of the world never shows
-	for _, sk in { { 0, MAP_Z1 + 150, 720, 300 }, { 0, MAP_Z0 - 150, 720, 300 }, { MAP_X + 150, -42, 300, 324 }, { -MAP_X - 150, -42, 300, 324 } } do
+	local midZ, spanZ, wide = (MAP_Z0 + MAP_Z1) / 2, MAP_Z1 - MAP_Z0, MAP_X * 2 + 600
+	for _, sk in { { 0, MAP_Z1 + 150, wide, 300 }, { 0, MAP_Z0 - 150, wide, 300 }, { MAP_X + 150, midZ, 300, spanZ }, { -MAP_X - 150, midZ, 300, spanZ } } do
 		newPart({ Name = "OuterGrass", Size = Vector3.new(sk[3], BLOCK, sk[4]), Position = W(sk[1], -BLOCK / 2 - 0.05, sk[2]), Color = grassB, Material = Enum.Material.SmoothPlastic }, tiles)
 	end
 
@@ -767,8 +876,8 @@ local function buildWorld()
 
 	-- Light sandy paths so the town reads at a glance
 	local sand = Color3.fromRGB(236, 206, 146)
-	for _, pth in { { 0, -113, 264, 12 }, { 0, -100, 16, 26 }, { 0, -90, 120, 12 }, { 0, -130, 36, 20 }, { 0, -142, 20, 8 }, { 78, -131, 10, 26 }, { -83, -131, 10, 26 } } do
-		newPart({ Name = "Path", Size = Vector3.new(pth[3], 0.3, pth[4]), Position = W(pth[1], 0.15, pth[2]), Color = sand, Material = Enum.Material.SmoothPlastic, CanCollide = false }, town)
+	for _, pth in { { 0, -165, MAP_X * 2 - 24, 12 }, { 0, -137, 16, 44 }, { 0, -112, 70, 16 }, { 0, -182, 44, 26 }, { 0, -210, 18, 32 }, { -150, -194, 10, 46 }, { 150, -194, 10, 46 }, { -160, -108, 10, 104 }, { 60, -138, 10, 44 } } do
+		newPart({ Name = "Path", Size = Vector3.new(pth[3], 0.3, pth[4]), Position = W(pth[1], 0.15, pth[2]), Color = sand, Material = Enum.Material.SmoothPlastic, CanCollide = false }, tiles)
 	end
 
 	-- A little cartoon pond in the north-east corner
@@ -1136,33 +1245,21 @@ local function buildWorld()
 
 	-- Pet shop: four egg stands (odds shown on each, like every simulator)
 	do
-		local plank = Color3.fromRGB(140, 98, 60)
-		newPart({ Name = "PetShopFloor", Size = Vector3.new(64, 0.4, 18), Position = W(-83, 0.2, -150), Color = Color3.fromRGB(236, 214, 170), Material = Enum.Material.WoodPlanks }, town)
-		newPart({ Name = "PetShopBack", Size = Vector3.new(64, 12, 1), Position = W(-83, 6, -159.5), Color = Color3.fromRGB(255, 200, 220), Material = Enum.Material.WoodPlanks }, town)
-		local board = newPart({ Name = "PetShopSign", Size = Vector3.new(26, 5, 0.6), Position = W(-83, 14.6, -159.2), Color = Color3.fromRGB(120, 60, 90), Material = Enum.Material.WoodPlanks }, town)
+		newPart({ Name = "PetShopFloor", Size = Vector3.new(84, 0.4, 18), Position = W(-97, 0.2, -150), Color = Color3.fromRGB(236, 214, 170), Material = Enum.Material.WoodPlanks }, town)
+		newPart({ Name = "PetShopBack", Size = Vector3.new(84, 12, 1), Position = W(-97, 6, -159.5), Color = Color3.fromRGB(255, 200, 220), Material = Enum.Material.WoodPlanks }, town)
+		local board = newPart({ Name = "PetShopSign", Size = Vector3.new(26, 5, 0.6), Position = W(-97, 14.6, -159.2), Color = Color3.fromRGB(120, 60, 90), Material = Enum.Material.WoodPlanks }, town)
 		signText(board, Enum.NormalId.Front, "🥚 PET SHOP", Color3.fromRGB(255, 230, 245))
 		for i = 0, 5 do
-			newPart({ Name = "PetShopAwning", Size = Vector3.new(64 / 6, 0.5, 8), CFrame = CFrame.new(W(-83 - 32 + (i + 0.5) * 64 / 6, 12.4, -156)) * CFrame.Angles(math.rad(-18), 0, 0), Color = if i % 2 == 0 then Color3.fromRGB(255, 120, 170) else Color3.fromRGB(255, 244, 250), Material = Enum.Material.Fabric }, town)
+			newPart({ Name = "PetShopAwning", Size = Vector3.new(84 / 6, 0.5, 8), CFrame = CFrame.new(W(-97 - 42 + (i + 0.5) * 84 / 6, 12.4, -156)) * CFrame.Angles(math.rad(-18), 0, 0), Color = if i % 2 == 0 then Color3.fromRGB(255, 120, 170) else Color3.fromRGB(255, 244, 250), Material = Enum.Material.Fabric }, town)
 		end
 		for i, egg in EGGS do
-			local x = -104 + (i - 1) * 14
-			local base = newPart({ Name = "EggStand", Shape = Enum.PartType.Cylinder, Size = Vector3.new(2.4, 7, 7), CFrame = CFrame.new(W(x, 1.6, -150)) * CFrame.Angles(0, 0, math.rad(90)), Color = plank, Material = Enum.Material.WoodPlanks }, town)
+			local x = -124 + (i - 1) * 18
+			local base = newPart({ Name = "EggStand", Shape = Enum.PartType.Cylinder, Size = Vector3.new(2.4, 7, 7), CFrame = CFrame.new(W(x, 1.6, -150)) * CFrame.Angles(0, 0, math.rad(90)), Color = rgb(egg.spots):Lerp(Color3.new(1, 1, 1), 0.55), Material = Enum.Material.SmoothPlastic }, town)
+			newPart({ Name = "EggStandTrim", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.5, 7.6, 7.6), CFrame = CFrame.new(W(x, 0.45, -150)) * CFrame.Angles(0, 0, math.rad(90)), Color = Color3.fromRGB(255, 205, 70), Material = Enum.Material.SmoothPlastic }, town)
+			newPart({ Name = "EggStandTop", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.4, 5.6, 5.6), CFrame = CFrame.new(W(x, 3, -150)) * CFrame.Angles(0, 0, math.rad(90)), Color = Color3.fromRGB(255, 205, 70), Material = Enum.Material.SmoothPlastic }, town)
 			local eggRing = newPart({ Name = "EggRing", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.3, 7.4, 7.4), CFrame = CFrame.new(W(x, 2.9, -150)) * CFrame.Angles(0, 0, math.rad(90)), Color = rgb(egg.spots), Material = Enum.Material.Neon, CanCollide = false }, town)
 			eggRing.CanQuery = false
-			local model = Instance.new("Model")
-			model.Name = egg.id
-			local shell = piece(model, { Size = Vector3.new(4.6, 6, 4.6), CFrame = CFrame.new(), Color = rgb(egg.color), Material = Enum.Material.SmoothPlastic, Reflectance = 0.05 })
-			local mesh = Instance.new("SpecialMesh")
-			mesh.MeshType = Enum.MeshType.Sphere
-			mesh.Parent = shell
-			local er = Random.new(i * 17)
-			for _ = 1, 7 do
-				local a, h = er:NextNumber(0, math.pi * 2), er:NextNumber(-0.7, 0.8)
-				local r = math.sqrt(1 - h * h)
-				piece(model, { Shape = Enum.PartType.Ball, Size = Vector3.one * er:NextNumber(0.8, 1.3), CFrame = CFrame.new(math.cos(a) * r * 2.2, h * 2.9, math.sin(a) * r * 2.2), Color = rgb(egg.spots), Material = Enum.Material.SmoothPlastic })
-			end
-			addLight(shell, rgb(egg.spots), 10, 0.8)
-			model.PrimaryPart = shell
+			local model = buildEgg(egg, i)
 			model:PivotTo(CFrame.new(W(x, 6.6, -150)))
 			CollectionService:AddTag(model, "Spin")
 			model.Parent = town
@@ -1239,71 +1336,74 @@ local function buildWorld()
 		display.Parent = town
 	end
 
-	-- Scenery: blocky voxel trees and bushes inside the walls, plus flower patches
-	local sr = Random.new(42)
-	local function blocked(x, z, pad)
-		pad = pad or 0
-		if math.abs(x) < PIT + 10 + pad and math.abs(z) < PIT + 10 + pad then
-			return true
+	-- Scenery: blocky voxel trees and bushes inside the walls, plus flower patches.
+	-- Planted after the town is spread out (see below), so it uses the final layout.
+	local function scatter()
+		local sr = Random.new(42)
+		local function blocked(x, z, pad)
+			pad = pad or 0
+			if math.abs(x) < PIT + 10 + pad and math.abs(z) < PIT + 10 + pad then
+				return true -- mine yard
+			end
+			if (Vector2.new(x, z) - Vector2.new(170, 140)).Magnitude < 26 + pad then
+				return true -- pond
+			end
+			if x > PIT and x < PIT + 30 and z > -50 and z < -10 then
+				return true -- headframe
+			end
+			if x < -130 + pad and x > -192 - pad and math.abs(z) < 78 + pad then
+				return true -- training area
+			end
+			if math.abs(x) > MAP_X - 10 - pad or z > MAP_Z1 - 8 - pad or z < MAP_Z0 + 8 + pad then
+				return true -- map edge
+			end
+			return z < -96 + pad and z > -272 - pad and math.abs(x) < 190 + pad -- the town
 		end
-		if (Vector2.new(x, z) - Vector2.new(120, 94)).Magnitude < 24 + pad then
-			return true
+		local leafColors = { Color3.fromRGB(70, 200, 70), Color3.fromRGB(96, 214, 60), Color3.fromRGB(56, 180, 80) }
+		local function voxelTree(x, z)
+			local h = sr:NextInteger(3, 5) * 2
+			newPart({ Name = "Trunk", Size = Vector3.new(2.4, h, 2.4), Position = W(x, h / 2, z), Color = Color3.fromRGB(150, 96, 52), Material = Enum.Material.SmoothPlastic }, town)
+			local leaf = leafColors[sr:NextInteger(1, #leafColors)]
+			local size = sr:NextInteger(3, 4) * 2
+			newPart({ Name = "Leaves", Size = Vector3.new(size + 2, size - 1, size + 2), Position = W(x, h + size / 2 - 1, z), Color = leaf, Material = Enum.Material.SmoothPlastic }, town)
+			newPart({ Name = "Leaves", Size = Vector3.new(size - 1, size - 2, size - 1), Position = W(x, h + size + 0.5, z), Color = leaf:Lerp(Color3.new(1, 1, 1), 0.12), Material = Enum.Material.SmoothPlastic }, town)
 		end
-		if x > PIT and x < PIT + 26 and z > -46 and z < -14 then
-			return true
+		local placed, tries = 0, 0
+		while placed < 70 and tries < 6000 do
+			tries += 1
+			local x, z = sr:NextNumber(-MAP_X + 12, MAP_X - 12), sr:NextNumber(MAP_Z0 + 12, MAP_Z1 - 12)
+			if not blocked(x, z, 5) then
+				placed += 1
+				voxelTree(x, z)
+			end
 		end
-		if x < -84 + pad and x > -142 - pad and math.abs(z) < 76 + pad then
-			return true -- training area
+		placed, tries = 0, 0
+		while placed < 60 and tries < 6000 do
+			tries += 1
+			local x, z = sr:NextNumber(-MAP_X + 12, MAP_X - 12), sr:NextNumber(MAP_Z0 + 12, MAP_Z1 - 12)
+			if not blocked(x, z, 2) then
+				placed += 1
+				local sz = sr:NextInteger(2, 4)
+				newPart({ Name = "Bush", Size = Vector3.new(sz * 1.6, sz, sz * 1.4), Position = W(x, sz / 2, z), Color = leafColors[sr:NextInteger(1, #leafColors)], Material = Enum.Material.SmoothPlastic }, town)
+			end
 		end
-		if math.abs(x) > 146 - pad or z > 112 - pad or z < -196 + pad then
-			return true
-		end
-		return x > -145 - pad and x < 145 + pad and z > -195 - pad and z < -70 + pad
-	end
-	local leafColors = { Color3.fromRGB(70, 200, 70), Color3.fromRGB(96, 214, 60), Color3.fromRGB(56, 180, 80) }
-	local function voxelTree(x, z)
-		local h = sr:NextInteger(3, 5) * 2
-		newPart({ Name = "Trunk", Size = Vector3.new(2.4, h, 2.4), Position = W(x, h / 2, z), Color = Color3.fromRGB(150, 96, 52), Material = Enum.Material.SmoothPlastic }, town)
-		local leaf = leafColors[sr:NextInteger(1, #leafColors)]
-		local size = sr:NextInteger(3, 4) * 2
-		newPart({ Name = "Leaves", Size = Vector3.new(size + 2, size - 1, size + 2), Position = W(x, h + size / 2 - 1, z), Color = leaf, Material = Enum.Material.SmoothPlastic }, town)
-		newPart({ Name = "Leaves", Size = Vector3.new(size - 1, size - 2, size - 1), Position = W(x, h + size + 0.5, z), Color = leaf:Lerp(Color3.new(1, 1, 1), 0.12), Material = Enum.Material.SmoothPlastic }, town)
-	end
-	local placed, tries = 0, 0
-	while placed < 34 and tries < 3000 do
-		tries += 1
-		local x, z = sr:NextNumber(-140, 140), sr:NextNumber(-190, 108)
-		if not blocked(x, z, 5) then
-			placed += 1
-			voxelTree(x, z)
-		end
-	end
-	placed, tries = 0, 0
-	while placed < 30 and tries < 3000 do
-		tries += 1
-		local x, z = sr:NextNumber(-140, 140), sr:NextNumber(-190, 108)
-		if not blocked(x, z, 2) then
-			placed += 1
-			local sz = sr:NextInteger(2, 4)
-			newPart({ Name = "Bush", Size = Vector3.new(sz * 1.6, sz, sz * 1.4), Position = W(x, sz / 2, z), Color = leafColors[sr:NextInteger(1, #leafColors)], Material = Enum.Material.SmoothPlastic }, town)
-		end
-	end
-	local flowerColors = { Color3.fromRGB(255, 90, 140), Color3.fromRGB(255, 220, 60), Color3.fromRGB(255, 255, 255), Color3.fromRGB(180, 120, 255), Color3.fromRGB(255, 140, 60) }
-	placed, tries = 0, 0
-	while placed < 40 and tries < 3000 do
-		tries += 1
-		local x, z = sr:NextNumber(-140, 140), sr:NextNumber(-190, 108)
-		if not blocked(x, z) then
-			placed += 1
-			local color = flowerColors[sr:NextInteger(1, #flowerColors)]
-			for _ = 1, 5 do
-				local fx, fz = x + sr:NextNumber(-3, 3), z + sr:NextNumber(-3, 3)
-				local stem = newPart({ Name = "FlowerStem", Size = Vector3.new(0.2, 1, 0.2), Position = W(fx, 0.5, fz), Color = Color3.fromRGB(60, 170, 50), Material = Enum.Material.SmoothPlastic, CanCollide = false }, town)
-				stem.CastShadow = false
-				stem.CanQuery = false
-				local head = newPart({ Name = "Flower", Size = Vector3.new(0.8, 0.5, 0.8), Position = W(fx, 1.15, fz), Color = color, Material = Enum.Material.SmoothPlastic, CanCollide = false }, town)
-				head.CastShadow = false
-				head.CanQuery = false
+		local flowerColors = { Color3.fromRGB(255, 90, 140), Color3.fromRGB(255, 220, 60), Color3.fromRGB(255, 255, 255), Color3.fromRGB(180, 120, 255), Color3.fromRGB(255, 140, 60) }
+		placed, tries = 0, 0
+		while placed < 70 and tries < 6000 do
+			tries += 1
+			local x, z = sr:NextNumber(-MAP_X + 12, MAP_X - 12), sr:NextNumber(MAP_Z0 + 12, MAP_Z1 - 12)
+			if not blocked(x, z) then
+				placed += 1
+				local color = flowerColors[sr:NextInteger(1, #flowerColors)]
+				for _ = 1, 5 do
+					local fx, fz = x + sr:NextNumber(-3, 3), z + sr:NextNumber(-3, 3)
+					local stem = newPart({ Name = "FlowerStem", Size = Vector3.new(0.2, 1, 0.2), Position = W(fx, 0.5, fz), Color = Color3.fromRGB(60, 170, 50), Material = Enum.Material.SmoothPlastic, CanCollide = false }, town)
+					stem.CastShadow = false
+					stem.CanQuery = false
+					local head = newPart({ Name = "Flower", Size = Vector3.new(0.8, 0.5, 0.8), Position = W(fx, 1.15, fz), Color = color, Material = Enum.Material.SmoothPlastic, CanCollide = false }, town)
+					head.CastShadow = false
+					head.CanQuery = false
+				end
 			end
 		end
 	end
@@ -1348,7 +1448,7 @@ local function buildWorld()
 	local gold = Color3.fromRGB(255, 220, 70)
 	title(W(-78, 22, -104), "⛏ PICKAXES", gold, 26)
 	title(W(66, 22, -104), "🎒 BACKPACKS", Color3.fromRGB(120, 200, 255), 28)
-	title(W(-83, 24, -152), "🥚 PET SHOP", Color3.fromRGB(255, 150, 210), 26)
+	title(W(-97, 24, -152), "🥚 PET SHOP", Color3.fromRGB(255, 150, 210), 26)
 	title(W(0, 13, -90), "💰 SELL", gold, 16)
 	title(W(0, 31, -150), "🏛 MUSEUM", Color3.fromRGB(255, 255, 255), 22)
 	title(W(44, 23, -84), "⬇ ELEVATOR", Color3.fromRGB(255, 200, 90), 18)
@@ -1357,7 +1457,7 @@ local function buildWorld()
 	title(W(0, 40, 0), "⛏ THE MINE", Color3.fromRGB(255, 180, 90), 30)
 	glowPad(W(-78, 0, -112), 7)
 	glowPad(W(66, 0, -112), 7)
-	glowPad(W(-83, 0, -140), 7)
+	glowPad(W(-97, 0, -140), 7)
 	glowPad(W(-16, 0, -121), 5, Color3.fromRGB(110, 255, 110))
 	glowPad(W(44, 0, -84), 6)
 	glowPad(W(78, 0, -150), 9, Color3.fromRGB(200, 140, 255))
@@ -1383,6 +1483,80 @@ local function buildWorld()
 		title(W(x, 17, z), `💪 x{R.mult}`, if R.rebirths == 0 then Color3.fromRGB(110, 255, 110) else Color3.fromRGB(255, 214, 70), 12)
 		billboard(rock, 9, { { "Sub", if R.rebirths == 0 then "FREE! Stand on the pad to train" else `🔒 Needs {R.rebirths} Rebirth{if R.rebirths == 1 then "" else "s"}`, 16, Color3.fromRGB(240, 240, 240) } }, 90)
 	end
+
+	-- SPREAD THE TOWN OUT. Everything above was laid out close together. Each area now moves,
+	-- as one piece, to its place on the bigger map. The ground, walls, paths, fences and mine
+	-- yard were already built at their final size, so they stay where they are.
+	local ZONES = {
+		{ x0 = 95, x1 = 160, z0 = 68, z1 = 125, dx = 50, dz = 46 }, -- pond
+		{ x0 = -130, x1 = -95, z0 = -76, z1 = 76, dx = -48, dz = 0 }, -- training rocks
+		{ x0 = -142, x1 = -14, z0 = -116, z1 = -92, dx = -32, dz = -46 }, -- pickaxe stall
+		{ x0 = 14, x1 = 118, z0 = -116, z1 = -92, dx = 32, dz = -46 }, -- backpack stall
+		{ x0 = -28, x1 = 18, z0 = -100, z1 = -80, dx = 0, dz = -22 }, -- sell pad
+		{ x0 = 36, x1 = 52, z0 = -92, z1 = -76, dx = 16, dz = -28 }, -- elevator
+		{ x0 = -145, x1 = -56, z0 = -165, z1 = -134, dx = -53, dz = -80 }, -- pet shop
+		{ x0 = -56, x1 = 60, z0 = -186, z1 = -144, dx = 0, dz = -80 }, -- museum
+		{ x0 = 62, x1 = 95, z0 = -168, z1 = -134, dx = 72, dz = -80 }, -- ascension shrine
+		{ x0 = -130, x1 = 130, z0 = -145, z1 = -112, dx = 0, dz = -52 }, -- spawn plaza
+	}
+	local STAY = { "Fence", "Lantern", "Headframe", "Footing", "Bucket", "Rope", "Spoke", "Wheel", "PitSign", "SignPost" }
+	local function zoneOf(pos)
+		for _, zn in ZONES do
+			if pos.X >= zn.x0 and pos.X <= zn.x1 and pos.Z >= zn.z0 and pos.Z <= zn.z1 then
+				return zn
+			end
+		end
+		return nil
+	end
+	-- (reads and writes Position when CFrame is unset, which also keeps the headless test emulator happy)
+	local function whereIs(obj)
+		local pos = obj.CFrame.Position
+		return if pos.Magnitude > 1e-3 then pos else obj.Position
+	end
+	local function shift(obj, offset)
+		if obj.CFrame.Position.Magnitude > 1e-3 then
+			obj.CFrame += offset
+		else
+			obj.Position += offset
+		end
+	end
+	local function spread(pos)
+		local zn = zoneOf(pos)
+		return if zn then pos + Vector3.new(zn.dx, 0, zn.dz) else pos
+	end
+	for _, item in town:GetChildren() do
+		local stays = item == tiles
+		for _, prefix in STAY do
+			if string.sub(item.Name, 1, #prefix) == prefix then
+				stays = true
+			end
+		end
+		local pos
+		if item:IsA("BasePart") then
+			pos = whereIs(item)
+		elseif item:IsA("Model") then
+			local first = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart", true)
+			pos = first and whereIs(first)
+		end
+		local zn = not stays and pos and zoneOf(pos)
+		if zn then
+			local offset = Vector3.new(zn.dx, 0, zn.dz)
+			if item:IsA("BasePart") then
+				shift(item, offset)
+			else
+				pcall(function()
+					item.WorldPivot += offset
+				end)
+			end
+			for _, d in item:GetDescendants() do
+				if d:IsA("BasePart") then
+					shift(d, offset)
+				end
+			end
+		end
+	end
+	SELL_POS, SPAWN_POS, CHEST_POS = spread(SELL_POS), spread(SPAWN_POS), spread(CHEST_POS)
+	scatter()
 
 	-- Cartoon pass: flat, saturated plastic everywhere (Neon and Glass stay as they are)
 	for _, part in town:GetDescendants() do
@@ -5930,17 +6104,27 @@ do
 		end
 	end
 
+	-- Round boulder buddy: mossy head, glowing crystal heart and crystal spikes on its back
 	function BUILDERS.golem(m, P, c, acc, anims)
-		local rock = Enum.Material.Rock
-		petPart(m, Vector3.new(2.1, 1.8, 1.6), CFrame.new(0, -0.2, 0.2) * CFrame.Angles(0, 0.05, 0.04), c, rock)
-		petPart(m, Vector3.new(1.6, 1.2, 1.3), CFrame.new(0, 1.05, -0.05) * CFrame.Angles(0.05, -0.08, 0), lighter(c, 0.1), rock)
-		local core = petPart(m, Vector3.new(0.9, 0.9, 0.5), CFrame.new(0, -0.1, -0.62) * CFrame.Angles(0, 0, math.rad(45)), acc, Enum.Material.Neon)
+		local stone = lighter(c, 0.15)
+		blob(m, Vector3.new(2.5, 2.2, 2.2), CFrame.new(0, -0.25, 0.2), stone)
+		blob(m, Vector3.new(1.5, 1.3, 0.5), CFrame.new(0, -0.35, -0.8), lighter(c, 0.4))
+		blob(m, Vector3.new(1.9, 1.6, 1.7), CFrame.new(0, 1.05, -0.25), stone)
+		face(m, CFrame.new(0, 1.05, -1.08), 0.8)
+		for k = 0, 4 do
+			local a = k * 1.26
+			blob(m, Vector3.new(0.8, 0.45, 0.8), CFrame.new(math.cos(a) * 0.55, 1.78, -0.25 + math.sin(a) * 0.5), Color3.fromRGB(110, 205, 80))
+		end
+		blob(m, Vector3.new(0.35, 0.35, 0.35), CFrame.new(0.3, 2.05, -0.3), Color3.fromRGB(255, 120, 170))
+		local core = blob(m, Vector3.new(0.6, 0.75, 0.35), CFrame.new(0, -0.1, -1.02), acc, Enum.Material.Neon)
+		for k = -1, 1 do
+			petPart(m, Vector3.new(0.45, 1.1 - math.abs(k) * 0.3, 0.45), CFrame.new(k * 0.55, 0.9, 0.95) * CFrame.Angles(0.5, 0, k * -0.35), acc, Enum.Material.Neon)
+		end
 		for _, x in { -1, 1 } do
-			petPart(m, Vector3.new(0.34, 0.16, 0.1), CFrame.new(x * 0.34, 1.12, -0.72), acc, Enum.Material.Neon)
-			local arm = petPart(m, Vector3.new(0.7, 1.5, 0.8), CFrame.new(x * 1.45, -0.35, 0.1) * CFrame.Angles(0, 0, x * 0.12), darker(c, 0.1), rock)
-			table.insert(anims, { part = arm, kind = "swing", hinge = Vector3.new(x * 1.35, 0.35, 0.1), side = x })
-			petPart(m, Vector3.new(0.75, 0.6, 0.8), CFrame.new(x * 0.55, -1.3, 0.2), darker(c, 0.2), rock)
-			blob(m, Vector3.new(0.7, 0.25, 0.6), CFrame.new(x * 0.35, 1.68, 0.1), Color3.fromRGB(90, 160, 70), Enum.Material.Grass)
+			local arm = blob(m, Vector3.new(0.85, 1.35, 0.9), CFrame.new(x * 1.45, -0.3, -0.05) * CFrame.Angles(0, 0, x * 0.25), darker(c, 0.05))
+			table.insert(anims, { part = arm, kind = "swing", hinge = Vector3.new(x * 1.3, 0.3, 0), side = x })
+			blob(m, Vector3.new(0.8, 0.55, 0.95), CFrame.new(x * 0.62, -1.3, -0.05), darker(c, 0.18))
+			blob(m, Vector3.new(0.6, 0.45, 0.5), CFrame.new(x * 0.9, 0.35, 0.8), darker(c, 0.1))
 		end
 		local light = Instance.new("PointLight")
 		light.Color = acc
@@ -6030,11 +6214,22 @@ do
 		face(m, CFrame.new(0, 0.85, -1.2), 0.85, acc)
 		for k = 0, 2 do
 			wedge(m, Vector3.new(0.15, 0.5, 0.5), CFrame.new(0, 0.55 - k * 0.1, 0.35 + k * 0.5), acc, mat)
+			-- belly plates
+			blob(m, Vector3.new(1.05 - k * 0.15, 0.2, 0.3), CFrame.new(0, -0.25 - k * 0.3, -0.86 + k * 0.08), lighter(acc, 0.55))
+		end
+		-- wing bones along the top edge of each wing
+		for _, x in { -1, 1 } do
+			local bone = petPart(m, Vector3.new(0.2, 0.2, 1.9), CFrame.new(x * 1.35, 1.3, 0.45) * CFrame.Angles(0, 0, x * -0.6), darker(acc, 0.25), mat)
+			table.insert(anims, { part = bone, kind = "flap", hinge = Vector3.new(x * 0.85, 0.35, 0.55), side = x })
+			-- cheek frills
+			wedge(m, Vector3.new(0.12, 0.5, 0.45), CFrame.new(x * 0.85, 0.75, -0.75) * CFrame.Angles(0, x * 0.6, 0), acc, mat)
 		end
 		local tailSegs = { { Vector3.new(0, -0.55, 1.65), 0.8 }, { Vector3.new(0, -0.45, 2.3), 0.6 }, { Vector3.new(0, -0.2, 2.85), 0.45 } }
 		for _, seg in tailSegs do
 			local part = blob(m, Vector3.one * seg[2], CFrame.new(seg[1]), c, mat)
 			table.insert(anims, { part = part, kind = "wag", hinge = Vector3.new(0, -0.5, 1.3) })
+			local spike = wedge(m, Vector3.new(0.12, seg[2] * 0.5, seg[2] * 0.5), CFrame.new(seg[1] + Vector3.new(0, seg[2] * 0.55, 0)), acc, mat)
+			table.insert(anims, { part = spike, kind = "wag", hinge = Vector3.new(0, -0.5, 1.3) })
 		end
 		local spade = wedge(m, Vector3.new(0.12, 0.5, 0.5), CFrame.new(0, 0, 3.2) * CFrame.Angles(0, math.pi, 0), acc, mat)
 		table.insert(anims, { part = spade, kind = "wag", hinge = Vector3.new(0, -0.5, 1.3) })
@@ -6098,6 +6293,29 @@ do
 		local c, acc = rgb(P.color), rgb(P.accent)
 		local builder = BUILDERS[P.style or "critter"] or BUILDERS.critter
 		builder(m, P, c, acc, anims)
+		if P.rarity == "Legendary" or P.rarity == "Exclusive" then
+			local topY, topX, topZ = -math.huge, 0, 0
+			for _, part in m:GetChildren() do
+				if part:IsA("BasePart") and part.Transparency < 0.5 and math.abs(part.CFrame.Position.X) < 0.4 then
+					local y = part.CFrame.Position.Y + part.Size.Y / 2
+					if y > topY then
+						topY, topX, topZ = y, part.CFrame.Position.X, part.CFrame.Position.Z
+					end
+				end
+			end
+			if topY > -math.huge then
+				local crownGold = Color3.fromRGB(255, 206, 60)
+				local at = CFrame.new(topX, topY + 0.05, topZ) * CFrame.Angles(-0.2, 0, 0.12)
+				petPart(m, Vector3.new(0.3, 0.95, 0.95), at * CFrame.Angles(0, 0, math.rad(90)), crownGold, nil, Enum.PartType.Cylinder)
+				for k = 0, 4 do
+					local a = k * math.pi * 2 / 5
+					local tip = at * CFrame.new(math.cos(a) * 0.4, 0.3, math.sin(a) * 0.4)
+					petPart(m, Vector3.new(0.14, 0.34, 0.14), tip, crownGold)
+					petPart(m, Vector3.one * 0.16, tip * CFrame.new(0, 0.2, 0), crownGold, nil, Enum.PartType.Ball)
+				end
+				petPart(m, Vector3.one * 0.2, at * CFrame.new(0, 0.05, -0.47), Color3.fromRGB(255, 60, 90), Enum.Material.Neon, Enum.PartType.Ball)
+			end
+		end
 		if P.glow then
 			local anchorPart = m:FindFirstChildWhichIsA("BasePart")
 			if anchorPart then
@@ -6242,6 +6460,57 @@ do
 			end
 		end
 	end
+end
+
+-- Egg previews: the pets inside each egg float above its stand, bobbing and turning
+do
+	local previews = {}
+	local function buildPreviews()
+		for _, stand in CollectionService:GetTagged("EggStand") do
+			local index = stand:GetAttribute("Egg")
+			local egg = index and CFG.eggs[index]
+			if egg and not previews[stand] and stand:IsA("BasePart") then
+				local list = {}
+				for k, entry in egg.pets do
+					local model = buildPet(entry[1])
+					local ok = pcall(function()
+						model:ScaleTo(0.55)
+					end)
+					if ok then
+						model.Parent = workspace
+						table.insert(list, { model = model, k = k, count = #egg.pets })
+					else
+						model:Destroy()
+					end
+				end
+				previews[stand] = list
+			end
+		end
+	end
+	task.delay(2, buildPreviews)
+	CollectionService:GetInstanceAddedSignal("EggStand"):Connect(function()
+		task.defer(buildPreviews)
+	end)
+	RunService.Heartbeat:Connect(function()
+		local cam = workspace.CurrentCamera
+		if not cam then
+			return
+		end
+		local t = os.clock()
+		for stand, list in previews do
+			if not stand.Parent then
+				continue
+			end
+			local base = stand.CFrame.Position
+			if (cam.CFrame.Position - base).Magnitude < 140 then
+				for _, item in list do
+					local x = (item.k - (item.count + 1) / 2) * 2.5
+					local bob = math.sin(t * 2 + item.k) * 0.25
+					item.model:PivotTo(CFrame.new(base + Vector3.new(x, 11.5 + bob, 0)) * CFrame.Angles(0, math.pi + math.sin(t * 0.8 + item.k) * 0.5, 0))
+				end
+			end
+		end
+	end)
 end
 
 -- PETS window ---------------------------------------------------------------------
@@ -6999,17 +7268,30 @@ Remotes.Hatched.OnClientEvent:Connect(function(petId, eggId)
 	local rc = rgb(CFG.rarityColors[P.rarity] or { 200, 200, 210 })
 	local shade = create("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 1, ZIndex = 20, Parent = overlayGui })
 	tween(shade, 0.25, { BackgroundTransparency = 0.35 })
-	local eggFrame = create("Frame", {
+	-- the real 3D egg from the pet shop, shaking in the middle of the screen
+	local eggFrame = create("ViewportFrame", {
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.48),
-		Size = UDim2.fromOffset(170, 220),
-		BackgroundColor3 = WHITE,
+		Size = UDim2.fromOffset(260, 300),
+		BackgroundTransparency = 1,
+		Ambient = Color3.fromRGB(190, 190, 200),
+		LightColor = WHITE,
+		LightDirection = Vector3.new(-0.5, -1, -0.6),
 		ZIndex = 21,
 		Parent = overlayGui,
-	}, { corner(UDim.new(0.5, 0)), stroke(6, INK) })
-	gradient(eggFrame, rgb(egg.color):Lerp(WHITE, 0.25), rgb(egg.color))
-	for k = 1, 5 do
-		create("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.2 + (k * 0.37) % 0.7, 0.2 + (k * 0.23) % 0.6), Size = UDim2.fromOffset(28, 28), BackgroundColor3 = rgb(egg.spots), ZIndex = 22, Parent = eggFrame }, { corner() })
+	})
+	local town = workspace:FindFirstChild("Town")
+	local source = town and town:FindFirstChild(egg.id)
+	if source and source:IsA("Model") then
+		local copy = source:Clone()
+		CollectionService:RemoveTag(copy, "Spin")
+		copy:PivotTo(CFrame.new())
+		copy.Parent = eggFrame
+		local eggCam = Instance.new("Camera")
+		eggCam.FieldOfView = 40
+		eggCam.CFrame = CFrame.lookAt(Vector3.new(0, 0.6, -10), Vector3.new(0, 0, 0))
+		eggCam.Parent = eggFrame
+		eggFrame.CurrentCamera = eggCam
 	end
 	local sc = create("UIScale", { Scale = 0.2, Parent = eggFrame })
 	tween(sc, 0.4, { Scale = 1 }, Enum.EasingStyle.Back)

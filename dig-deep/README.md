@@ -88,6 +88,10 @@ While an ID is `0`, the item shows **"Soon"** in the live game. **In Studio, buy
 - **Red arrow trail** on the ground from you to the current objective.
 - **Avatar headshot tags** over every player, with name, level, 👑 VIP and ⭐ Ascension.
 
+- **Big, spread-out map:** the mine yard with 9 shafts sits in the middle, the pickaxe and backpack stalls line the main road, and the spawn plaza, museum, pet shop, Ascension shrine, training rocks and pond each have their own space.
+- **Themed eggs:** the Dirt Egg has a grassy top with flowers, the Cave Egg has glowing orange crystals and cracks, the Crystal Egg is see-through glass with a pink crystal inside, and the Void Egg is dark with neon cracks and orbiting moons. The pets inside each egg float above its stand, and hatching shows the real 3D egg shaking.
+- **Pets:** a round, mossy Rock Golem with a glowing crystal heart, dragons with belly plates, wing bones and tail spikes, brighter Void pets, and a little gold crown on every Legendary and Exclusive pet.
+
 ## Sound and music
 
 - **Music:** licensed APM tracks (*Happy Song*, *Breezy Days*, *Relaxed Scene*) that play on a loop and get quieter underground.
