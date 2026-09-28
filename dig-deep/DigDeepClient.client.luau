@@ -54,7 +54,6 @@ local AMBIENCE = {
 }
 
 -- Player settings (saved on the server; these are the defaults)
-local chestGuideUntil = 0 -- set by the welcome popup when the daily chest is ready
 local settings = { music = true, musicVol = 0.5, sfx = true, sfxVol = 0.8, ambience = true, otherPets = true, shake = true }
 
 pcall(function()
@@ -326,8 +325,8 @@ local gui = create("ScreenGui", {
 -- Coins, top centre
 local coinRow = create("Frame", {
 	Name = "Coins",
-	AnchorPoint = Vector2.new(0.5, 0),
-	Position = UDim2.new(0.5, 0, 0, 12),
+	AnchorPoint = Vector2.new(0, 0),
+	Position = UDim2.new(0, 14, 0, 66),
 	Size = UDim2.fromOffset(0, 48),
 	AutomaticSize = Enum.AutomaticSize.X,
 	BackgroundColor3 = WHITE,
@@ -376,7 +375,7 @@ local coinLabel = create("TextLabel", {
 local eventLabel = create("TextLabel", {
 	Name = "Event",
 	AnchorPoint = Vector2.new(0.5, 0),
-	Position = UDim2.new(0.5, 0, 0, 88),
+	Position = UDim2.new(0.5, 0, 0, 72),
 	Size = UDim2.fromOffset(360, 20),
 	BackgroundTransparency = 1,
 	Font = FONT,
@@ -1353,59 +1352,18 @@ do
 	guideBeam.Parent = workspace.Terrain
 	local guideEnd = Instance.new("Attachment")
 	guideEnd.Parent = workspace.Terrain
-	local guideStart = nil
 
-	local function findPedestal(kind, tier)
-		for _, p in CollectionService:GetTagged("ShopItem") do
-			if p:GetAttribute("Kind") == kind and p:GetAttribute("Tier") == tier and p.Parent and p.Parent:IsA("BasePart") then
-				return p.Parent
-			end
-		end
-		return nil
-	end
 
 	updateTutorial = function(depth)
-		local tut = attr("Tut", 0)
+		-- The objective banner and arrow trail do the guiding now; this only keeps the
+		-- big "bag full" reminder when you're down in the mine.
 		local full = attr("Bag", 0) >= attr("BagMax", 20)
-		local nextPick = CFG.picks[attr("Pick", 1) + 1]
-		local canAfford = nextPick ~= nil and attr("Coins", 0) >= nextPick.price
-		local root = getRoot()
-		local target = nil
-
-		if full and depth > 0 then
+		if full and depth > 5 then
 			setHint(if isTouch then "Bag full! Tap ⬆ to sell" else "Bag full! Press R or ⬆ to sell")
-		elseif tut == 0 then
-			setHint(if isTouch then "Hold your finger on the ground to dig" else "Hold Left Click on the ground to dig")
-		elseif tut == 2 and canAfford and depth == 0 then
-			setHint("New pickaxe ready! Follow the light")
-			target = findPedestal("Pick", attr("Pick", 1) + 1)
-		elseif chestGuideUntil > os.clock() and depth == 0 and attr("LastDay", -1) ~= math.floor(workspace:GetServerTimeNow() / 86400) then
-			setHint("🎁 Your daily chest is ready! Follow the light")
-			target = CollectionService:GetTagged("DailyChest")[1]
-		elseif tut >= 3 and depth == 0 and attr("PetIndex", 0) == 0 and attr("Coins", 0) >= (CFG.eggs[1] and CFG.eggs[1].price or 250) then
-			setHint("🥚 Hatch your first pet at the Pet Shop! Follow the light")
-			for _, stand in CollectionService:GetTagged("EggStand") do
-				if stand:GetAttribute("Egg") == 1 then
-					target = stand
-				end
-			end
 		else
 			setHint("")
 		end
-
-		if target and root then
-			if not guideStart or guideStart.Parent ~= root then
-				guideStart = Instance.new("Attachment")
-				guideStart.Name = "DigGuide"
-				guideStart.Parent = root
-			end
-			guideEnd.Position = target.Position + Vector3.new(0, 2, 0)
-			guideBeam.Attachment0 = guideStart
-			guideBeam.Attachment1 = guideEnd
-			guideBeam.Enabled = (target.Position - root.Position).Magnitude > 8
-		else
-			guideBeam.Enabled = false
-		end
+		guideBeam.Enabled = false
 	end
 end
 
@@ -1699,8 +1657,8 @@ stackButton(7, "Settings", "⚙️", "SETTINGS", Color3.fromRGB(220, 224, 235), 
 
 -- Level bar under the coins ------------------------------------------------------
 local levelRow = create("Frame", {
-	AnchorPoint = Vector2.new(0.5, 0),
-	Position = UDim2.new(0.5, 0, 0, 64),
+	AnchorPoint = Vector2.new(0, 0),
+	Position = UDim2.new(0, 14, 0, 122),
 	Size = UDim2.fromOffset(230, 20),
 	BackgroundColor3 = Color3.fromRGB(40, 30, 70),
 	Parent = gui,
@@ -1712,7 +1670,7 @@ local levelText = label({ parent = levelRow, text = "Lv 1", size = 15, z = 2 })
 -- Potion timers ----------------------------------------------------------------
 local potionRow = create("Frame", {
 	AnchorPoint = Vector2.new(0.5, 0),
-	Position = UDim2.new(0.5, 0, 0, 112),
+	Position = UDim2.new(0.5, 0, 0, 96),
 	Size = UDim2.fromOffset(420, 30),
 	BackgroundTransparency = 1,
 	Parent = gui,
@@ -2689,7 +2647,6 @@ Remotes.Welcome.OnClientEvent:Connect(function(amount, minutes, dailyReady, stre
 	end
 	if dailyReady then
 		label({ parent = panel, text = if (streak or 0) > 0 then `🎁 Daily chest ready! Keep your 🔥{streak}-day streak` else "🎁 Your daily chest is ready!", size = 17, color = Color3.fromRGB(200, 90, 40), outline = false, sz = UDim2.new(1, 0, 0, 24), pos = UDim2.fromOffset(0, y), z = 31 })
-		chestGuideUntil = os.clock() + 40
 	end
 	local btn = cartoonButton(panel, {
 		sz = UDim2.fromOffset(220, 54),
@@ -2943,6 +2900,248 @@ Remotes.LevelUp.OnClientEvent:Connect(function(level, reward)
 end)
 
 -- Slow HUD refresh (level bar, potions, badges, pass buttons) ----------------------
+-- OBJECTIVE BANNER + ARROW TRAIL --------------------------------------------------
+-- A big "what to do next" banner at the top and red arrows on the ground leading to it.
+-- It walks new players through the first steps, then always shows the next goal.
+local updateObjective, updateArrows
+do
+	local banner2 = create("Frame", {
+		Name = "Objective",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 10),
+		Size = UDim2.fromOffset(0, 58),
+		AutomaticSize = Enum.AutomaticSize.X,
+		BackgroundColor3 = Color3.new(0, 0, 0),
+		BackgroundTransparency = 0.35,
+		Parent = gui,
+	}, {
+		create("UIPadding", { PaddingLeft = UDim.new(0, 60), PaddingRight = UDim.new(0, 60) }),
+		create("UIGradient", { Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.18, 0.25), NumberSequenceKeypoint.new(0.82, 0.25), NumberSequenceKeypoint.new(1, 1) }) }),
+	})
+	local bannerScale = create("UIScale", { Parent = banner2 })
+	local objText = create("TextLabel", {
+		Size = UDim2.fromOffset(0, 58),
+		AutomaticSize = Enum.AutomaticSize.X,
+		BackgroundTransparency = 1,
+		Font = FONT,
+		TextSize = 40,
+		TextColor3 = WHITE,
+		Text = "",
+		Parent = banner2,
+	}, { stroke(4, INK) })
+	local stepLabel = create("TextLabel", {
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 0, 12),
+		Size = UDim2.fromOffset(200, 18),
+		BackgroundTransparency = 1,
+		Font = FONT,
+		TextSize = 16,
+		TextColor3 = GOLD,
+		Text = "",
+		Parent = banner2,
+	}, { stroke(2.5, INK) })
+
+	local mineCenter = Vector3.new(0, CFG.top - CFG.block * 3, 0)
+	local function tagged(tag, pred)
+		for _, inst in CollectionService:GetTagged(tag) do
+			if not pred or pred(inst) then
+				return inst
+			end
+		end
+		return nil
+	end
+	local function pedestal(kind, tier)
+		local p = tagged("ShopItem", function(pr)
+			return pr:GetAttribute("Kind") == kind and pr:GetAttribute("Tier") == tier
+		end)
+		return p and p.Parent
+	end
+	local function posOf(target)
+		if typeof(target) == "Vector3" then
+			return target
+		elseif typeof(target) == "Instance" and target:IsA("BasePart") then
+			return target.Position
+		end
+		return nil
+	end
+
+	local TUTORIAL_STEPS = 7
+	local current, currentTarget = "", nil
+	-- returns: text, target (part or position), tutorial step number (or nil)
+	local function pick(depth)
+		local mined, tut, pickTier, pack = attr("Mined", 0), attr("Tut", 0), attr("Pick", 1), attr("Pack", 1)
+		local coins, bag, bagMax, best = attr("Coins", 0), attr("Bag", 0), attr("BagMax", 20), attr("Best", 0)
+		local have = coins + attr("BagValue", 0)
+		local underground = depth > 5
+		local full = bag >= bagMax
+		local sellPad = tagged("SellPad")
+		local function sellStep(step)
+			if underground then
+				return if isTouch then "⬆ Tap SURFACE to sell!" else "⬆ Press R to go sell!", nil, step
+			end
+			return "💰 Sell your ores!", sellPad, step
+		end
+		local function earn(step, goalText, price)
+			if full or (bag > 0 and have >= price) then
+				return sellStep(step)
+			end
+			return `⛏ {goalText} ({fmt(have)}/{fmt(price)})`, mineCenter, step
+		end
+		if mined < 5 then
+			return "⛏ Dig into the ground!", mineCenter, 1
+		end
+		if tut < 2 then
+			if bag >= math.min(10, bagMax) then
+				return sellStep(2)
+			end
+			return `🎒 Fill your backpack! ({bag}/{math.min(10, bagMax)})`, mineCenter, 2
+		end
+		local p2 = CFG.picks[2]
+		if pickTier < 2 then
+			if coins >= p2.price then
+				return `⛏ Buy the {p2.name}!`, pedestal("Pick", 2), 3
+			end
+			return earn(3, "Dig coins for a " .. p2.name, p2.price)
+		end
+		local b2 = CFG.bags[2]
+		if pack < 2 then
+			if coins >= b2.price then
+				return `🎒 Buy the {b2.name}!`, pedestal("Bag", 2), 4
+			end
+			return earn(4, "Dig coins for a " .. b2.name, b2.price)
+		end
+		local egg = CFG.eggs[1]
+		if attr("PetIndex", 0) == 0 then
+			if coins >= egg.price then
+				return "🥚 Hatch your first pet!", tagged("EggStand", function(e)
+					return e:GetAttribute("Egg") == 1
+				end), 5
+			end
+			return earn(5, "Dig coins for a pet egg", egg.price)
+		end
+		if best < 20 then
+			if full then
+				return sellStep(6)
+			end
+			return `⬇ Dig down to 20m! ({best}m)`, mineCenter, 6
+		end
+		if attr("LastDay", -1) ~= math.floor(workspace:GetServerTimeNow() / 86400) then
+			return "🎁 Open your FREE daily chest!", tagged("DailyChest"), 7
+		end
+		-- after the tutorial: always the next goal
+		if full then
+			return sellStep(nil)
+		end
+		local nextPick = CFG.picks[pickTier + 1]
+		if nextPick and coins >= nextPick.price then
+			return `⛏ Buy the {nextPick.name}!`, pedestal("Pick", pickTier + 1), nil
+		end
+		local nextBag = CFG.bags[pack + 1]
+		if nextBag and coins >= nextBag.price and (not nextPick or nextBag.price <= nextPick.price * 0.5) then
+			return `🎒 Buy the {nextBag.name}!`, pedestal("Bag", pack + 1), nil
+		end
+		if best >= CFG.maxDepth then
+			return "⭐ ASCEND at the shrine!", tagged("Shrine"), nil
+		end
+		for _, L in CFG.layers do
+			if L.from > best then
+				return `⬇ Reach {L.from}m: {L.name}!`, mineCenter, nil
+			end
+		end
+		return `⬇ Reach {CFG.maxDepth}m to Ascend!`, mineCenter, nil
+	end
+
+	updateObjective = function(depth)
+		local text, target, step = pick(depth)
+		currentTarget = target
+		if text ~= current then
+			local first = current == ""
+			current = text
+			objText.Text = text
+			stepLabel.Text = if step then `STEP {step} / {TUTORIAL_STEPS}` else ""
+			bannerScale.Scale = 0.6
+			tween(bannerScale, 0.45, { Scale = 1 }, Enum.EasingStyle.Back)
+			if not first then
+				playSound("Pop", 1.2)
+			end
+		end
+	end
+
+	-- red chevrons that scroll along the ground towards the objective
+	local arrowFolder = Instance.new("Folder")
+	arrowFolder.Name = "DigArrows"
+	arrowFolder.Parent = workspace
+	local ARROWS, SPACING = 34, 3.6
+	local arrows = {}
+	for k = 1, ARROWS do
+		local pair = {}
+		for side = -1, 1, 2 do
+			local bar = Instance.new("Part")
+			bar.Anchored = true
+			bar.CanCollide = false
+			bar.CanQuery = false
+			bar.CanTouch = false
+			bar.CastShadow = false
+			bar.Size = Vector3.new(0.45, 0.2, 1.5)
+			bar.Color = Color3.fromRGB(255, 45, 45)
+			bar.Material = Enum.Material.SmoothPlastic
+			bar.Transparency = 1
+			bar.Parent = arrowFolder
+			pair[side] = bar
+		end
+		arrows[k] = pair
+	end
+	local groundParams = RaycastParams.new()
+	groundParams.FilterType = Enum.RaycastFilterType.Exclude
+	local function hideFrom(k)
+		for i = k, ARROWS do
+			arrows[i][-1].Transparency = 1
+			arrows[i][1].Transparency = 1
+		end
+	end
+	updateArrows = function(depth)
+		local root = getRoot()
+		local goal = posOf(currentTarget)
+		if not root or not goal then
+			hideFrom(1)
+			return
+		end
+		local start = root.Position - Vector3.new(0, 2.8, 0)
+		-- underground players get "press surface" instead of arrows through rock
+		if depth > 5 and goal.Y > CFG.top - 8 then
+			hideFrom(1)
+			return
+		end
+		local flat = Vector3.new(goal.X - start.X, 0, goal.Z - start.Z)
+		local dist = flat.Magnitude
+		if dist < 6 then
+			hideFrom(1)
+			return
+		end
+		local dir = flat.Unit
+		groundParams.FilterDescendantsInstances = { arrowFolder, player.Character or arrowFolder }
+		local offset = (os.clock() * 5) % SPACING
+		local shown = 0
+		for k = 1, ARROWS do
+			local along = 2.5 + offset + (k - 1) * SPACING
+			if along > dist - 3 then
+				break
+			end
+			local p = start + dir * along
+			local hit = workspace:Raycast(p + Vector3.new(0, 12, 0), Vector3.new(0, -40, 0), groundParams)
+			local y = if hit then hit.Position.Y + 0.25 else start.Y + 0.25
+			local base = CFrame.lookAt(Vector3.new(p.X, y, p.Z), Vector3.new(p.X, y, p.Z) + dir)
+			for side = -1, 1, 2 do
+				local bar = arrows[k][side]
+				bar.CFrame = base * CFrame.new(side * 0.45, 0, 0.35) * CFrame.Angles(0, side * math.rad(-40), 0)
+				bar.Transparency = if k == 1 then 0.5 else 0
+			end
+			shown = k
+		end
+		hideFrom(shown + 1)
+	end
+end
+
 local function updateSimHUD()
 	local now = workspace:GetServerTimeNow()
 	local nextPick = CFG.picks[attr("Pick", 1) + 1]
@@ -3004,6 +3203,7 @@ local gaugeShown = false
 RunService.RenderStepped:Connect(function(dt)
 	updateMining()
 	updatePets(dt)
+	updateArrows(currentDepth())
 
 	local depth = currentDepth()
 	local now = workspace:GetServerTimeNow()
@@ -3027,7 +3227,7 @@ RunService.RenderStepped:Connect(function(dt)
 	end
 	grade.TintColor = grade.TintColor:Lerp(tint, 1 - math.exp(-dt * 4))
 	grade.Contrast = 0.05 + 0.08 * dark
-	grade.Saturation = 0.08
+	grade.Saturation = 0.12
 
 	-- Camera shake (swings, finds and earthquakes)
 	local hum = getHumanoid()
@@ -3084,6 +3284,7 @@ RunService.RenderStepped:Connect(function(dt)
 		checkSky()
 		checkAfford()
 		updateSimHUD()
+		updateObjective(depth)
 		refreshStations()
 		updateTutorial(depth)
 	end

@@ -22,9 +22,9 @@
     },
     "Lighting": {
       "$properties": {
-        "Technology": "Future",
-        "Brightness": 2.8,
-        "ClockTime": 14.4,
+        "Technology": "ShadowMap",
+        "Brightness": 3.2,
+        "ClockTime": 13.5,
         "GlobalShadows": true,
         "EnvironmentDiffuseScale": 1,
         "EnvironmentSpecularScale": 1,

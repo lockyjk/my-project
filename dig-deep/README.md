@@ -68,6 +68,13 @@ While an ID is `0`, the item shows **"Soon"** in the live game. **In Studio, buy
 - **Potions:** timers show under your coins.
 - **Cartoony UI:** a button stack on the left (Shop, Pets, Spin, Codes, Offer), chunky gradient buttons, bouncy windows, confetti, and a level-up burst.
 
+## Look and guidance
+
+- **Cartoony front-page style:** a lime checkerboard grass map inside checkered dirt walls with a bright green trim, flat saturated plastic, wooden cross-brace fences, blocky trees, a cartoon pond, and glowing yellow circle pads with big floating titles (⛏ PICKAXES, 🥚 PET SHOP, FREE!, and so on).
+- **Objective banner** at the top center that walks new players through 7 steps: dig, fill your bag, sell, buy a pickaxe, buy a backpack, hatch a pet, reach 20m and open the daily chest. After that it always shows the next goal (next pickaxe, next layer, or Ascend).
+- **Red arrow trail** on the ground from you to the current objective.
+- **Avatar headshot tags** over every player, with name, level, 👑 VIP and ⭐ Ascension.
+
 ## Sound and music
 
 - **Music:** licensed APM tracks (*Happy Song*, *Breezy Days*, *Relaxed Scene*) that play on a loop and get quieter underground.
