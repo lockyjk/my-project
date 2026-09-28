@@ -6,7 +6,7 @@ A Roblox mining game made of two scripts. The server script builds the whole wor
 
 ## Play it
 
-Open **`DigDeep.rbxlx`** in Roblox Studio and press Play. The place file already contains both scripts, ShadowMap lighting, and a kill floor set low enough for the 500m mine.
+Open **`DigDeep.rbxlx`** in Roblox Studio and press Play. There are 9 mines, so set **Game Settings → Places → Max Players** to 9 when you publish. The place file already contains both scripts, ShadowMap lighting, and a kill floor set low enough for the 500m mine.
 
 ## Or put the scripts in your own place (2 minutes)
 
@@ -22,12 +22,12 @@ To keep progress between sessions, turn on **Game Settings → Security → Enab
 
 | | |
 |---|---|
-| **Dig** | Hold left click (or hold your finger on a phone) on a block within reach. |
+| **Dig** | Every player gets **their own mine**: a shaft with your name on it. Jump in and click (or hold) anywhere. Each click hits the one big block you're standing on. When it breaks you drop onto the next one, and the walls change colour as you reach new layers. |
 | **Sell** | Tap **⬆ SURFACE** (or press **R**). It teleports you onto the gold sell pad, which sells your bag. |
 | **Upgrade** | Walk up to a pickaxe or backpack on the market stalls and press **E** to buy it. Prices turn green when you can afford them. |
 | **Go deeper** | Topsoil → Stone (20m) → Deepstone (60m) → Magma Rock (120m) → Crystal Caves (200m) → The Void (300m) → The Core (420m) → bedrock at 500m. Each layer has richer ore and harder blocks. |
 | **Ascend** | Once you've reached bedrock, use the Ascension Shrine next to the museum. It resets your coins, gear and depth but keeps your treasures, and gives +50% ore value forever each time. |
-| **Elevator** | Takes you straight to your deepest 25m checkpoint. |
+| **Elevator** | Takes you straight back down to the bottom of your mine. |
 
 ## +1 Strength every click
 
@@ -109,8 +109,7 @@ While an ID is `0`, the item shows **"Soon"** in the live game. **In Studio, buy
 
 - **Treasures:** 8 rare finds, from an Old Boot near the surface to the Crown of the Deep below 360m, plus a 1-in-40,000 Rubber Duck anywhere. Each find gets a big reveal and is announced to the whole server. First finds and rare treasures are announced to the server. Repeat finds of common ones show as a small popup. Each one goes into the **Museum of the Deep**, which shows silhouettes for the ones you haven't found. Every unique treasure gives **+10% ore value forever**.
 - **Gold Rush:** every 12 minutes on the UTC clock (the same moment in every server), ore is 3× more common for 90 seconds. The countdown sits under your coins.
-- **Earthquakes:** every 30 minutes, or when the mine gets too big, there's a 20-second warning with screen shake. Then the mine resets with fresh ore and everyone underground is sent back up.
-- **Geodes:** purple glowing blocks with lots of health. *Everyone* who hits one gets the full reward, so strangers team up.
+- **Geodes:** now and then your next block is a glowing purple geode with lots of health and a big coin reward.
 - **Daily chest:** a streak reward that grows each day, with triple on day 7. The reward scales with your pickaxe tier.
 - **Friend bonus:** +10% ore value while a friend is in your server.
 - Your **Depth** and **Coins** show on the player list.
@@ -128,6 +127,6 @@ Sounds use built-in Roblox sounds. To use your own, replace the ids in the `SOUN
 ## How it was checked
 
 - Both scripts type-check with **zero warnings** against the Roblox API (luau-lsp 1.70, in the same non-strict mode Studio uses).
-- The server was run headlessly on an emulated Roblox instance tree. The run covered: world build, two players joining, digging 30 rows, a full bag, the anti-cheat rejecting out-of-reach and malformed hits, selling, buying, the daily chest, the elevator, a treasure find, a shared geode, an earthquake reset and a player leaving.
+- The server was run headlessly on an emulated Roblox instance tree. The run covered: world build, two players each getting their own mine, breaking slabs row by row, a full bag, the anti-cheat rejecting hits on someone else's slab, from outside the shaft and malformed hits, trespassers being sent back, selling, buying, the elevator, a treasure find, a geode, Strength, gifts, rebirth, training rocks, Ascension (a fresh mine) and a player leaving (their mine is freed).
 - The client ran against that server with every server event triggered, including real hold-to-dig input and the R key to surface. It had no errors.
 - This has **not** been played in the real Roblox engine yet. Things like animation feel, lighting and camera can only be judged in Studio.

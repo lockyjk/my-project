@@ -943,12 +943,58 @@ local function findTarget()
 end
 
 local trainFx = { at = 0 } -- when you last swung, so Strength popups appear at your cursor
+
+-- Your own slab, if you're standing in your shaft. In your shaft every click hits it.
+local slabUI = (function()
+	local bar = create("Frame", {
+		Name = "SlabBar",
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, -108),
+		Size = UDim2.fromOffset(380, 34),
+		BackgroundColor3 = Color3.fromRGB(40, 30, 60),
+		Visible = false,
+		Parent = gui,
+	}, { corner(), stroke(4, INK) })
+	local fill = create("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = WHITE, Parent = bar }, { corner() })
+	create("UIGradient", { Color = ColorSequence.new(Color3.fromRGB(255, 170, 90), Color3.fromRGB(235, 70, 50)), Rotation = 90, Parent = fill })
+	local text = create("TextLabel", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Font = FONT, TextSize = 20, TextColor3 = WHITE, Text = "", ZIndex = 2, Parent = bar }, { stroke(2.5) })
+	local function mySlab()
+		local root = getRoot()
+		local index = player:GetAttribute("Shaft")
+		if not root or not index then
+			return nil
+		end
+		for _, slab in CollectionService:GetTagged("Slab") do
+			if slab.Parent and slab.Parent.Name == "Shaft" .. index then
+				local offset = root.Position - slab.Position
+				local half = (CFG.shaftWidth or 24) / 2
+				if math.abs(offset.X) < half + 1 and math.abs(offset.Z) < half + 1 and offset.Y > 0 and offset.Y < CFG.reach then
+					return slab
+				end
+			end
+		end
+		return nil
+	end
+	return { bar = bar, fill = fill, text = text, mySlab = mySlab }
+end)()
+
 local function updateMining()
 	local hum = getHumanoid()
 	local holding = mouseHeld or (activeTouch ~= nil and not touchDragged)
 	local target, hitPos = nil, nil
 	if hum and hum.Health > 0 and (holding or not isTouch) then
 		target, hitPos = findTarget()
+	end
+	-- in your own shaft, every click breaks your slab, wherever you point
+	local slab = if hum and hum.Health > 0 then slabUI.mySlab() else nil
+	if slab and target ~= slab then
+		target, hitPos = slab, slab.Position + Vector3.new(math.random(-6, 6), CFG.block / 2, math.random(-6, 6))
+	end
+	slabUI.bar.Visible = slab ~= nil
+	if slab then
+		local hp, maxHp = slab:GetAttribute("HP") or 1, slab:GetAttribute("MaxHP") or 1
+		slabUI.fill.Size = UDim2.fromScale(math.clamp(hp / math.max(1, maxHp), 0, 1), 1)
+		slabUI.text.Text = `{if slab:GetAttribute("Geode") then "💎 GEODE" else "🪨 " .. slab.Name} · {fmt(math.ceil(hp))} / {fmt(maxHp)}`
 	end
 	-- Auto Mine pass: keep digging the block under your feet (or whatever you point at)
 	if autoMine and hum and hum.Health > 0 and not holding then
@@ -1006,24 +1052,40 @@ end
 --------------------------------------------------------------------------------
 local lastFullPopup = 0
 
-Remotes.Mined.OnClientEvent:Connect(function(pos, kind, color, collected, full)
+-- A whole slab breaks: a big burst of rock, then every block of loot pops up one after another
+Remotes.Mined.OnClientEvent:Connect(function(pos, kinds, color, collected, full)
 	local mat = Enum.Material.Slate
-	dust(pos, color, 8)
-	chunks(pos, color, mat, 5)
-	playSound("Break", 0.85 + math.random() * 0.3)
-	kick(0.12)
-	if kind ~= "" and kind ~= "Geode" and collected then
-		local ore = CFG.ores[kind]
-		if ore then
-			local tier = ore.tier or 1
-			local c = rgb(ore.color)
-			popup(pos, "+1 " .. ore.name, c:Lerp(WHITE, 0.15), 20 + tier * 4, 4 + tier, 1.1 + tier * 0.1)
-			sparkle(pos, c, 8 + tier * 6, 14 + tier * 3)
-			playSound("Pickup", 0.9 + tier * 0.12)
-			if tier >= 4 then
-				kick(0.35)
-			end
+	for _ = 1, 4 do
+		local spot = pos + Vector3.new(math.random(-9, 9), 0.5, math.random(-9, 9))
+		dust(spot, color, 6)
+		chunks(spot, color, mat, 4)
+	end
+	playSound("Break", 0.75 + math.random() * 0.2)
+	kick(0.3)
+	if type(kinds) ~= "table" then
+		kinds = {}
+	end
+	for i, kind in kinds do
+		if i > (collected or 0) then
+			break
 		end
+		task.delay((i - 1) * 0.12, function()
+			local spot = pos + Vector3.new(math.random(-6, 6), 1, math.random(-6, 6))
+			local ore = kind ~= "" and CFG.ores[kind]
+			if ore then
+				local tier = ore.tier or 1
+				local c = rgb(ore.color)
+				popup(spot, "+1 " .. ore.name, c:Lerp(WHITE, 0.15), 22 + tier * 4, 5 + tier, 1.2 + tier * 0.1)
+				sparkle(spot, c, 8 + tier * 6, 14 + tier * 3)
+				playSound("Pickup", 0.9 + tier * 0.12)
+				if tier >= 4 then
+					kick(0.35)
+				end
+			else
+				popup(spot, "+1 🪨", WHITE, 22, 4, 1)
+				playSound("Pop", 1 + i * 0.08)
+			end
+		end)
 	end
 	if full and os.clock() - lastFullPopup > 1.5 then
 		lastFullPopup = os.clock()
@@ -1331,14 +1393,8 @@ do
 			local sub = info and info:FindFirstChild("Sub")
 			if sub then
 				local best = attr("Best", 0)
-				local stop = math.min(math.floor(best / CFG.elevatorStep) * CFG.elevatorStep, CFG.maxDepth - 1)
-				if stop >= CFG.elevatorStep then
-					sub.Text = `Takes you down to {stop}m`
-					sub.TextColor3 = GREEN
-				else
-					sub.Text = `Dig to {CFG.elevatorStep}m to unlock ({best}m)`
-					sub.TextColor3 = Color3.fromRGB(220, 220, 230)
-				end
+				sub.Text = `Back down to your mine ({best}m)`
+				sub.TextColor3 = GREEN
 			end
 		end
 	end
@@ -3543,7 +3599,6 @@ do
 		Parent = banner2,
 	}, { stroke(2.5, INK) })
 
-	local mineCenter = Vector3.new(0, CFG.top - CFG.block * 3, 0)
 	local function tagged(tag, pred)
 		for _, inst in CollectionService:GetTagged(tag) do
 			if not pred or pred(inst) then
@@ -3571,6 +3626,7 @@ do
 	local current, currentTarget = "", nil
 	-- returns: text, target (part or position), tutorial step number (or nil)
 	local function pick(depth)
+		local mineCenter = player:GetAttribute("ShaftPos") or Vector3.new(0, CFG.top, 0) -- your own shaft
 		local mined, tut, pickTier, pack = attr("Mined", 0), attr("Tut", 0), attr("Pick", 1), attr("Pack", 1)
 		local coins, bag, bagMax, best = attr("Coins", 0), attr("Bag", 0), attr("BagMax", 20), attr("Best", 0)
 		local have = coins + attr("BagValue", 0)
@@ -3590,11 +3646,11 @@ do
 			return `⛏ {goalText} ({fmt(have)}/{fmt(price)})`, mineCenter, step
 		end
 		local strength = attr("Strength", 0)
-		if mined < 5 and strength < 25 then
+		if mined < 3 and strength < 25 then
 			return `💪 Click to train Strength! ({fmt(strength)}/25)`, nil, 1
 		end
-		if mined < 5 then
-			return "⛏ Dig into the ground!", mineCenter, 2
+		if mined < 3 then
+			return "⛏ Jump in YOUR mine and click to break it!", mineCenter, 2
 		end
 		if tut < 2 then
 			if bag >= math.min(10, bagMax) then

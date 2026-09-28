@@ -36,9 +36,11 @@ local BLOCK = 6 -- studs per block
 local GRID = 24 -- the mine is GRID x GRID blocks wide
 local MAX_DEPTH = 500 -- rows; bedrock below
 local REACH = 20 -- studs from your root part to a block's centre
-local PART_CAP = 11000 -- an earthquake resets the mine once this many blocks exist
-local QUAKE_EVERY = 30 * 60
-local QUAKE_WARNING = 20
+local SHAFT_SLOTS = 9 -- one personal shaft per player (set the server size to 9 or fewer)
+local SHAFT_W = 24 -- studs across the inside of a shaft
+local SHAFT_PITCH = 48 -- studs between shaft centres (3 x 3 grid)
+local SLAB_LOOT = 3 -- each slab you break holds this many blocks' worth of loot
+local SLAB_HP = 4 -- slab health = layer hp x this
 local RUSH_EVERY = 12 * 60 -- a Gold Rush starts every 12 minutes on the UTC clock...
 local RUSH_LENGTH = 90 -- ...and lasts this many seconds
 local RUSH_MULT = 3 -- ore chance multiplier during a rush
@@ -208,7 +210,7 @@ local SPIN = {
 }
 -- Daily quests: 3 are picked per day (same for everyone), progress resets at midnight UTC.
 local QUEST_POOL = {
-	{ id = "mine", text = "Mine %d blocks", goal = 200 },
+	{ id = "mine", text = "Break %d blocks", goal = 60 },
 	{ id = "ore", text = "Collect %d ores", goal = 25 },
 	{ id = "sell", text = "Sell your bag %d times", goal = 5 },
 	{ id = "hatch", text = "Hatch %d eggs", goal = 2 },
@@ -576,7 +578,7 @@ end
 
 do
 	local cfg = {
-		top = TOP, block = BLOCK, grid = GRID, maxDepth = MAX_DEPTH, reach = REACH,
+		top = TOP, block = BLOCK, grid = GRID, maxDepth = MAX_DEPTH, reach = REACH, shaftWidth = SHAFT_W,
 		rushEvery = RUSH_EVERY, rushLength = RUSH_LENGTH, elevatorStep = ELEVATOR_STEP, treasureBonus = TREASURE_BONUS,
 		layers = {}, ores = {}, picks = {}, bags = {}, treasures = {}, treasureOrder = {},
 		passes = PASSES, products = PRODUCTS, pets = PETS, eggs = EGGS, rarityColors = RARITY_COLORS,
@@ -688,7 +690,15 @@ local function buildWorld()
 	for i = 0, (MAP_X * 2) / TILE - 1 do
 		for j = 0, (MAP_Z1 - MAP_Z0) / TILE - 1 do
 			local cx, cz = -MAP_X + (i + 0.5) * TILE, MAP_Z0 + (j + 0.5) * TILE
-			if not (math.abs(cx) < PIT and math.abs(cz) < PIT) then
+			local inShaft = false
+			for sx = -1, 1 do
+				for sz = -1, 1 do
+					if math.abs(cx - sx * SHAFT_PITCH) < SHAFT_W / 2 and math.abs(cz - sz * SHAFT_PITCH) < SHAFT_W / 2 then
+						inShaft = true
+					end
+				end
+			end
+			if not inShaft then
 				newPart({ Name = "Tile", Size = Vector3.new(TILE, BLOCK, TILE), Position = W(cx, -BLOCK / 2, cz), Color = if (i + j) % 2 == 0 then grassA else grassB, Material = Enum.Material.SmoothPlastic }, tiles)
 			end
 		end
@@ -989,7 +999,7 @@ local function buildWorld()
 	newPart({ Name = "ElevatorTop", Size = Vector3.new(8.8, 0.8, 8.8), Position = W(ex, 14.2, ez), Color = Color3.fromRGB(60, 60, 66), Material = Enum.Material.Metal }, town)
 	newPart({ Name = "ElevatorWheel", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.6, 4, 4), CFrame = CFrame.new(W(ex, 16.4, ez)), Color = Color3.fromRGB(150, 110, 60), Material = Enum.Material.Metal }, town)
 	CollectionService:AddTag(platform, "Elevator")
-	billboard(platform, 16, { { "Sub", "Unlocks at " .. ELEVATOR_STEP .. "m", 15, Color3.fromRGB(240, 240, 240) } }, 80)
+	billboard(platform, 16, { { "Sub", "Back down to your mine", 15, Color3.fromRGB(240, 240, 240) } }, 80)
 	prompt(platform, "Elevator", "Ride down", "Elevator", 0.4)
 
 	-- Daily chest
@@ -1369,27 +1379,16 @@ local sellPad = buildWorld()
 remoteFolder.Parent = ReplicatedStorage
 
 --------------------------------------------------------------------------------
--- THE MINE
--- Blocks are created lazily: only blocks touching air exist. Breaking one creates its hidden neighbours.
--- cells[key] = nil (solid, not built yet) | false (air) | true (outside, solid) | Part
+-- THE MINE: one shaft per player (the "+1 Mine Per Click" layout)
+-- You stand on one big block (a "slab") that fills your shaft. Click to break it, drop onto the
+-- next one. The shaft's walls show the layer you are in. SHAFT_SLOTS shafts sit in a 3 x 3 grid.
 --------------------------------------------------------------------------------
 local mineFolder = Instance.new("Folder")
 mineFolder.Name = "Mine"
 mineFolder.Parent = workspace
 
-local cells = {}
-local blockInfo = {}
-local partCount = 0
-local DIRS = { { 1, 0, 0 }, { -1, 0, 0 }, { 0, 1, 0 }, { 0, -1, 0 }, { 0, 0, 1 }, { 0, 0, -1 } }
+local blockInfo = {} -- slab part -> { shaft, row, kinds, value, hp, maxHp, color, pos, geode }
 local GEODE_COLOR = Color3.fromRGB(170, 95, 255)
-
-local function cellKey(x, y, z)
-	return (x + 1) + (z + 1) * 64 + y * 4096
-end
-
-local function cellPos(x, y, z)
-	return Vector3.new((x - GRID / 2 + 0.5) * BLOCK, TOP - y * BLOCK - BLOCK / 2, (z - GRID / 2 + 0.5) * BLOCK)
-end
 
 local function layerAt(y)
 	local found = LAYERS[1]
@@ -1413,10 +1412,7 @@ local function rushActive()
 	return workspace:GetServerTimeNow() % RUSH_EVERY < RUSH_LENGTH
 end
 
-local function rollKind(y, L)
-	if y >= GEODE_MIN_DEPTH and rng:NextNumber() < GEODE_CHANCE then
-		return "Geode"
-	end
+local function rollOre(L)
 	local boost = if rushActive() then RUSH_MULT else 1
 	local r = rng:NextNumber()
 	local acc = 0
@@ -1429,10 +1425,7 @@ local function rollKind(y, L)
 	return ""
 end
 
--- Ore and geode blocks are stone with nuggets or crystals growing out of every face.
-local FACE_NORMALS = { Vector3.xAxis, -Vector3.xAxis, Vector3.yAxis, -Vector3.yAxis, Vector3.zAxis, -Vector3.zAxis }
-
-local function orePiece(block, color, mat)
+local function orePiece(parent, color, mat)
 	local piece = Instance.new("Part")
 	piece.Name = "Nugget"
 	piece.Anchored = true
@@ -1444,239 +1437,235 @@ local function orePiece(block, color, mat)
 	piece.Material = mat
 	piece.TopSurface = Enum.SurfaceType.Smooth
 	piece.BottomSurface = Enum.SurfaceType.Smooth
-	piece.Parent = block
+	piece.Parent = parent
 	return piece
 end
 
--- Ore shows as chunky lumps set into the rock (walls and ceilings) and low inlays on floors,
--- so nothing looks like loose litter. Gems also grow crystal clusters from the sides and ceiling.
-local function decorate(block, color, mat, crystal, count)
-	local center = block.Position
-	for _, n in FACE_NORMALS do
-		local t1 = if math.abs(n.Y) > 0.5 then Vector3.xAxis else Vector3.yAxis
-		local t2 = n:Cross(t1)
-		local floorFace = n.Y > 0.5
-		for _ = 1, math.max(2, math.floor(count / 3)) do
-			local spot = center + n * (BLOCK / 2) + t1 * rng:NextNumber(-1.8, 1.8) + t2 * rng:NextNumber(-1.8, 1.8)
-			local lump = orePiece(block, color, mat)
-			if floorFace then
-				lump.Size = Vector3.new(rng:NextNumber(1, 1.9), rng:NextNumber(0.8, 1.5), 0.1)
-				lump.CFrame = CFrame.lookAt(spot + n * 0.03, spot + n, t1) * CFrame.Angles(0, 0, rng:NextNumber(0, math.pi))
-			else
-				local sz = rng:NextNumber(0.9, 1.5)
-				lump.Size = Vector3.new(sz, sz * rng:NextNumber(0.7, 1), sz * rng:NextNumber(0.7, 1))
-				-- mostly buried: only a corner or edge breaks the surface
-				lump.CFrame = CFrame.new(spot + n * (sz * 0.12)) * CFrame.Angles(rng:NextNumber(0, 6), rng:NextNumber(0, 6), rng:NextNumber(0, 6))
+local SHAFTS = {}
+do
+	local STONE_A, STONE_B = Color3.fromRGB(176, 176, 206), Color3.fromRGB(156, 156, 188)
+	for i = 0, SHAFT_SLOTS - 1 do
+		local col, rowIdx = i % 3, math.floor(i / 3)
+		local cx, cz = (col - 1) * SHAFT_PITCH, (rowIdx - 1) * SHAFT_PITCH
+		local folder = Instance.new("Folder")
+		folder.Name = "Shaft" .. (i + 1)
+		folder.Parent = mineFolder
+		local shaft = { index = i + 1, x = cx, z = cz, folder = folder, rows = {}, owner = nil, slab = nil, oldWall = nil }
+		-- Stone rim around the opening, in 6-stud blocks of two shades
+		local h = SHAFT_W / 2
+		local k = 0
+		for _, side in { { -1, 0 }, { 1, 0 }, { 0, -1 }, { 0, 1 } } do
+			for s = -h - 3, h, 6 do
+				k += 1
+				local along = s + 3
+				local pos = if side[1] ~= 0 then Vector3.new(cx + side[1] * (h + 1.5), TOP + 0.6, cz + along) else Vector3.new(cx + along, TOP + 0.6, cz + side[2] * (h + 1.5))
+				local size = if side[1] ~= 0 then Vector3.new(3, 1.2, 6) else Vector3.new(6, 1.2, 3)
+				newPart({ Name = "Rim", Size = size, Position = pos, Color = if k % 2 == 0 then STONE_A else STONE_B, Material = Enum.Material.SmoothPlastic }, folder)
 			end
 		end
-		if crystal and not floorFace and rng:NextNumber() < 0.7 then
-			local base = center + n * (BLOCK / 2) + t1 * rng:NextNumber(-1.2, 1.2) + t2 * rng:NextNumber(-1.2, 1.2)
-			for _ = 1, rng:NextInteger(2, 4) do
-				local len = rng:NextNumber(1.2, 2.6)
-				local spike = orePiece(block, color, mat)
-				spike.Size = Vector3.new(0.5, len, 0.5)
-				spike.CFrame = CFrame.lookAt(base, base + n, t1) * CFrame.Angles(-math.pi / 2, 0, 0)
-					* CFrame.Angles(rng:NextNumber(-0.5, 0.5), rng:NextNumber(0, math.pi), rng:NextNumber(-0.5, 0.5))
-					* CFrame.new(0, len * 0.35, 0)
-			end
+		-- Lid shown while nobody owns the shaft
+		local lid = newPart({ Name = "Lid", Size = Vector3.new(SHAFT_W, 0.6, SHAFT_W), Position = Vector3.new(cx, TOP + 0.3, cz), Color = Color3.fromRGB(150, 100, 60), Material = Enum.Material.SmoothPlastic }, folder)
+		for p = -1, 1 do
+			newPart({ Name = "LidPlank", Size = Vector3.new(SHAFT_W, 0.7, 1.2), Position = Vector3.new(cx, TOP + 0.35, cz + p * 8), Color = Color3.fromRGB(120, 78, 44), Material = Enum.Material.SmoothPlastic }, lid)
 		end
+		shaft.lid = lid
+		-- Owner sign floating over the shaft
+		local anchor = newPart({ Name = "SignAnchor", Size = Vector3.new(1, 1, 1), Position = Vector3.new(cx, TOP + 1, cz - h - 1.5), Transparency = 1, CanCollide = false }, folder)
+		anchor.CanQuery = false
+		billboard(anchor, 7, { { "Title", "⛏ FREE MINE", 26, Color3.fromRGB(255, 214, 90) }, { "Sub", "Join to claim it", 16, Color3.fromRGB(240, 240, 240) } }, 120)
+		shaft.sign = anchor:FindFirstChild("Info")
+		table.insert(SHAFTS, shaft)
 	end
 end
 
-local function spawnBlock(x, y, z)
-	if y < 0 then
+local function shaftRowY(row)
+	return TOP - row * BLOCK - BLOCK / 2
+end
+
+-- Rock colour of a row: the layer colour with strata bands, every other row a shade lighter
+local STRATA = { 0, 0.4, 0.12, 0.55, 0.25, 0.05, 0.45, 0.18 }
+local function rowColor(row)
+	local L = layerAt(math.min(row, MAX_DEPTH - 1))
+	local c = rgb(L.color):Lerp(rgb(L.band), STRATA[math.floor(row / 2) % #STRATA + 1])
+	if row % 2 == 0 then
+		c = c:Lerp(Color3.new(1, 1, 1), 0.1)
+	end
+	return c
+end
+
+local KEEP_ROWS = 40
+
+-- Rows 0..cut become one tall wall per side, to keep the part count low far above you
+local function mergeAbove(shaft, cut)
+	for r, list in shaft.rows do
+		if r <= cut then
+			for _, p in list do
+				p:Destroy()
+			end
+			shaft.rows[r] = nil
+		end
+	end
+	if shaft.oldWall then
+		for _, p in shaft.oldWall do
+			p:Destroy()
+		end
+	end
+	shaft.oldWall = {}
+	local h = SHAFT_W / 2
+	local height = (cut + 1) * BLOCK
+	for _, side in { { -1, 0 }, { 1, 0 }, { 0, -1 }, { 0, 1 } } do
+		local size = if side[1] ~= 0 then Vector3.new(3, height, SHAFT_W + 6) else Vector3.new(SHAFT_W, height, 3)
+		local p = newPart({ Name = "OldWall", Size = size, Position = Vector3.new(shaft.x + side[1] * (h + 1.5), TOP - height / 2, shaft.z + side[2] * (h + 1.5)), Color = rowColor(cut), Material = Enum.Material.SmoothPlastic }, shaft.folder)
+		p.CanQuery = false
+		table.insert(shaft.oldWall, p)
+	end
+end
+
+-- The four walls of one row. Walls can't be clicked (CanQuery off), so clicks reach the slab.
+local function buildRow(shaft, row)
+	if shaft.rows[row] then
 		return
 	end
-	local k = cellKey(x, y, z)
-	if cells[k] ~= nil then
-		return
+	local parts = {}
+	local h, y = SHAFT_W / 2, shaftRowY(row)
+	local base = rowColor(row)
+	for i, side in { { -1, 0 }, { 1, 0 }, { 0, -1 }, { 0, 1 } } do
+		local size = if side[1] ~= 0 then Vector3.new(3, BLOCK, SHAFT_W + 6) else Vector3.new(SHAFT_W, BLOCK, 3)
+		local pos = Vector3.new(shaft.x + side[1] * (h + 1.5), y, shaft.z + side[2] * (h + 1.5))
+		local p = newPart({ Name = "Wall", Size = size, Position = pos, Color = if i % 2 == 0 then base else base:Lerp(Color3.new(0, 0, 0), 0.06), Material = Enum.Material.SmoothPlastic }, shaft.folder)
+		p.CanQuery = false
+		table.insert(parts, p)
 	end
-	local outside = x < 0 or x >= GRID or z < 0 or z >= GRID
-	if outside and y == 0 then
-		cells[k] = true -- the terrain ground already fills this spot
-		return
+	shaft.rows[row] = parts
+	if row - KEEP_ROWS >= 0 and shaft.rows[row - KEEP_ROWS] then
+		mergeAbove(shaft, row - KEEP_ROWS)
 	end
+end
+
+-- The slab you stand on. Its loot is rolled up front, and ore shows as nuggets on its top.
+local function spawnSlab(shaft, row)
+	if shaft.slab then
+		blockInfo[shaft.slab] = nil
+		shaft.slab:Destroy()
+		shaft.slab = nil
+	end
+	buildRow(shaft, row)
 	local p = Instance.new("Part")
 	p.Anchored = true
-	p.Size = Vector3.new(BLOCK, BLOCK, BLOCK)
-	p.CFrame = CFrame.new(cellPos(x, y, z))
+	p.Size = Vector3.new(SHAFT_W, BLOCK, SHAFT_W)
+	p.CFrame = CFrame.new(shaft.x, shaftRowY(row), shaft.z)
 	p.TopSurface = Enum.SurfaceType.Smooth
 	p.BottomSurface = Enum.SurfaceType.Smooth
-
-	-- The look of a block: its own layer, blending into the next layer near a boundary.
-	local L = layerAt(math.min(y, MAX_DEPTH - 1))
-	local look = L
-	local nextLayer = LAYERS[(table.find(LAYERS, L) or #LAYERS) + 1]
-	if nextLayer and y >= nextLayer.from - 4 and rng:NextNumber() < (y - (nextLayer.from - 5)) / 6 then
-		look = nextLayer
-	end
-	local useAlt = look.alt and rng:NextNumber() < 0.28
-	local fillColor = if useAlt then rgb(look.alt.color) else rgb(look.color)
-	local fillMaterial = Enum.Material.SmoothPlastic
-	-- Rock strata: every two rows the rock shifts towards the layer's accent colour, so walls show bands.
-	local STRATA = { 0, 0.4, 0.12, 0.55, 0.25, 0.05, 0.45, 0.18 }
-	fillColor = fillColor:Lerp(rgb(look.band), STRATA[math.floor(y / 2) % #STRATA + 1])
-	if y == 0 then
-		fillColor = if (x + z) % 2 == 0 then Color3.fromRGB(126, 214, 52) else Color3.fromRGB(112, 200, 44)
-	else
-		-- checkerboard: every other block a shade lighter, like the grass
-		if (x + y + z) % 2 == 0 then
-			fillColor = fillColor:Lerp(Color3.new(1, 1, 1), 0.1)
-		end
-		fillColor = fillColor:Lerp(Color3.new(0, 0, 0), rng:NextNumber() * 0.04)
-	end
-
-	if outside or y >= MAX_DEPTH then
-		-- Unbreakable walls keep the look of the layer they are in, only darker.
+	p.Material = Enum.Material.SmoothPlastic
+	if row >= MAX_DEPTH then
 		p.Name = "Bedrock"
-		p.Color = if y >= MAX_DEPTH then Color3.fromRGB(18, 16, 22) else fillColor:Lerp(Color3.new(0, 0, 0), 0.35)
-		p.Material = if y >= MAX_DEPTH then Enum.Material.Basalt else fillMaterial
+		p.Color = Color3.fromRGB(28, 24, 34)
 		p:SetAttribute("Bedrock", true)
+		p.Parent = shaft.folder
+		shaft.slab = p
+		return
+	end
+	local L = layerAt(row)
+	local info = { shaft = shaft, row = row, kinds = {}, value = 0, pos = p.Position + Vector3.new(0, BLOCK / 2, 0) }
+	local hp = L.hp * SLAB_HP
+	local top = p.Position.Y + BLOCK / 2
+	if row >= GEODE_MIN_DEPTH and rng:NextNumber() < GEODE_CHANCE * SLAB_LOOT then
+		p.Name = "Geode"
+		p.Color = Color3.fromRGB(70, 50, 92)
+		info.geode = true
+		info.value = math.floor(layerAverage(L) * 60 * SLAB_LOOT)
+		hp *= 6
+		for _ = 1, 7 do
+			local base = Vector3.new(shaft.x + rng:NextNumber(-9, 9), top, shaft.z + rng:NextNumber(-9, 9))
+			for _ = 1, 3 do
+				local len = rng:NextNumber(1.4, 3)
+				local spike = orePiece(p, GEODE_COLOR, Enum.Material.Neon)
+				spike.Size = Vector3.new(0.6, len, 0.6)
+				spike.CFrame = CFrame.new(base) * CFrame.Angles(rng:NextNumber(-0.5, 0.5), rng:NextNumber(0, 6), rng:NextNumber(-0.5, 0.5)) * CFrame.new(0, len * 0.35, 0)
+			end
+		end
+		addLight(p, GEODE_COLOR, 24, 1.6)
+		p:SetAttribute("Geode", true)
 	else
-		local kind = rollKind(y, L)
-		local info = { x = x, y = y, z = z, kind = kind, pos = p.Position }
-		local hp
-		if kind == "Geode" then
-			p.Name = "Geode"
-			p.Color = Color3.fromRGB(58, 44, 72)
-			p.Material = Enum.Material.Basalt
-			decorate(p, GEODE_COLOR, Enum.Material.Neon, true, 6)
-			addLight(p, GEODE_COLOR, 14, 1.6)
-			hp = L.hp * 14
-			info.value = math.floor(layerAverage(L) * 60)
-			info.hitters = {}
-			p:SetAttribute("Geode", true)
-		elseif kind ~= "" then
-			local O = ORES[kind]
-			local oreColor = rgb(O.color)
-			local crystal = O.material == "Glass" or O.material == "Neon"
-			p.Name = O.name
-			p.Color = fillColor:Lerp(oreColor, 0.12)
-			p.Material = fillMaterial
-			decorate(p, oreColor, material(O.material), crystal, rng:NextInteger(6, 9))
-			if O.glow then
-				addLight(p, oreColor, 11, 1.1)
-			end
-			hp = L.hp * O.hp
-			info.value = O.value
-			p:SetAttribute("Ore", kind)
-		else
-			p.Name = L.name
-			p.Color = fillColor
-			p.Material = fillMaterial
-			hp = L.hp
-			info.value = L.value
-		end
-		hp = math.max(1, math.floor(hp))
-		info.hp = hp
-		info.maxHp = hp
-		info.color = p.Color
-		p:SetAttribute("HP", hp)
-		p:SetAttribute("MaxHP", hp)
-		blockInfo[p] = info
-	end
-	p.Parent = mineFolder
-	cells[k] = p
-	partCount += 1
-end
-
--- A wall torch on the block at (x, y, z), on the face that looks at `facing`.
-local function placeTorch(x, y, z, facing)
-	local block = cells[cellKey(x, y, z)]
-	if typeof(block) ~= "Instance" or not block:IsA("BasePart") or block:FindFirstChild("Torch") then
-		return
-	end
-	local base = block.Position + facing * (BLOCK / 2) + Vector3.new(0, 0.6, 0)
-	local tilt = CFrame.fromAxisAngle(facing:Cross(Vector3.yAxis), -0.45)
-	local stick = Instance.new("Part")
-	stick.Name = "Torch"
-	stick.Anchored = true
-	stick.CanCollide = false
-	stick.CanQuery = false
-	stick.CanTouch = false
-	stick.Size = Vector3.new(0.3, 1.8, 0.3)
-	stick.CFrame = CFrame.new(base + facing * 0.35) * tilt
-	stick.Color = Color3.fromRGB(96, 66, 40)
-	stick.Material = Enum.Material.Wood
-	local flame = Instance.new("Part")
-	flame.Name = "Flame"
-	flame.Anchored = true
-	flame.CanCollide = false
-	flame.CanQuery = false
-	flame.CanTouch = false
-	flame.CastShadow = false
-	flame.Size = Vector3.new(0.45, 0.45, 0.45)
-	flame.CFrame = CFrame.new(base + facing * 0.75 + Vector3.new(0, 0.85, 0))
-	flame.Color = Color3.fromRGB(255, 170, 60)
-	flame.Material = Enum.Material.Neon
-	local fire = Instance.new("Fire")
-	fire.Size = 1.6
-	fire.Heat = 4
-	fire.Color = Color3.fromRGB(255, 140, 40)
-	fire.SecondaryColor = Color3.fromRGB(255, 220, 120)
-	fire.Parent = flame
-	local light = Instance.new("PointLight")
-	light.Color = Color3.fromRGB(255, 168, 90)
-	light.Range = 20
-	light.Brightness = 1.4
-	light.Shadows = true
-	light.Parent = flame
-	flame.Parent = stick
-	stick.Parent = block
-end
-
-local function clearCell(x, y, z)
-	if y < 0 or y >= MAX_DEPTH or x < 0 or x >= GRID or z < 0 or z >= GRID then
-		return
-	end
-	local k = cellKey(x, y, z)
-	local c = cells[k]
-	if c == true then
-		return
-	end
-	if typeof(c) == "Instance" then
-		blockInfo[c] = nil
-		c:Destroy()
-		partCount -= 1
-	end
-	cells[k] = false
-	for _, d in DIRS do
-		spawnBlock(x + d[1], y + d[2], z + d[3])
-	end
-end
-
--- The mine starts as a terraced open-pit quarry: each ring is one block (one jump) lower than the last.
-local function quarryDepth(x, z)
-	local c = (GRID - 1) / 2
-	local d = math.max(math.abs(x - c), math.abs(z - c))
-	if d > 9.5 then
-		return 0
-	elseif d > 7.5 then
-		return 1
-	elseif d > 5.5 then
-		return 2
-	elseif d > 3.5 then
-		return 3
-	end
-	return 4
-end
-
-local function buildMineTop()
-	for x = 0, GRID - 1 do
-		for z = 0, GRID - 1 do
-			spawnBlock(x, 0, z)
-		end
-	end
-	for x = 0, GRID - 1 do
-		for z = 0, GRID - 1 do
-			for y = 0, quarryDepth(x, z) - 1 do
-				clearCell(x, y, z)
+		p.Name = L.name
+		local c = rowColor(row)
+		p.Color = c:Lerp(Color3.new(1, 1, 1), 0.08)
+		for _ = 1, SLAB_LOOT do
+			local kind = rollOre(L)
+			table.insert(info.kinds, kind)
+			if kind ~= "" then
+				local O = ORES[kind]
+				info.value += O.value
+				hp += L.hp * SLAB_HP * (O.hp - 1) / SLAB_LOOT
+				local oreColor = rgb(O.color)
+				local crystal = O.material == "Glass" or O.material == "Neon"
+				for _ = 1, 4 do
+					local spot = Vector3.new(shaft.x + rng:NextNumber(-10, 10), top, shaft.z + rng:NextNumber(-10, 10))
+					local lump = orePiece(p, oreColor, material(O.material))
+					if crystal then
+						local len = rng:NextNumber(1, 2.2)
+						lump.Size = Vector3.new(0.5, len, 0.5)
+						lump.CFrame = CFrame.new(spot) * CFrame.Angles(rng:NextNumber(-0.4, 0.4), rng:NextNumber(0, 6), rng:NextNumber(-0.4, 0.4)) * CFrame.new(0, len * 0.3, 0)
+					else
+						local sz = rng:NextNumber(0.9, 1.6)
+						lump.Size = Vector3.new(sz, sz * 0.5, sz * rng:NextNumber(0.7, 1))
+						lump.CFrame = CFrame.new(spot + Vector3.new(0, sz * 0.12, 0)) * CFrame.Angles(0, rng:NextNumber(0, 6), 0)
+					end
+				end
+				if O.glow then
+					addLight(p, oreColor, 14, 0.9)
+				end
+			else
+				info.value += L.value
 			end
 		end
 	end
+	hp = math.max(1, math.floor(hp))
+	info.hp, info.maxHp, info.color = hp, hp, p.Color
+	p:SetAttribute("HP", hp)
+	p:SetAttribute("MaxHP", hp)
+	p:SetAttribute("Row", row)
+	CollectionService:AddTag(p, "Slab")
+	blockInfo[p] = info
+	p.Parent = shaft.folder
+	shaft.slab = p
 end
 
-buildMineTop()
+-- Empties a shaft (rows, slab) and puts the lid back on
+local function clearShaft(shaft)
+	if shaft.slab then
+		blockInfo[shaft.slab] = nil
+		shaft.slab:Destroy()
+		shaft.slab = nil
+	end
+	for r, list in shaft.rows do
+		for _, p in list do
+			p:Destroy()
+		end
+		shaft.rows[r] = nil
+	end
+	if shaft.oldWall then
+		for _, p in shaft.oldWall do
+			p:Destroy()
+		end
+		shaft.oldWall = nil
+	end
+	shaft.lid.Parent = shaft.folder
+end
+
+-- Builds a shaft for someone who has already dug `depth` rows
+local function openShaft(shaft, depth)
+	clearShaft(shaft)
+	shaft.lid.Parent = nil
+	depth = math.clamp(depth, 0, MAX_DEPTH)
+	if depth - 1 - KEEP_ROWS >= 0 then
+		mergeAbove(shaft, depth - 1 - KEEP_ROWS)
+	end
+	for r = math.max(0, depth - KEEP_ROWS), depth - 1 do
+		buildRow(shaft, r)
+	end
+	spawnSlab(shaft, depth)
+end
 
 --------------------------------------------------------------------------------
 -- PLAYER DATA
@@ -2266,71 +2255,133 @@ local function awardTreasure(player, T, pos, depth)
 	end
 end
 
-local function breakBlock(player, part, info)
-	local d = sessions[player]
-	clearCell(info.x, info.y, info.z)
-	-- Now and then a torch appears on a wall of the fresh hole, so tunnels feel lived-in.
-	if info.y >= 2 and rng:NextNumber() < 1 / 12 then
-		local dir = DIRS[rng:NextInteger(1, 6)]
-		if dir[2] == 0 then
-			placeTorch(info.x + dir[1], info.y, info.z + dir[3], Vector3.new(-dir[1], 0, -dir[3]))
+-- Shafts: claimed on join, given back on leave -------------------------------------
+local function updateShaftSign(shaft)
+	local info = shaft.sign
+	if not info then
+		return
+	end
+	local title, sub = info:FindFirstChild("Title"), info:FindFirstChild("Sub")
+	local owner = shaft.owner
+	local d = owner and sessions[owner]
+	if title and sub then
+		if d then
+			title.Text = `⛏ {owner.DisplayName}'s Mine`
+			sub.Text = `{d.best}m · {layerAt(math.min(d.best, MAX_DEPTH - 1)).name}`
+		else
+			title.Text = "⛏ FREE MINE"
+			sub.Text = "Join to claim it"
 		end
 	end
+end
+
+local function slabTop(shaft)
+	return TOP - (shaft.slab and shaft.slab:GetAttribute("Row") or 0) * BLOCK
+end
+
+local function claimShaft(player)
+	local d = sessions[player]
+	for _, shaft in SHAFTS do
+		if not shaft.owner then
+			shaft.owner = player
+			d._shaft = shaft
+			openShaft(shaft, d.best)
+			slabTop(shaft)
+			player:SetAttribute("Shaft", shaft.index)
+			player:SetAttribute("ShaftPos", Vector3.new(shaft.x, TOP, shaft.z))
+			updateShaftSign(shaft)
+			return shaft
+		end
+	end
+	return nil
+end
+
+local function releaseShaft(player)
+	for _, shaft in SHAFTS do
+		if shaft.owner == player then
+			shaft.owner = nil
+			clearShaft(shaft)
+			updateShaftSign(shaft)
+		end
+	end
+end
+
+-- Puts you on top of your slab
+local function toMyShaft(player)
+	local d = sessions[player]
+	local shaft = d and d._shaft
+	if not shaft then
+		notify(player, "Every mine is taken right now", Color3.fromRGB(255, 180, 120))
+		return
+	end
+	local row = math.min(d.best, MAX_DEPTH)
+	teleportTo(player, Vector3.new(shaft.x + rng:NextNumber(-4, 4), TOP - row * BLOCK + 3.5, shaft.z + rng:NextNumber(-4, 4)))
+end
+
+local function breakSlab(player, part, info)
+	local d = sessions[player]
+	local shaft = info.shaft
+	local row = info.row
+	blockInfo[part] = nil
 	d.mined += 1
-	local depth = info.y + 1
+	local depth = row + 1
 	if depth > d.best then
 		d.best = depth
 		questProgress(player, "deep")
 	end
 	questProgress(player, "mine")
-	if d.tut == 0 and d.mined >= 5 then
+	if d.tut == 0 and d.mined >= 1 then
 		d.tut = 1
 	end
 
-	local collected, full = false, false
-	if info.kind == "Geode" then
-		local count = 0
-		for _ in info.hitters do
-			count += 1
-		end
-		for hitter in info.hitters do
-			local hd = sessions[hitter]
-			if hd and hitter.Parent then
-				local amount = math.floor(info.value * valueMult(hitter))
-				hd.coins += amount
-				hd.earned += amount
-				Remotes.Geode:FireClient(hitter, info.pos, amount, count)
-				questProgress(hitter, "geode")
-				sync(hitter)
+	local collected, full = 0, false
+	if info.geode then
+		local amount = math.floor(info.value * valueMult(player))
+		d.coins += amount
+		d.earned += amount
+		Remotes.Geode:FireClient(player, info.pos, amount, 1)
+		questProgress(player, "geode")
+	else
+		local each = info.value / math.max(1, #info.kinds)
+		for _, kind in info.kinds do
+			if d.bagCount < capacity(player) then
+				d.bagCount += 1
+				d.bagValue += each * valueMult(player)
+				collected += 1
+				if kind ~= "" then
+					questProgress(player, "ore")
+				end
+			else
+				full = true
 			end
 		end
-	elseif d.bagCount < capacity(player) then
-		d.bagCount += 1
-		d.bagValue += info.value * valueMult(player)
-		collected = true
-		if info.kind ~= "" then
-			questProgress(player, "ore")
+	end
+	Remotes.Mined:FireClient(player, info.pos, info.kinds, info.color, collected, full)
+
+	for _, kind in info.kinds do
+		if kind ~= "" and ORES[kind].announce then
+			local O = ORES[kind]
+			announce(`💎 {player.DisplayName} mined {article(O.name)} {O.name} at {depth}m!`, rgb(O.color))
 		end
-	else
-		full = true
 	end
 
-	Remotes.Mined:FireClient(player, info.pos, info.kind, info.color, collected, full)
-
-	if info.kind ~= "" and info.kind ~= "Geode" and ORES[info.kind].announce then
-		local O = ORES[info.kind]
-		announce(`💎 {player.DisplayName} mined {article(O.name)} {O.name} at {depth}m!`, rgb(O.color))
-	end
-
-	for _, T in TREASURE_ROLL do
-		if depth >= T.depth and rng:NextNumber() < T.chance * luckMult(player) then
-			awardTreasure(player, T, info.pos, depth)
+	-- a slab holds SLAB_LOOT blocks' worth of rock, so it gets that many treasure rolls
+	for _ = 1, SLAB_LOOT do
+		local found = false
+		for _, T in TREASURE_ROLL do
+			if depth >= T.depth and rng:NextNumber() < T.chance * luckMult(player) then
+				awardTreasure(player, T, info.pos, depth)
+				found = true
+				break
+			end
+		end
+		if found then
 			break
 		end
 	end
 
 	-- XP: deeper layers are worth more
-	d.xp += table.find(LAYERS, layerAt(info.y)) or 1
+	d.xp += (table.find(LAYERS, layerAt(row)) or 1) * SLAB_LOOT
 	while d.xp >= xpForLevel(d.level) do
 		d.xp -= xpForLevel(d.level)
 		d.level += 1
@@ -2340,6 +2391,12 @@ local function breakBlock(player, part, info)
 		updateNameplate(player)
 	end
 
+	-- the next slab, one row down
+	spawnSlab(shaft, depth)
+	if depth >= MAX_DEPTH then
+		notify(player, "⭐ You hit bedrock! Ascend at the shrine in town", Color3.fromRGB(215, 175, 255))
+	end
+	updateShaftSign(shaft)
 	sync(player)
 	updateBagFill(player)
 end
@@ -2350,7 +2407,8 @@ Remotes.Hit.OnServerEvent:Connect(function(player, part)
 		return
 	end
 	local info = blockInfo[part]
-	if not info then
+	-- only your own slab, and only while you're standing in your shaft
+	if not info or info.shaft ~= d._shaft or info.shaft.owner ~= player then
 		return
 	end
 	local pick = PICKS[d.pick]
@@ -2364,22 +2422,49 @@ Remotes.Hit.OnServerEvent:Connect(function(player, part)
 	if not root or not hum or hum.Health <= 0 then
 		return
 	end
-	if (root.Position - part.Position).Magnitude > REACH + 6 then
+	local offset = root.Position - part.Position
+	if math.abs(offset.X) > SHAFT_W / 2 + 2 or math.abs(offset.Z) > SHAFT_W / 2 + 2 or offset.Y < 0 or offset.Y > REACH then
 		return
 	end
 	lastHit[player] = now
 	addStrength(player, strengthMult(player))
 
-	if info.hitters then
-		info.hitters[player] = true
-	end
 	info.hp -= pick.dmg * damageMult(d)
 	if info.hp > 0 then
 		part:SetAttribute("HP", info.hp)
-		part.Color = info.color:Lerp(Color3.new(0, 0, 0), 0.45 * (1 - info.hp / info.maxHp))
+		part.Color = info.color:Lerp(Color3.new(0, 0, 0), 0.35 * (1 - info.hp / info.maxHp))
 		return
 	end
-	breakBlock(player, part, info)
+	breakSlab(player, part, info)
+end)
+
+-- Jumping into your shaft takes you straight down to your slab, and nobody can wander into
+-- someone else's shaft.
+task.spawn(function()
+	while true do
+		task.wait(0.25)
+		for _, shaft in SHAFTS do
+			local h = SHAFT_W / 2
+			for _, player in Players:GetPlayers() do
+				local char = player.Character
+				local root = char and char:FindFirstChild("HumanoidRootPart")
+				if root and root:IsA("BasePart") then
+					local pos = root.Position
+					if math.abs(pos.X - shaft.x) < h and math.abs(pos.Z - shaft.z) < h and pos.Y < TOP - 1 then
+						if shaft.owner == player then
+							-- falling from the top: skip the long drop
+							if pos.Y > slabTop(shaft) + 14 then
+								toMyShaft(player)
+							end
+						elseif shaft.owner ~= nil or pos.Y < TOP - 4 then
+							teleportTo(player, spawnPoint())
+							notify(player, "That's someone else's mine! Yours has your name on it", Color3.fromRGB(255, 180, 120))
+						end
+					end
+				end
+			end
+		end
+	end
 end)
 
 --------------------------------------------------------------------------------
@@ -3091,6 +3176,10 @@ local function ascend(player)
 	d.best = 0
 	d.bagCount = 0
 	d.bagValue = 0
+	if d._shaft then
+		openShaft(d._shaft, 0)
+		updateShaftSign(d._shaft)
+	end
 	teleportTo(player, spawnPoint())
 	givePick(player)
 	attachBag(player)
@@ -3098,30 +3187,18 @@ local function ascend(player)
 	announce(`⭐ {player.DisplayName} ASCENDED! (Ascension {d.asc}: ore worth x{string.format("%.1f", 1 + d.asc * ASCEND_BONUS)})`, Color3.fromRGB(200, 160, 255))
 end
 
+-- The elevator takes you back down to your slab
 local function descend(player)
 	local d = sessions[player]
-	local char = player.Character
-	if not d or not char then
+	if not d or not player.Character then
 		return
 	end
-	local stop = math.min(math.floor(d.best / ELEVATOR_STEP) * ELEVATOR_STEP, MAX_DEPTH - 1)
-	if stop < ELEVATOR_STEP then
-		notify(player, `Dig to {ELEVATOR_STEP}m to unlock the elevator`, Color3.fromRGB(255, 214, 90))
+	if d.best < 3 then
+		notify(player, "Your mine is right there! Jump in your shaft", Color3.fromRGB(255, 214, 90))
 		return
 	end
-	local row = stop - 1
-	local cx, cz = rng:NextInteger(2, GRID - 3), rng:NextInteger(2, GRID - 3)
-	for dx = -1, 1 do
-		for dz = -1, 1 do
-			clearCell(cx + dx, row, cz + dz)
-		end
-	end
-	clearCell(cx, row - 1, cz)
-	placeTorch(cx + 2, row, cz, Vector3.new(-1, 0, 0))
-	placeTorch(cx - 2, row, cz, Vector3.new(1, 0, 0))
-	local floorY = TOP - (row + 1) * BLOCK
-	teleportTo(player, Vector3.new(cellPos(cx, row, cz).X, floorY + 3.5, cellPos(cx, row, cz).Z))
-	notify(player, `⬇ {stop}m`, Color3.fromRGB(255, 214, 90))
+	toMyShaft(player)
+	notify(player, `⬇ {d.best}m`, Color3.fromRGB(255, 214, 90))
 end
 
 local function claimDaily(player)
@@ -3230,6 +3307,9 @@ local function onJoin(player)
 	end
 	player:SetAttribute("Settings", HttpService:JSONEncode(d.settings or {}))
 	d.petIndex = d.petIndex or {}
+	if not claimShaft(player) then
+		task.delay(3, notify, player, "Every mine is taken right now. Try another server!", Color3.fromRGB(255, 180, 120))
+	end
 	d._giftStart = os.clock()
 	d._gifts = {}
 	player:SetAttribute("GiftStart", workspace:GetServerTimeNow())
@@ -3287,11 +3367,7 @@ Players.PlayerRemoving:Connect(function(player)
 	lastSurface[player] = nil
 	lastHatch[player] = nil
 	lastAction[player] = nil
-	for _, info in blockInfo do
-		if info.hitters then
-			info.hitters[player] = nil
-		end
-	end
+	releaseShaft(player)
 	task.defer(refreshFriends)
 end)
 
@@ -3412,47 +3488,12 @@ task.spawn(function()
 end)
 
 --------------------------------------------------------------------------------
--- EVENTS: Gold Rush (global clock) and Earthquakes (mine reset)
+-- EVENTS: Gold Rush (global clock)
 --------------------------------------------------------------------------------
-local function resetMine()
-	for _, player in Players:GetPlayers() do
-		local char = player.Character
-		local root = char and char:FindFirstChild("HumanoidRootPart")
-		if root and root.Position.Y < TOP - 1 then
-			teleportTo(player, spawnPoint())
-		end
-	end
-	mineFolder:ClearAllChildren()
-	table.clear(cells)
-	table.clear(blockInfo)
-	partCount = 0
-	buildMineTop()
-end
-
 task.spawn(function()
-	local nextQuake = os.clock() + QUAKE_EVERY
-	local warning = false
 	local wasRush = rushActive()
 	while true do
 		task.wait(1)
-		local now = os.clock()
-		if not warning then
-			if partCount > PART_CAP and nextQuake - now > QUAKE_WARNING then
-				nextQuake = now + QUAKE_WARNING
-			end
-			if nextQuake - now <= QUAKE_WARNING then
-				warning = true
-				workspace:SetAttribute("QuakeAt", workspace:GetServerTimeNow() + (nextQuake - now))
-				announce("⚠ EARTHQUAKE INCOMING! The mine is about to collapse!", Color3.fromRGB(255, 100, 80))
-			end
-		elseif now >= nextQuake then
-			resetMine()
-			warning = false
-			workspace:SetAttribute("QuakeAt", nil)
-			nextQuake = now + QUAKE_EVERY
-			announce("🌋 The mine has shifted. Fresh ore everywhere!", Color3.fromRGB(255, 200, 120))
-		end
-
 		local rush = rushActive()
 		if rush and not wasRush then
 			announce(`✨ GOLD RUSH! Ore is {RUSH_MULT}x more common for {RUSH_LENGTH} seconds!`, Color3.fromRGB(255, 214, 70))
