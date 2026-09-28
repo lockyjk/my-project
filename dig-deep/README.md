@@ -41,6 +41,13 @@ The core loop borrows from *+1 Mine Per Click*, one of the biggest mining games 
 - **Offline:** Strength keeps training while you're away, as well as coins.
 - **First steps:** the objective banner now starts with "Click to train Strength" and later sends you to the free training rock.
 
+## Rock Cave, accessories and TNT
+
+- **🪨 Rock Cave:** once you break the first block in your mine, a tunnel in the right-hand wall opens into your own cave. It holds 7 boulders: grey Pebble Rocks (4 clicks, 1 🪨), Gold Rocks (8 clicks, 6 🪨) and glowing Gem Rocks (15 clicks, 30 🪨). Broken rocks grow back after 15 seconds. A ladder at the far end climbs out to the surface, so you can always come back, even from deep down.
+- **✨ Accessory shop** east of the mine: spend 🪨 Rocks on a Party Hat, Miner Helmet (with a working head lamp), Cool Shades, Gold Crown, Angel Wings, Halo, Dragon Wings or a Rainbow Aura. You wear one per slot (head, face, back, aura), and each one adds coin value (3% to 35%).
+- **💣 TNT stand** beside the sell pad: TNT costs a lot (25 minutes of digging with your current pickaxe, at least 💰 2,500). Stand in your mine and press the TNT button to blast through 5 blocks at once, and everything it blows up is sold on the spot.
+- **Pickaxes:** new models with a banded handle, a wrapped grip and pommel, and a curved head with two points and a gem. High tiers glow and sparkle. A new top tier, the **Rainbow Pick**, sits after the Core Breaker.
+
 ## Making money (Game Passes and Developer Products)
 
 Everything is already built. You only need to create the items on Roblox and paste their IDs in:
@@ -88,7 +95,7 @@ While an ID is `0`, the item shows **"Soon"** in the live game. **In Studio, buy
 - **Red arrow trail** on the ground from you to the current objective.
 - **Avatar headshot tags** over every player, with name, level, 👑 VIP and ⭐ Ascension.
 
-- **Big, spread-out map:** the mine yard with 9 shafts sits in the middle, the pickaxe and backpack stalls line the main road, and the spawn plaza, museum, pet shop, Ascension shrine, training rocks and pond each have their own space.
+- **Big, spread-out map** (about 670 × 700 studs): the mine yard with 9 shafts sits in the middle, the pickaxe and backpack stalls line the main road, and the spawn plaza, museum, pet shop, Ascension shrine, training rocks and pond each have their own space.
 - **Themed eggs:** the Dirt Egg has a grassy top with flowers, the Cave Egg has glowing orange crystals and cracks, the Crystal Egg is see-through glass with a pink crystal inside, and the Void Egg is dark with neon cracks and orbiting moons. The pets inside each egg float above its stand, and hatching shows the real 3D egg shaking.
 - **Pets:** a round, mossy Rock Golem with a glowing crystal heart, dragons with belly plates, wing bones and tail spikes, brighter Void pets, and a little gold crown on every Legendary and Exclusive pet.
 

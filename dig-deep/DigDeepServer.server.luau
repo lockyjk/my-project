@@ -38,7 +38,7 @@ local MAX_DEPTH = 500 -- rows; bedrock below
 local REACH = 20 -- studs from your root part to a block's centre
 local SHAFT_SLOTS = 9 -- one personal shaft per player (set the server size to 9 or fewer)
 local SHAFT_W = 24 -- studs across the inside of a shaft
-local SHAFT_PITCH = 60 -- studs between shaft centres (3 x 3 grid)
+local SHAFT_PITCH = 72 -- studs between shaft centres (3 x 3 grid)
 local SLAB_LOOT = 3 -- each slab you break holds this many blocks' worth of loot
 local SLAB_HP = 4 -- slab health = layer hp x this
 local RUSH_EVERY = 12 * 60 -- a Gold Rush starts every 12 minutes on the UTC clock...
@@ -105,6 +105,7 @@ local PICKS = {
 	{ name = "Void Pick", dmg = 170, speed = 0.24, price = 8000000, color = { 80, 10, 140 }, material = "Neon", glow = true },
 	{ name = "Starforged Pick", dmg = 400, speed = 0.20, price = 60000000, color = { 255, 240, 165 }, material = "Neon", glow = true },
 	{ name = "Core Breaker", dmg = 1100, speed = 0.18, price = 450000000, color = { 255, 90, 40 }, material = "Neon", glow = true },
+	{ name = "Rainbow Pick", dmg = 3200, speed = 0.16, price = 3500000000, color = { 255, 110, 220 }, gem = { 120, 255, 255 }, material = "Neon", glow = true },
 }
 
 local BAGS = {
@@ -135,7 +136,7 @@ local DAILY = { 100, 300, 1500, 8000, 25000, 120000, 700000, 5000000, 35000000, 
 
 -- Rough coins per minute of digging for each pickaxe tier. Coin packs, codes and the spin wheel
 -- pay "N minutes of digging", so rewards stay useful at every stage of the game.
-local INCOME = { 30, 90, 300, 1100, 3500, 14000, 60000, 350000, 2000000, 12000000 }
+local INCOME = { 30, 90, 300, 1100, 3500, 14000, 60000, 350000, 2000000, 12000000, 75000000 }
 
 --------------------------------------------------------------------------------
 -- MONETIZATION
@@ -259,6 +260,37 @@ local CODES = {
 	GOLDRUSH = { potion = "Coins", minutes = 15 },
 	THANKYOU = { coinMinutes = 30 },
 }
+
+-- SIDE CAVE: once you break the first block, a tunnel in your shaft opens into a cave full of
+-- rocks. Rocks take a set number of clicks and pay 🪨 Rocks, spent on accessories.
+local ROCK_TYPES = {
+	{ id = "Pebble", name = "Pebble Rock", color = { 150, 150, 162 }, hits = 4, reward = 1, weight = 70 },
+	{ id = "Gold", name = "Gold Rock", color = { 255, 200, 60 }, hits = 8, reward = 6, weight = 24 },
+	{ id = "Gem", name = "Gem Rock", color = { 180, 100, 255 }, hits = 15, reward = 30, weight = 6, glow = true },
+}
+local CAVE_ROCKS = 7 -- rocks in each cave
+local CAVE_LENGTH = 36 -- studs the cave runs out from the side of the shaft (3 grass tiles)
+local CAVE_DOOR = 10 -- width of the tunnel from the shaft into the cave
+local CAVE_SIDE = -1 -- the cave is on your right (-X) when you face the mine from spawn
+local ROCK_RESPAWN = 15 -- seconds
+
+-- Accessories (bought with 🪨 Rocks). One per slot; each adds coin value while you wear it.
+local ACCESSORIES = {
+	{ id = "PartyHat", name = "Party Hat", slot = "Head", price = 40, bonus = 0.03, icon = "🥳" },
+	{ id = "MinerHelmet", name = "Miner Helmet", slot = "Head", price = 150, bonus = 0.06, icon = "⛑️" },
+	{ id = "CoolShades", name = "Cool Shades", slot = "Face", price = 250, bonus = 0.05, icon = "😎" },
+	{ id = "GoldCrown", name = "Gold Crown", slot = "Head", price = 600, bonus = 0.12, icon = "👑" },
+	{ id = "AngelWings", name = "Angel Wings", slot = "Back", price = 1000, bonus = 0.12, icon = "🪽" },
+	{ id = "Halo", name = "Halo", slot = "Aura", price = 2000, bonus = 0.15, icon = "😇" },
+	{ id = "DragonWings", name = "Dragon Wings", slot = "Back", price = 4000, bonus = 0.25, icon = "🐉" },
+	{ id = "RainbowAura", name = "Rainbow Aura", slot = "Aura", price = 8000, bonus = 0.35, icon = "🌈" },
+}
+
+-- TNT: bought with coins at the TNT stand (it costs a lot). One stick blasts through
+-- TNT_SLABS blocks in your mine at once, and everything it blows up is sold on the spot.
+local TNT_SLABS = 5
+local TNT_MINUTES = 25 -- price = this many minutes of digging with your current pickaxe
+local TNT_MIN_PRICE = 2500
 
 --------------------------------------------------------------------------------
 -- HELPERS
@@ -527,20 +559,41 @@ local function buildEgg(egg, index)
 end
 
 -- Pickaxe built along +Z (handle) with the head across X, centred on the handle.
+-- A banded wooden handle with a wrapped grip and pommel, and a curved head that tapers to two
+-- points with a gem set in the middle. Higher tiers glow and sparkle.
 local function buildPick(tier)
 	local P = PICKS[tier]
 	local m = Instance.new("Model")
 	m.Name = P.name
-	local wood = Color3.fromRGB(112, 74, 46)
-	local handle = piece(m, { Name = "Handle", Size = Vector3.new(0.35, 0.35, 4.4), CFrame = CFrame.new(), Color = wood, Material = Enum.Material.Wood })
-	piece(m, { Name = "Grip", Size = Vector3.new(0.45, 0.45, 1.1), CFrame = CFrame.new(0, 0, -1.55), Color = Color3.fromRGB(60, 40, 30), Material = Enum.Material.Fabric })
-	local head = piece(m, { Name = "Head", Size = Vector3.new(3.2, 0.55, 0.7), CFrame = CFrame.new(0, 0, 2.05), Color = rgb(P.color), Material = material(P.material) })
-	local tipColor = rgb(P.color):Lerp(Color3.new(1, 1, 1), 0.35)
-	piece(m, { Name = "TipA", Size = Vector3.new(0.7, 0.4, 0.5), CFrame = CFrame.new(1.9, 0, 2.05), Color = tipColor, Material = material(P.material) })
-	piece(m, { Name = "TipB", Size = Vector3.new(0.7, 0.4, 0.5), CFrame = CFrame.new(-1.9, 0, 2.05), Color = tipColor, Material = material(P.material) })
-	piece(m, { Name = "Collar", Size = Vector3.new(0.6, 0.7, 0.9), CFrame = CFrame.new(0, 0, 2.05), Color = Color3.fromRGB(70, 66, 64), Material = Enum.Material.Metal })
+	local wood = Color3.fromRGB(128, 84, 50)
+	local metal = rgb(P.color)
+	local mat = material(P.material)
+	local edge = metal:Lerp(Color3.new(1, 1, 1), 0.35)
+	local gemColor = if P.gem then rgb(P.gem) elseif tier >= 5 then metal:Lerp(Color3.new(1, 1, 1), 0.6) else Color3.fromRGB(90, 200, 255)
+	local handle = piece(m, { Name = "Handle", Size = Vector3.new(0.38, 0.38, 4.4), CFrame = CFrame.new(), Color = wood, Material = Enum.Material.SmoothPlastic })
+	for _, z in { -0.35, 0.85 } do
+		piece(m, { Name = "Band", Size = Vector3.new(0.46, 0.46, 0.18), CFrame = CFrame.new(0, 0, z), Color = Color3.fromRGB(70, 60, 58), Material = Enum.Material.SmoothPlastic })
+	end
+	piece(m, { Name = "Grip", Size = Vector3.new(0.48, 0.48, 1.3), CFrame = CFrame.new(0, 0, -1.5), Color = Color3.fromRGB(150, 40, 40), Material = Enum.Material.SmoothPlastic })
+	piece(m, { Name = "Pommel", Shape = Enum.PartType.Ball, Size = Vector3.one * 0.62, CFrame = CFrame.new(0, 0, -2.25), Color = metal, Material = mat })
+	piece(m, { Name = "Collar", Size = Vector3.new(0.66, 0.66, 1), CFrame = CFrame.new(0, 0, 2.05), Color = Color3.fromRGB(70, 66, 64), Material = Enum.Material.SmoothPlastic })
+	local head = piece(m, { Name = "Head", Size = Vector3.new(1.3, 0.72, 0.95), CFrame = CFrame.new(0, 0, 2.1), Color = metal, Material = mat })
+	for _, x in { -1, 1 } do
+		-- each arm curves back towards the handle and ends in a point
+		piece(m, { Name = "Arm", Size = Vector3.new(1.1, 0.58, 0.7), CFrame = CFrame.new(x * 1.05, 0, 2.02) * CFrame.Angles(0, x * 0.22, 0), Color = metal, Material = mat })
+		piece(m, { Name = "Arm", Size = Vector3.new(0.95, 0.44, 0.52), CFrame = CFrame.new(x * 1.85, 0, 1.78) * CFrame.Angles(0, x * 0.5, 0), Color = edge, Material = mat })
+		piece(m, { Name = "Tip", Size = Vector3.new(0.7, 0.3, 0.3), CFrame = CFrame.new(x * 2.4, 0, 1.42) * CFrame.Angles(0, x * 0.8, 0), Color = edge, Material = mat })
+	end
+	for _, y in { -0.37, 0.37 } do
+		piece(m, { Name = "Gem", Shape = Enum.PartType.Ball, Size = Vector3.new(0.5, 0.5, 0.5), CFrame = CFrame.new(0, y, 2.1), Color = gemColor, Material = if tier >= 4 then Enum.Material.Neon else Enum.Material.SmoothPlastic })
+	end
 	if P.glow then
-		addLight(head, rgb(P.color), 8, 1.2)
+		addLight(head, metal, 8, 1.2)
+	end
+	if tier >= 9 then
+		local sparkle = Instance.new("Sparkles")
+		sparkle.SparkleColor = gemColor
+		sparkle.Parent = head
 	end
 	m.PrimaryPart = handle
 	return m
@@ -677,7 +730,7 @@ treasureFolder.Parent = ReplicatedStorage
 local remoteFolder = Instance.new("Folder")
 remoteFolder.Name = "DigRemotes"
 local Remotes = {}
-for _, name in { "Hit", "Surface", "Mined", "Treasure", "Geode", "Sold", "Notify", "Announce", "Bought", "Reward", "Action", "Hatched", "LevelUp", "SpinResult", "Purchased", "Welcome", "Milestone", "Gift" } do
+for _, name in { "Hit", "Surface", "Mined", "Treasure", "Geode", "Sold", "Notify", "Announce", "Bought", "Reward", "Action", "Hatched", "LevelUp", "SpinResult", "Purchased", "Welcome", "Milestone", "Gift", "RockMined", "Blast" } do
 	local r = Instance.new("RemoteEvent")
 	r.Name = name
 	r.Parent = remoteFolder
@@ -693,6 +746,7 @@ do
 		petSlots = PET_SLOTS, maxPets = MAX_PETS, spin = SPIN, spinCooldown = SPIN_COOLDOWN, income = INCOME,
 		levelBonus = LEVEL_BONUS, ascendBonus = ASCEND_BONUS, questRewardMinutes = QUEST_REWARD_MINUTES,
 		strengthDamage = STRENGTH_DAMAGE, rebirthStrength = REBIRTH_STRENGTH, rebirthCash = REBIRTH_CASH, trainingRocks = TRAINING_ROCKS, gifts = GIFTS,
+		rockTypes = ROCK_TYPES, accessories = ACCESSORIES, caveSide = CAVE_SIDE, tntSlabs = TNT_SLABS, tntMinutes = TNT_MINUTES, tntMinPrice = TNT_MIN_PRICE,
 		petCount = (function()
 			local n = 0
 			for _ in PETS do
@@ -726,7 +780,7 @@ end
 --------------------------------------------------------------------------------
 -- WORLD
 --------------------------------------------------------------------------------
-local PIT = SHAFT_PITCH + SHAFT_W / 2 + 12 -- half-width of the fenced mine yard in studs (84)
+local PIT = SHAFT_PITCH + SHAFT_W / 2 + 12 -- half-width of the fenced mine yard in studs (96)
 local SELL_POS = W(0, 0, -90)
 local SPAWN_POS = W(0, 0, -122)
 local CHEST_POS = W(-16, 0, -121)
@@ -790,7 +844,7 @@ local function buildWorld()
 	-- Checkerboard grass: 12-stud tiles in two lime greens. One block thick, so the
 	-- mine's top row sits flush with it.
 	local TILE = 12
-	local MAP_X, MAP_Z0, MAP_Z1 = 228, -300, 180
+	local MAP_X, MAP_Z0, MAP_Z1 = 336, -420, 276 -- multiples of the 12-stud tile, so tiles line up with the shafts
 	local grassA, grassB = Color3.fromRGB(126, 214, 52), Color3.fromRGB(112, 200, 44)
 	local tiles = Instance.new("Folder")
 	tiles.Name = "Ground"
@@ -798,16 +852,24 @@ local function buildWorld()
 	for i = 0, (MAP_X * 2) / TILE - 1 do
 		for j = 0, (MAP_Z1 - MAP_Z0) / TILE - 1 do
 			local cx, cz = -MAP_X + (i + 0.5) * TILE, MAP_Z0 + (j + 0.5) * TILE
-			local inShaft = false
+			local inShaft, overCave = false, false
 			for sx = -1, 1 do
 				for sz = -1, 1 do
-					if math.abs(cx - sx * SHAFT_PITCH) < SHAFT_W / 2 and math.abs(cz - sz * SHAFT_PITCH) < SHAFT_W / 2 then
+					local dx, dz = cx - sx * SHAFT_PITCH, cz - sz * SHAFT_PITCH
+					if math.abs(dx) < SHAFT_W / 2 and math.abs(dz) < SHAFT_W / 2 then
 						inShaft = true
+					elseif dx * CAVE_SIDE > SHAFT_W / 2 + CAVE_LENGTH - 12 and dx * CAVE_SIDE < SHAFT_W / 2 + CAVE_LENGTH and dz > 0 and dz < SHAFT_W / 2 then
+						inShaft = true -- the ladder hole at the far end of the side cave
+					elseif dx * CAVE_SIDE > SHAFT_W / 2 and dx * CAVE_SIDE < SHAFT_W / 2 + CAVE_LENGTH and math.abs(dz) < SHAFT_W / 2 then
+						overCave = true -- the side cave runs just under the grass here
 					end
 				end
 			end
-			if not inShaft then
-				newPart({ Name = "Tile", Size = Vector3.new(TILE, BLOCK, TILE), Position = W(cx, -BLOCK / 2, cz), Color = if (i + j) % 2 == 0 then grassA else grassB, Material = Enum.Material.SmoothPlastic }, tiles)
+			local color = if (i + j) % 2 == 0 then grassA else grassB
+			if overCave then
+				newPart({ Name = "Tile", Size = Vector3.new(TILE, 0.25, TILE), Position = W(cx, -0.125, cz), Color = color, Material = Enum.Material.SmoothPlastic }, tiles)
+			elseif not inShaft then
+				newPart({ Name = "Tile", Size = Vector3.new(TILE, BLOCK, TILE), Position = W(cx, -BLOCK / 2, cz), Color = color, Material = Enum.Material.SmoothPlastic }, tiles)
 			end
 		end
 	end
@@ -855,7 +917,7 @@ local function buildWorld()
 
 	-- Light sandy paths so the town reads at a glance
 	local sand = Color3.fromRGB(236, 206, 146)
-	for _, pth in { { 0, -165, MAP_X * 2 - 24, 12 }, { 0, -137, 16, 44 }, { 0, -112, 70, 16 }, { 0, -182, 44, 26 }, { 0, -210, 18, 32 }, { -150, -194, 10, 46 }, { 150, -194, 10, 46 }, { -160, -108, 10, 104 }, { 60, -138, 10, 44 } } do
+	for _, pth in { { 0, -214, MAP_X * 2 - 24, 14 }, { 0, -173, 16, 68 }, { 0, -132, 180, 16 }, { 0, -266, 50, 30 }, { 0, -300, 20, 40 }, { -220, -270, 12, 100 }, { 220, -270, 12, 100 }, { -250, -140, 12, 150 }, { 230, -125, 12, 170 } } do
 		newPart({ Name = "Path", Size = Vector3.new(pth[3], 0.3, pth[4]), Position = W(pth[1], 0.15, pth[2]), Color = sand, Material = Enum.Material.SmoothPlastic, CanCollide = false }, tiles)
 	end
 
@@ -1324,19 +1386,22 @@ local function buildWorld()
 			if math.abs(x) < PIT + 10 + pad and math.abs(z) < PIT + 10 + pad then
 				return true -- mine yard
 			end
-			if (Vector2.new(x, z) - Vector2.new(170, 140)).Magnitude < 26 + pad then
+			if math.abs(x) < PIT + 34 + pad and math.abs(z) < PIT + 10 + pad then
+				return true -- side caves and headframe along the edges of the yard
+			end
+			if (Vector2.new(x, z) - Vector2.new(250, 190)).Magnitude < 28 + pad then
 				return true -- pond
 			end
-			if x > PIT and x < PIT + 30 and z > -50 and z < -10 then
-				return true -- headframe
-			end
-			if x < -130 + pad and x > -192 - pad and math.abs(z) < 78 + pad then
+			if x < -220 + pad and x > -282 - pad and math.abs(z) < 78 + pad then
 				return true -- training area
+			end
+			if x > 190 - pad and x < 270 + pad and z > -84 - pad and z < 4 + pad then
+				return true -- accessory shop
 			end
 			if math.abs(x) > MAP_X - 10 - pad or z > MAP_Z1 - 8 - pad or z < MAP_Z0 + 8 + pad then
 				return true -- map edge
 			end
-			return z < -96 + pad and z > -272 - pad and math.abs(x) < 190 + pad -- the town
+			return z < -110 + pad and z > -366 - pad and math.abs(x) < 290 + pad -- the town
 		end
 		local leafColors = { Color3.fromRGB(70, 200, 70), Color3.fromRGB(96, 214, 60), Color3.fromRGB(56, 180, 80) }
 		local function voxelTree(x, z)
@@ -1348,7 +1413,7 @@ local function buildWorld()
 			newPart({ Name = "Leaves", Size = Vector3.new(size - 1, size - 2, size - 1), Position = W(x, h + size + 0.5, z), Color = leaf:Lerp(Color3.new(1, 1, 1), 0.12), Material = Enum.Material.SmoothPlastic }, town)
 		end
 		local placed, tries = 0, 0
-		while placed < 70 and tries < 6000 do
+		while placed < 130 and tries < 9000 do
 			tries += 1
 			local x, z = sr:NextNumber(-MAP_X + 12, MAP_X - 12), sr:NextNumber(MAP_Z0 + 12, MAP_Z1 - 12)
 			if not blocked(x, z, 5) then
@@ -1357,7 +1422,7 @@ local function buildWorld()
 			end
 		end
 		placed, tries = 0, 0
-		while placed < 60 and tries < 6000 do
+		while placed < 100 and tries < 9000 do
 			tries += 1
 			local x, z = sr:NextNumber(-MAP_X + 12, MAP_X - 12), sr:NextNumber(MAP_Z0 + 12, MAP_Z1 - 12)
 			if not blocked(x, z, 2) then
@@ -1368,7 +1433,7 @@ local function buildWorld()
 		end
 		local flowerColors = { Color3.fromRGB(255, 90, 140), Color3.fromRGB(255, 220, 60), Color3.fromRGB(255, 255, 255), Color3.fromRGB(180, 120, 255), Color3.fromRGB(255, 140, 60) }
 		placed, tries = 0, 0
-		while placed < 70 and tries < 6000 do
+		while placed < 130 and tries < 9000 do
 			tries += 1
 			local x, z = sr:NextNumber(-MAP_X + 12, MAP_X - 12), sr:NextNumber(MAP_Z0 + 12, MAP_Z1 - 12)
 			if not blocked(x, z) then
@@ -1467,16 +1532,16 @@ local function buildWorld()
 	-- as one piece, to its place on the bigger map. The ground, walls, paths, fences and mine
 	-- yard were already built at their final size, so they stay where they are.
 	local ZONES = {
-		{ x0 = 95, x1 = 160, z0 = 68, z1 = 125, dx = 50, dz = 46 }, -- pond
-		{ x0 = -130, x1 = -95, z0 = -76, z1 = 76, dx = -48, dz = 0 }, -- training rocks
-		{ x0 = -142, x1 = -14, z0 = -116, z1 = -92, dx = -32, dz = -46 }, -- pickaxe stall
-		{ x0 = 14, x1 = 118, z0 = -116, z1 = -92, dx = 32, dz = -46 }, -- backpack stall
-		{ x0 = -28, x1 = 18, z0 = -100, z1 = -80, dx = 0, dz = -22 }, -- sell pad
-		{ x0 = 36, x1 = 52, z0 = -92, z1 = -76, dx = 16, dz = -28 }, -- elevator
-		{ x0 = -145, x1 = -56, z0 = -165, z1 = -134, dx = -53, dz = -80 }, -- pet shop
-		{ x0 = -56, x1 = 60, z0 = -186, z1 = -144, dx = 0, dz = -80 }, -- museum
-		{ x0 = 62, x1 = 95, z0 = -168, z1 = -134, dx = 72, dz = -80 }, -- ascension shrine
-		{ x0 = -130, x1 = 130, z0 = -145, z1 = -112, dx = 0, dz = -52 }, -- spawn plaza
+		{ x0 = 95, x1 = 160, z0 = 68, z1 = 125, dx = 130, dz = 96 }, -- pond
+		{ x0 = -130, x1 = -95, z0 = -76, z1 = 76, dx = -138, dz = 0 }, -- training rocks
+		{ x0 = -156, x1 = -14, z0 = -116, z1 = -92, dx = -66, dz = -92 }, -- pickaxe stall
+		{ x0 = 14, x1 = 118, z0 = -116, z1 = -92, dx = 84, dz = -92 }, -- backpack stall
+		{ x0 = -28, x1 = 18, z0 = -100, z1 = -80, dx = 0, dz = -42 }, -- sell pad
+		{ x0 = 36, x1 = 52, z0 = -92, z1 = -76, dx = 28, dz = -48 }, -- elevator
+		{ x0 = -145, x1 = -56, z0 = -165, z1 = -134, dx = -123, dz = -180 }, -- pet shop
+		{ x0 = -56, x1 = 60, z0 = -186, z1 = -144, dx = 0, dz = -172 }, -- museum
+		{ x0 = 62, x1 = 95, z0 = -168, z1 = -134, dx = 142, dz = -180 }, -- ascension shrine
+		{ x0 = -130, x1 = 130, z0 = -145, z1 = -112, dx = 0, dz = -128 }, -- spawn plaza
 	}
 	local STAY = { "Fence", "Lantern", "Headframe", "Footing", "Bucket", "Rope", "Spoke", "Wheel", "PitSign", "SignPost" }
 	local function zoneOf(pos)
@@ -1536,6 +1601,79 @@ local function buildWorld()
 	end
 	SELL_POS, SPAWN_POS, CHEST_POS = spread(SELL_POS), spread(SPAWN_POS), spread(CHEST_POS)
 	scatter()
+
+	-- TNT stand beside the sell pad (built straight in the final layout)
+	do
+		local tx, tz = -72, -132
+		local red, black = Color3.fromRGB(220, 50, 50), Color3.fromRGB(40, 36, 40)
+		newPart({ Name = "TNTFloor", Size = Vector3.new(20, 0.4, 14), Position = W(tx, 0.2, tz), Color = Color3.fromRGB(150, 110, 72), Material = Enum.Material.SmoothPlastic }, town)
+		newPart({ Name = "TNTBack", Size = Vector3.new(20, 10, 1), Position = W(tx, 5, tz + 6.5), Color = Color3.fromRGB(90, 60, 40), Material = Enum.Material.SmoothPlastic }, town)
+		for i = 0, 3 do
+			newPart({ Name = "TNTAwning", Size = Vector3.new(5, 0.5, 8), CFrame = CFrame.new(W(tx - 7.5 + i * 5, 10.4, tz + 3)) * CFrame.Angles(math.rad(16), 0, 0), Color = if i % 2 == 0 then red else black, Material = Enum.Material.SmoothPlastic }, town)
+		end
+		local crate
+		for k, spot in { { -3, 1.5, 0 }, { 3, 1.5, 0 }, { 0, 4.5, 0 } } do
+			local box = newPart({ Name = "TNTCrate", Size = Vector3.new(5, 3, 3.2), Position = W(tx + spot[1], spot[2], tz + spot[3]), Color = red, Material = Enum.Material.SmoothPlastic }, town)
+			newPart({ Name = "TNTBand", Size = Vector3.new(5.1, 0.7, 3.3), Position = W(tx + spot[1], spot[2], tz + spot[3]), Color = Color3.fromRGB(245, 235, 210), Material = Enum.Material.SmoothPlastic }, town)
+			signText(box, Enum.NormalId.Front, "TNT", black)
+			if k == 3 then
+				crate = box
+				local fuse = newPart({ Name = "TNTFuse", Size = Vector3.new(0.25, 1.4, 0.25), Position = W(tx, 6.7, tz), Color = Color3.fromRGB(60, 50, 40), Material = Enum.Material.SmoothPlastic, CanCollide = false }, town)
+				local spark = Instance.new("Sparkles")
+				spark.SparkleColor = Color3.fromRGB(255, 200, 80)
+				spark.Parent = fuse
+			end
+		end
+		billboard(crate, 5.5, { { "Sub", `Blasts {TNT_SLABS} blocks at once. Loot sells on the spot`, 15, Color3.fromRGB(240, 240, 240) }, { "Price", "", 18, Color3.fromRGB(255, 214, 90) } }, 70)
+		CollectionService:AddTag(crate, "TNTStand")
+		prompt(crate, "TNT", "Buy TNT", "💣 TNT", 0.4)
+		title(W(tx, 17, tz), "💣 TNT", Color3.fromRGB(255, 110, 90), 14)
+		glowPad(W(tx, 0, tz - 10), 6, Color3.fromRGB(255, 110, 90))
+	end
+
+	-- Accessory shop east of the mine yard: spend 🪨 Rocks from your Rock Cave
+	do
+		local ax, az = 230, -40
+		local pink, white = Color3.fromRGB(200, 120, 255), Color3.fromRGB(250, 245, 255)
+		newPart({ Name = "AccFloor", Size = Vector3.new(44, 0.4, 26), Position = W(ax, 0.2, az), Color = Color3.fromRGB(240, 226, 250), Material = Enum.Material.SmoothPlastic }, town)
+		newPart({ Name = "AccBack", Size = Vector3.new(44, 14, 1), Position = W(ax, 7, az + 12.5), Color = Color3.fromRGB(230, 200, 255), Material = Enum.Material.SmoothPlastic }, town)
+		for _, sx in { -1, 1 } do
+			newPart({ Name = "AccSide", Size = Vector3.new(1, 14, 26), Position = W(ax + sx * 21.5, 7, az), Color = Color3.fromRGB(230, 200, 255), Material = Enum.Material.SmoothPlastic }, town)
+		end
+		for i = 0, 7 do
+			newPart({ Name = "AccAwning", Size = Vector3.new(44 / 8, 0.5, 9), CFrame = CFrame.new(W(ax - 22 + (i + 0.5) * 44 / 8, 14.3, az - 9)) * CFrame.Angles(math.rad(16), 0, 0), Color = if i % 2 == 0 then pink else white, Material = Enum.Material.SmoothPlastic }, town)
+		end
+		local board = newPart({ Name = "AccSign", Size = Vector3.new(26, 5, 0.6), Position = W(ax, 18, az + 12.2), Color = Color3.fromRGB(120, 60, 160), Material = Enum.Material.SmoothPlastic }, town)
+		signText(board, Enum.NormalId.Front, "✨ ACCESSORIES", Color3.fromRGB(255, 240, 255))
+		-- display heads wearing a crown, a halo and a party hat
+		for k, dx in { -12, 0, 12 } do
+			newPart({ Name = "AccStand", Shape = Enum.PartType.Cylinder, Size = Vector3.new(3, 4, 4), CFrame = CFrame.new(W(ax + dx, 1.5, az + 6)) * CFrame.Angles(0, 0, math.rad(90)), Color = Color3.fromRGB(255, 205, 70), Material = Enum.Material.SmoothPlastic }, town)
+			local head = newPart({ Name = "AccHead", Shape = Enum.PartType.Ball, Size = Vector3.one * 2.4, Position = W(ax + dx, 4.2, az + 6), Color = Color3.fromRGB(255, 220, 180), Material = Enum.Material.SmoothPlastic }, town)
+			local top = head.Position + Vector3.new(0, 1.2, 0)
+			if k == 1 then
+				newPart({ Name = "AccCrown", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.8, 2.2, 2.2), CFrame = CFrame.new(top) * CFrame.Angles(0, 0, math.rad(90)), Color = Color3.fromRGB(255, 205, 60), Material = Enum.Material.SmoothPlastic }, town)
+				for s = 0, 4 do
+					local a = s * math.pi * 2 / 5
+					newPart({ Name = "AccCrown", Size = Vector3.new(0.35, 0.9, 0.35), Position = top + Vector3.new(math.cos(a) * 0.95, 0.7, math.sin(a) * 0.95), Color = Color3.fromRGB(255, 205, 60), Material = Enum.Material.SmoothPlastic }, town)
+				end
+			elseif k == 2 then
+				for s = 0, 11 do
+					local a = s * math.pi / 6
+					newPart({ Name = "AccHalo", Shape = Enum.PartType.Ball, Size = Vector3.one * 0.45, Position = top + Vector3.new(math.cos(a) * 1.2, 1.3, math.sin(a) * 1.2), Color = Color3.fromRGB(255, 240, 120), Material = Enum.Material.Neon, CanCollide = false }, town)
+				end
+			else
+				for s = 0, 2 do
+					newPart({ Name = "AccHat", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.9, 2 - s * 0.6, 2 - s * 0.6), CFrame = CFrame.new(top + Vector3.new(0, 0.4 + s * 0.8, 0)) * CFrame.Angles(0, 0, math.rad(90)), Color = if s % 2 == 0 then Color3.fromRGB(255, 90, 160) else Color3.fromRGB(255, 220, 60), Material = Enum.Material.SmoothPlastic }, town)
+				end
+			end
+		end
+		local counter = newPart({ Name = "AccCounter", Size = Vector3.new(12, 3.4, 3), Position = W(ax, 1.7, az - 4), Color = pink, Material = Enum.Material.SmoothPlastic }, town)
+		prompt(counter, "Accessories", "Shop", "✨ Accessories", 0)
+		billboard(counter, 4, { { "Sub", "Spend 🪨 Rocks from your Rock Cave", 15, Color3.fromRGB(240, 240, 240) } }, 70)
+		CollectionService:AddTag(counter, "AccessoryShop")
+		title(W(ax, 26, az), "✨ ACCESSORIES", Color3.fromRGB(230, 170, 255), 30)
+		glowPad(W(ax, 0, az - 16), 7, Color3.fromRGB(220, 150, 255))
+	end
 
 	-- Cartoon pass: flat, saturated plastic everywhere (Neon and Glass stay as they are)
 	for _, part in town:GetDescendants() do
@@ -1637,6 +1775,44 @@ do
 				newPart({ Name = "Rim", Size = size, Position = pos, Color = if k % 2 == 0 then STONE_A else STONE_B, Material = Enum.Material.SmoothPlastic }, folder)
 			end
 		end
+		-- Side cave: a rocky room just under the grass on the right of the shaft. A tunnel in the
+		-- top row of the shaft leads in, and a ladder at the far end climbs out to the surface.
+		do
+			local S = CAVE_SIDE
+			local near, far = cx + S * h, cx + S * (h + CAVE_LENGTH) -- edge by the shaft, far end
+			local midX = (near + far) / 2
+			local caveRock, caveDark = Color3.fromRGB(150, 108, 74), Color3.fromRGB(118, 82, 56)
+			local function caveWall(size, pos, color)
+				local p = newPart({ Name = "CaveWall", Size = size, Position = pos, Color = color or caveRock, Material = Enum.Material.SmoothPlastic }, folder)
+				p.CanQuery = false
+				return p
+			end
+			caveWall(Vector3.new(CAVE_LENGTH, 1, SHAFT_W), Vector3.new(midX, TOP - BLOCK - 0.5, cz), caveDark) -- floor
+			caveWall(Vector3.new(1, BLOCK, SHAFT_W), Vector3.new(far - S * 0.5, TOP - BLOCK / 2, cz)) -- far wall (inside the cave, so its face never meets the grass tiles')
+			for _, dir in { -1, 1 } do
+				caveWall(Vector3.new(CAVE_LENGTH, BLOCK, 1), Vector3.new(midX, TOP - BLOCK / 2, cz + dir * (h - 0.5)))
+			end
+			-- rock ceiling under the thin grass, with a hole over the ladder
+			caveWall(Vector3.new(CAVE_LENGTH - 12, 0.25, SHAFT_W), Vector3.new(near + S * (CAVE_LENGTH - 12) / 2, TOP - 0.375, cz), caveDark)
+			caveWall(Vector3.new(12, 0.25, h), Vector3.new(far - S * 6, TOP - 0.375, cz - h / 2), caveDark)
+			local ladder = Instance.new("TrussPart")
+			ladder.Name = "CaveLadder"
+			ladder.Anchored = true
+			ladder.Size = Vector3.new(2, 8, 2)
+			ladder.Position = Vector3.new(far - S * 2.5, TOP - BLOCK + 4, cz + h / 2)
+			ladder.Color = Color3.fromRGB(150, 100, 60)
+			ladder.CanQuery = false
+			ladder.Parent = folder
+			for _, lx in { near + S * 8, far - S * 16 } do
+				local lamp = newPart({ Name = "CaveLamp", Size = Vector3.new(1.2, 1.2, 1.2), Position = Vector3.new(lx, TOP - 1.4, cz), Color = Color3.fromRGB(255, 200, 110), Material = Enum.Material.Neon, CanCollide = false }, folder)
+				lamp.CanQuery = false
+				addLight(lamp, Color3.fromRGB(255, 190, 120), 26, 1.4)
+			end
+			local signAnchor = newPart({ Name = "SignAnchor", Size = Vector3.new(1, 1, 1), Position = Vector3.new(far - S * 6, TOP + 1, cz + h / 2), Transparency = 1, CanCollide = false }, folder)
+			signAnchor.CanQuery = false
+			billboard(signAnchor, 6, { { "Title", "🪨 ROCK CAVE", 22, Color3.fromRGB(255, 214, 140) }, { "Sub", "Mine rocks for accessories", 14, Color3.fromRGB(240, 240, 240) } }, 70)
+			shaft.cave = { near = near, lo = math.min(near, far), hi = math.max(near, far), rocks = {} }
+		end
 		-- Lid shown while nobody owns the shaft
 		local lid = newPart({ Name = "Lid", Size = Vector3.new(SHAFT_W, 0.6, SHAFT_W), Position = Vector3.new(cx, TOP + 0.3, cz), Color = Color3.fromRGB(150, 100, 60), Material = Enum.Material.SmoothPlastic }, folder)
 		for p = -1, 1 do
@@ -1704,9 +1880,21 @@ local function buildRow(shaft, row)
 	local h, y = SHAFT_W / 2, shaftRowY(row)
 	local base = rowColor(row)
 	for i, side in { { -1, 0 }, { 1, 0 }, { 0, -1 }, { 0, 1 } } do
+		local color = if i % 2 == 0 then base else base:Lerp(Color3.new(0, 0, 0), 0.06)
+		if row == 0 and side[1] == CAVE_SIDE then
+			-- the top row's right-hand wall has a tunnel into the side cave
+			local gap = CAVE_DOOR / 2
+			for _, dir in { -1, 1 } do
+				local len = h + 3 - gap
+				local p = newPart({ Name = "Wall", Size = Vector3.new(3, BLOCK, len), Position = Vector3.new(shaft.x + CAVE_SIDE * (h + 1.5), y, shaft.z + dir * (gap + len / 2)), Color = color, Material = Enum.Material.SmoothPlastic }, shaft.folder)
+				p.CanQuery = false
+				table.insert(parts, p)
+			end
+			continue
+		end
 		local size = if side[1] ~= 0 then Vector3.new(3, BLOCK, SHAFT_W + 6) else Vector3.new(SHAFT_W, BLOCK, 3)
 		local pos = Vector3.new(shaft.x + side[1] * (h + 1.5), y, shaft.z + side[2] * (h + 1.5))
-		local p = newPart({ Name = "Wall", Size = size, Position = pos, Color = if i % 2 == 0 then base else base:Lerp(Color3.new(0, 0, 0), 0.06), Material = Enum.Material.SmoothPlastic }, shaft.folder)
+		local p = newPart({ Name = "Wall", Size = size, Position = pos, Color = color, Material = Enum.Material.SmoothPlastic }, shaft.folder)
 		p.CanQuery = false
 		table.insert(parts, p)
 	end
@@ -1805,8 +1993,84 @@ local function spawnSlab(shaft, row)
 	shaft.slab = p
 end
 
+-- Cave rocks --------------------------------------------------------------------------
+local rockInfo = {} -- rock part -> { shaft, spot, kind, hits }
+local ROCK_SPOTS = { { 6, -6 }, { 7, 6 }, { 13, -1 }, { 19, -7 }, { 19, 5 }, { 26, -6 }, { 13, 8 } }
+
+local function spawnRock(shaft, spot)
+	local cave = shaft.cave
+	local at = ROCK_SPOTS[spot]
+	if not cave or not at or cave.rocks[spot] then
+		return
+	end
+	local total = 0
+	for _, R in ROCK_TYPES do
+		total += R.weight
+	end
+	local roll, kind = rng:NextNumber() * total, ROCK_TYPES[1]
+	for _, R in ROCK_TYPES do
+		roll -= R.weight
+		if roll <= 0 then
+			kind = R
+			break
+		end
+	end
+	local color = rgb(kind.color)
+	local floorY = TOP - BLOCK
+	local pos = Vector3.new(cave.near + CAVE_SIDE * at[1], floorY + 1.3, shaft.z + at[2])
+	local rock = newPart({ Name = kind.name, Size = Vector3.new(3.6, 2.8, 3.2), CFrame = CFrame.new(pos) * CFrame.Angles(0, rng:NextNumber(0, 6), 0), Color = color, Material = Enum.Material.SmoothPlastic })
+	local mesh = Instance.new("SpecialMesh")
+	mesh.MeshType = Enum.MeshType.Sphere
+	mesh.Parent = rock
+	-- a few smaller lumps stuck to it, so it reads as a chunky cartoon boulder
+	for k = 1, 3 do
+		local a = k * 2.1
+		local chunk = newPart({ Name = "RockChunk", Size = Vector3.new(1.9, 1.5, 1.7) * (1.15 - k * 0.15), CFrame = rock.CFrame * CFrame.new(math.cos(a) * 1.3, 0.3 + (k % 2) * 0.5, math.sin(a) * 1.1), Color = color:Lerp(Color3.new(1, 1, 1), 0.08 * k), Material = Enum.Material.SmoothPlastic, CanCollide = false })
+		local chunkMesh = Instance.new("SpecialMesh")
+		chunkMesh.MeshType = Enum.MeshType.Sphere
+		chunkMesh.Parent = chunk
+		chunk.CanQuery = false
+		chunk.Parent = rock
+	end
+	if kind.glow then
+		for k = 0, 2 do
+			local crystal = newPart({ Name = "RockCrystal", Size = Vector3.new(0.6, 2.2 - k * 0.4, 0.6), CFrame = rock.CFrame * CFrame.new((k - 1) * 0.8, 1.8, 0) * CFrame.Angles(0, 0, (k - 1) * -0.4), Color = color:Lerp(Color3.new(1, 1, 1), 0.3), Material = Enum.Material.Neon, CanCollide = false })
+			crystal.CanQuery = false
+			crystal.Parent = rock
+		end
+		addLight(rock, color, 12, 1.2)
+	end
+	rock:SetAttribute("HitsLeft", kind.hits)
+	rock:SetAttribute("Hits", kind.hits)
+	rock:SetAttribute("CaveRock", kind.id)
+	CollectionService:AddTag(rock, "CaveRock")
+	rock.Parent = shaft.folder
+	cave.rocks[spot] = rock
+	rockInfo[rock] = { shaft = shaft, spot = spot, kind = kind, hits = kind.hits }
+end
+
+local function fillCave(shaft)
+	for spot = 1, #ROCK_SPOTS do
+		if spot <= CAVE_ROCKS then
+			spawnRock(shaft, spot)
+		end
+	end
+end
+
+local function clearCave(shaft)
+	if not shaft.cave then
+		return
+	end
+	for spot, rock in shaft.cave.rocks do
+		rockInfo[rock] = nil
+		rock:Destroy()
+		shaft.cave.rocks[spot] = nil
+	end
+end
+
 -- Empties a shaft (rows, slab) and puts the lid back on
 local function clearShaft(shaft)
+	clearCave(shaft)
 	if shaft.slab then
 		blockInfo[shaft.slab] = nil
 		shaft.slab:Destroy()
@@ -1839,6 +2103,7 @@ local function openShaft(shaft, depth)
 		buildRow(shaft, r)
 	end
 	spawnSlab(shaft, depth)
+	fillCave(shaft)
 end
 
 --------------------------------------------------------------------------------
@@ -1862,6 +2127,7 @@ local function newData()
 		potions = {}, codes = {}, spinAt = 0, starter = false, firstJoin = 0, receipts = {}, settings = {},
 		quests = {}, lastSeen = 0, petIndex = {}, sells = 0,
 		strength = 0, rebirths = 0, strMile = 0,
+		rocks = 0, accs = {}, accEq = {}, tnt = 0,
 	}
 end
 
@@ -2011,6 +2277,13 @@ local function valueMult(player)
 	m *= 1 + (d.level - 1) * LEVEL_BONUS
 	m *= 1 + petBoost(d)
 	m *= 1 + (d.rebirths or 0) * REBIRTH_CASH
+	for _, id in d.accEq or {} do
+		for _, A in ACCESSORIES do
+			if A.id == id and d.accs[id] then
+				m *= 1 + A.bonus
+			end
+		end
+	end
 	if player:GetAttribute("FriendBonus") then
 		m *= 1 + FRIEND_BONUS
 	end
@@ -2056,6 +2329,10 @@ local function sync(player)
 	player:SetAttribute("Rebirths", d.rebirths)
 	player:SetAttribute("RebirthReq", math.floor(REBIRTH_BASE * REBIRTH_GROWTH ^ d.rebirths))
 	player:SetAttribute("StrMult", strengthMult(player))
+	player:SetAttribute("Rocks", d.rocks or 0)
+	player:SetAttribute("TNT", d.tnt or 0)
+	player:SetAttribute("Accs", HttpService:JSONEncode(d.accs or {}))
+	player:SetAttribute("AccEq", HttpService:JSONEncode(d.accEq or {}))
 	for name, expiry in d.potions do
 		player:SetAttribute("Potion_" .. name, expiry)
 	end
@@ -2375,6 +2652,155 @@ local function spawnPoint()
 	return SPAWN_POS + Vector3.new(rng:NextNumber(-3, 3), 3.5, rng:NextNumber(-3, 3))
 end
 
+-- ACCESSORIES: little part-built hats, shades, wings and auras welded to your character -------
+local ACC_BUILDERS = {}
+do
+	local function acc(model, size, cf, color, material, shape)
+		local p = Instance.new("Part")
+		p.Name = "AccessoryPart"
+		p.Size = size
+		p.CFrame = cf
+		p.Color = color
+		p.Material = material or Enum.Material.SmoothPlastic
+		if shape then
+			p.Shape = shape
+		end
+		p.TopSurface = Enum.SurfaceType.Smooth
+		p.BottomSurface = Enum.SurfaceType.Smooth
+		p.Parent = model
+		return p
+	end
+	local function sphere(model, size, cf, color, material)
+		local p = acc(model, size, cf, color, material)
+		local mesh = Instance.new("SpecialMesh")
+		mesh.MeshType = Enum.MeshType.Sphere
+		mesh.Parent = p
+		return p
+	end
+	local UP = CFrame.Angles(0, 0, math.rad(90)) -- turns a cylinder upright
+	local GOLD_C = Color3.fromRGB(255, 205, 60)
+
+	ACC_BUILDERS.PartyHat = function(m, head)
+		local top = head.CFrame * CFrame.new(0, head.Size.Y / 2, 0)
+		local colors = { Color3.fromRGB(255, 90, 160), Color3.fromRGB(255, 220, 60), Color3.fromRGB(90, 200, 255) }
+		for k = 0, 2 do
+			acc(m, Vector3.new(0.5, 1 - k * 0.3, 1 - k * 0.3), top * CFrame.new(0, 0.25 + k * 0.45, 0) * UP, colors[k + 1], nil, Enum.PartType.Cylinder)
+		end
+		acc(m, Vector3.one * 0.4, top * CFrame.new(0, 1.55, 0), Color3.new(1, 1, 1), nil, Enum.PartType.Ball)
+	end
+	ACC_BUILDERS.MinerHelmet = function(m, head)
+		local top = head.CFrame * CFrame.new(0, head.Size.Y / 2, 0)
+		sphere(m, Vector3.new(1.5, 1, 1.5), top * CFrame.new(0, 0, 0), Color3.fromRGB(255, 200, 40))
+		acc(m, Vector3.new(0.12, 1.75, 1.75), top * CFrame.new(0, -0.25, 0) * UP, Color3.fromRGB(230, 170, 30), nil, Enum.PartType.Cylinder)
+		local lamp = acc(m, Vector3.new(0.3, 0.5, 0.5), top * CFrame.new(0, 0.1, -0.72) * CFrame.Angles(0, math.rad(90), 0), Color3.fromRGB(255, 255, 220), Enum.Material.Neon, Enum.PartType.Cylinder)
+		local beam = Instance.new("SpotLight")
+		beam.Face = Enum.NormalId.Right
+		beam.Range = 30
+		beam.Angle = 50
+		beam.Brightness = 2
+		beam.Parent = lamp
+	end
+	ACC_BUILDERS.CoolShades = function(m, head)
+		local face = head.CFrame * CFrame.new(0, 0.12, -head.Size.Z / 2 - 0.05)
+		for _, x in { -0.27, 0.27 } do
+			acc(m, Vector3.new(0.46, 0.3, 0.1), face * CFrame.new(x, 0, 0), Color3.fromRGB(20, 20, 26))
+			acc(m, Vector3.new(0.14, 0.08, 0.02), face * CFrame.new(x - 0.1, 0.07, -0.06), Color3.fromRGB(200, 230, 255), Enum.Material.Neon)
+		end
+		acc(m, Vector3.new(0.2, 0.06, 0.08), face * CFrame.new(0, 0.08, 0), Color3.fromRGB(20, 20, 26))
+	end
+	ACC_BUILDERS.GoldCrown = function(m, head)
+		local top = head.CFrame * CFrame.new(0, head.Size.Y / 2 + 0.15, 0)
+		acc(m, Vector3.new(0.4, 1.15, 1.15), top * UP, GOLD_C, nil, Enum.PartType.Cylinder)
+		for k = 0, 4 do
+			local a = k * math.pi * 2 / 5
+			local tip = top * CFrame.new(math.cos(a) * 0.48, 0.35, math.sin(a) * 0.48)
+			acc(m, Vector3.new(0.18, 0.45, 0.18), tip, GOLD_C)
+			acc(m, Vector3.one * 0.2, tip * CFrame.new(0, 0.28, 0), GOLD_C, nil, Enum.PartType.Ball)
+		end
+		acc(m, Vector3.one * 0.26, top * CFrame.new(0, 0, -0.58), Color3.fromRGB(255, 60, 90), Enum.Material.Neon, Enum.PartType.Ball)
+	end
+	local function wings(m, torso, color, edge, span)
+		local back = torso.CFrame * CFrame.new(0, 0.35, torso.Size.Z / 2 + 0.25)
+		for _, x in { -1, 1 } do
+			sphere(m, Vector3.new(0.2, 1.6 * span, 2.3 * span), back * CFrame.new(x * 0.9 * span, 0.2, 0.25) * CFrame.Angles(0, x * 0.5, x * 0.55), color)
+			sphere(m, Vector3.new(0.18, 1.1 * span, 1.7 * span), back * CFrame.new(x * 1.45 * span, -0.35, 0.4) * CFrame.Angles(0, x * 0.55, x * 0.9), edge)
+		end
+	end
+	ACC_BUILDERS.AngelWings = function(m, _, torso)
+		wings(m, torso, Color3.fromRGB(255, 255, 255), Color3.fromRGB(230, 240, 255), 1)
+	end
+	ACC_BUILDERS.DragonWings = function(m, _, torso)
+		wings(m, torso, Color3.fromRGB(200, 50, 70), Color3.fromRGB(255, 120, 60), 1.3)
+	end
+	ACC_BUILDERS.Halo = function(m, head)
+		local top = head.CFrame * CFrame.new(0, head.Size.Y / 2 + 0.75, 0)
+		for k = 0, 11 do
+			local a = k * math.pi / 6
+			acc(m, Vector3.one * 0.24, top * CFrame.new(math.cos(a) * 0.6, 0, math.sin(a) * 0.6), Color3.fromRGB(255, 240, 120), Enum.Material.Neon, Enum.PartType.Ball)
+		end
+	end
+	ACC_BUILDERS.RainbowAura = function(m, _, _, root)
+		local p = acc(m, Vector3.new(1, 1, 1), root.CFrame, Color3.new(1, 1, 1))
+		p.Transparency = 1
+		local fx = Instance.new("ParticleEmitter")
+		fx.Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 80, 80)),
+			ColorSequenceKeypoint.new(0.33, Color3.fromRGB(255, 220, 60)),
+			ColorSequenceKeypoint.new(0.66, Color3.fromRGB(80, 220, 120)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(120, 120, 255)),
+		})
+		fx.Size = NumberSequence.new(0.5, 0)
+		fx.Lifetime = NumberRange.new(0.8, 1.4)
+		fx.Rate = 24
+		fx.Speed = NumberRange.new(1, 3)
+		fx.SpreadAngle = Vector2.new(180, 180)
+		fx.LightEmission = 0.8
+		fx.Parent = p
+	end
+end
+
+local function applyAccessories(player)
+	local d = sessions[player]
+	local char = player.Character
+	if not d or not char then
+		return
+	end
+	for _, c in char:GetChildren() do
+		if c.Name == "DigAccessory" then
+			c:Destroy()
+		end
+	end
+	local head = char:FindFirstChild("Head")
+	local torso = char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")
+	local root = char:FindFirstChild("HumanoidRootPart")
+	if not (head and head:IsA("BasePart") and torso and torso:IsA("BasePart") and root and root:IsA("BasePart")) then
+		return
+	end
+	for slot, id in d.accEq or {} do
+		local build = ACC_BUILDERS[id]
+		if build and d.accs[id] then
+			local model = Instance.new("Model")
+			model.Name = "DigAccessory"
+			build(model, head, torso, root)
+			local anchor = if slot == "Back" then torso elseif slot == "Aura" and id == "RainbowAura" then root else head
+			for _, p in model:GetDescendants() do
+				if p:IsA("BasePart") then
+					p.Anchored = false
+					p.CanCollide = false
+					p.CanQuery = false
+					p.CanTouch = false
+					p.Massless = true
+					local weld = Instance.new("WeldConstraint")
+					weld.Part0 = anchor
+					weld.Part1 = p
+					weld.Parent = p
+				end
+			end
+			model.Parent = char
+		end
+	end
+end
+
 local function onCharacter(player, char)
 	local hum = char:WaitForChild("Humanoid", 10)
 	local root = char:WaitForChild("HumanoidRootPart", 10)
@@ -2392,6 +2818,7 @@ local function onCharacter(player, char)
 	attachBag(player)
 	addHeadlamp(char)
 	updateNameplate(player)
+	applyAccessories(player)
 end
 
 --------------------------------------------------------------------------------
@@ -2492,7 +2919,8 @@ local function toMyShaft(player)
 	teleportTo(player, Vector3.new(shaft.x + rng:NextNumber(-4, 4), TOP - row * BLOCK + 3.5, shaft.z + rng:NextNumber(-4, 4)))
 end
 
-local function breakSlab(player, part, info)
+-- `blast` is set when TNT did it: the loot is sold on the spot (added to blast.coins)
+local function breakSlab(player, part, info, blast)
 	local d = sessions[player]
 	local shaft = info.shaft
 	local row = info.row
@@ -2515,6 +2943,11 @@ local function breakSlab(player, part, info)
 		d.earned += amount
 		Remotes.Geode:FireClient(player, info.pos, amount, 1)
 		questProgress(player, "geode")
+	elseif blast then
+		local amount = math.floor(info.value * valueMult(player))
+		d.coins += amount
+		d.earned += amount
+		blast.coins += amount
 	else
 		local each = info.value / math.max(1, #info.kinds)
 		for _, kind in info.kinds do
@@ -2530,7 +2963,9 @@ local function breakSlab(player, part, info)
 			end
 		end
 	end
-	Remotes.Mined:FireClient(player, info.pos, info.kinds, info.color, collected, full)
+	if not blast then
+		Remotes.Mined:FireClient(player, info.pos, info.kinds, info.color, collected, full)
+	end
 
 	for _, kind in info.kinds do
 		if kind ~= "" and ORES[kind].announce then
@@ -2575,9 +3010,50 @@ local function breakSlab(player, part, info)
 	updateBagFill(player)
 end
 
+-- A rock in your side cave: a set number of clicks, then 🪨 Rocks for accessories
+local function hitRock(player, d, part, rock)
+	if rock.shaft.owner ~= player then
+		return
+	end
+	local now = os.clock()
+	if now - (lastHit[player] or 0) < PICKS[d.pick].speed * swingMult(player) * 0.75 then
+		return
+	end
+	local char = player.Character
+	local root = char and char:FindFirstChild("HumanoidRootPart")
+	if not root or (root.Position - part.Position).Magnitude > REACH + 4 then
+		return
+	end
+	lastHit[player] = now
+	addStrength(player, strengthMult(player))
+	rock.hits -= 1
+	part:SetAttribute("HitsLeft", rock.hits)
+	if rock.hits > 0 then
+		return
+	end
+	local shaft, spot, kind = rock.shaft, rock.spot, rock.kind
+	local pos = part.Position
+	rockInfo[part] = nil
+	shaft.cave.rocks[spot] = nil
+	part:Destroy()
+	d.rocks = (d.rocks or 0) + kind.reward
+	player:SetAttribute("Rocks", d.rocks)
+	Remotes.RockMined:FireClient(player, pos, kind.id, kind.reward)
+	task.delay(ROCK_RESPAWN, function()
+		if shaft.owner == player then
+			spawnRock(shaft, spot)
+		end
+	end)
+end
+
 Remotes.Hit.OnServerEvent:Connect(function(player, part)
 	local d = sessions[player]
 	if not d or typeof(part) ~= "Instance" or not part:IsA("BasePart") then
+		return
+	end
+	local rock = rockInfo[part]
+	if rock then
+		hitRock(player, d, part, rock)
 		return
 	end
 	local info = blockInfo[part]
@@ -2634,6 +3110,9 @@ task.spawn(function()
 							teleportTo(player, spawnPoint())
 							notify(player, "That's someone else's mine! Yours has your name on it", Color3.fromRGB(255, 180, 120))
 						end
+					elseif shaft.cave and pos.X > shaft.cave.lo and pos.X < shaft.cave.hi and math.abs(pos.Z - shaft.z) < h and pos.Y < TOP - 1 and pos.Y > TOP - BLOCK * 2 and shaft.owner ~= player then
+						teleportTo(player, spawnPoint())
+						notify(player, "That's someone else's Rock Cave! Yours is next to your mine", Color3.fromRGB(255, 180, 120))
 					end
 				end
 			end
@@ -3162,6 +3641,101 @@ do
 	end)
 end
 
+--------------------------------------------------------------------------------
+-- TNT AND ACCESSORIES
+--------------------------------------------------------------------------------
+local function tntPrice(d)
+	return math.max(TNT_MIN_PRICE, math.floor(INCOME[d.pick] * TNT_MINUTES * (1 + (d.asc or 0) * ASCEND_BONUS)))
+end
+
+local function buyTNT(player)
+	local d = sessions[player]
+	if not d then
+		return
+	end
+	local price = tntPrice(d)
+	if d.coins < price then
+		notify(player, `💣 TNT costs 💰 {fmt(price)}. You need 💰 {fmt(price - d.coins)} more`, Color3.fromRGB(255, 130, 110))
+		return
+	end
+	d.coins -= price
+	d.tnt = (d.tnt or 0) + 1
+	sync(player)
+	notify(player, `💣 You bought TNT! Stand in your mine and press the TNT button`, Color3.fromRGB(255, 170, 90))
+end
+
+-- Blasts through TNT_SLABS blocks at once. Everything it blows up is sold on the spot.
+local function useTNT(player)
+	local d = sessions[player]
+	local shaft = d and d._shaft
+	if not shaft or (d.tnt or 0) <= 0 or not shaft.slab or not blockInfo[shaft.slab] then
+		return
+	end
+	local char = player.Character
+	local root = char and char:FindFirstChild("HumanoidRootPart")
+	if not root then
+		return
+	end
+	local offset = root.Position - shaft.slab.CFrame.Position
+	if math.abs(offset.X) > SHAFT_W / 2 + 2 or math.abs(offset.Z) > SHAFT_W / 2 + 2 or offset.Y < 0 or offset.Y > REACH then
+		notify(player, "💣 Stand in your mine to use TNT", Color3.fromRGB(255, 180, 120))
+		return
+	end
+	d.tnt -= 1
+	local blast = { coins = 0 }
+	local startPos = shaft.slab.CFrame.Position + Vector3.new(0, BLOCK / 2, 0)
+	local broke = 0
+	for _ = 1, TNT_SLABS do
+		local slab = shaft.slab
+		local info = slab and blockInfo[slab]
+		if not info then
+			break
+		end
+		breakSlab(player, slab, info, blast)
+		broke += 1
+	end
+	sync(player)
+	updateBagFill(player)
+	Remotes.Blast:FireClient(player, startPos, blast.coins, broke)
+	toMyShaft(player)
+end
+
+local function buyAccessory(player, id)
+	local d = sessions[player]
+	local A
+	for _, item in ACCESSORIES do
+		if item.id == id then
+			A = item
+		end
+	end
+	if not d or not A then
+		return
+	end
+	if not d.accs[id] then
+		if (d.rocks or 0) < A.price then
+			notify(player, `You need 🪨 {fmt(A.price - (d.rocks or 0))} more Rocks. Mine them in your Rock Cave!`, Color3.fromRGB(255, 180, 120))
+			return
+		end
+		d.rocks -= A.price
+		d.accs[id] = true
+		notify(player, `{A.icon} You got the {A.name}!`, Color3.fromRGB(255, 214, 90))
+	end
+	-- buying (or clicking an owned one) wears it
+	d.accEq[A.slot] = id
+	applyAccessories(player)
+	sync(player)
+end
+
+local function unequipAccessory(player, slot)
+	local d = sessions[player]
+	if not d or type(slot) ~= "string" then
+		return
+	end
+	d.accEq[slot] = nil
+	applyAccessories(player)
+	sync(player)
+end
+
 local lastAction = {}
 Remotes.Action.OnServerEvent:Connect(function(player, action, arg, arg2)
 	local d = sessions[player]
@@ -3186,6 +3760,12 @@ Remotes.Action.OnServerEvent:Connect(function(player, action, arg, arg2)
 		rebirth(player)
 	elseif action == "ClaimGift" then
 		claimGift(player, arg)
+	elseif action == "UseTNT" then
+		useTNT(player)
+	elseif action == "BuyAccessory" then
+		buyAccessory(player, arg)
+	elseif action == "UnequipAccessory" then
+		unequipAccessory(player, arg)
 	elseif action == "Sell" then
 		if owns(player, "SellAnywhere") then
 			trySell(player)
@@ -3407,6 +3987,8 @@ ProximityPromptService.PromptTriggered:Connect(function(p, player)
 		buy(player, kind, p:GetAttribute("Tier"))
 	elseif kind == "Elevator" then
 		descend(player)
+	elseif kind == "TNT" then
+		buyTNT(player)
 	elseif kind == "Daily" then
 		claimDaily(player)
 	elseif kind == "Ascend" then

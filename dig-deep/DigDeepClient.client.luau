@@ -990,8 +990,13 @@ local function updateMining()
 	if slab and target ~= slab then
 		target, hitPos = slab, slab.Position + Vector3.new(math.random(-6, 6), CFG.block / 2, math.random(-6, 6))
 	end
-	slabUI.bar.Visible = slab ~= nil
-	if slab then
+	local caveRock = if target and target:GetAttribute("CaveRock") then target else nil
+	slabUI.bar.Visible = slab ~= nil or caveRock ~= nil
+	if caveRock then
+		local left, total = caveRock:GetAttribute("HitsLeft") or 1, caveRock:GetAttribute("Hits") or 1
+		slabUI.fill.Size = UDim2.fromScale(math.clamp(left / math.max(1, total), 0, 1), 1)
+		slabUI.text.Text = `🪨 {caveRock.Name} · {left} / {total} hits`
+	elseif slab then
 		local hp, maxHp = slab:GetAttribute("HP") or 1, slab:GetAttribute("MaxHP") or 1
 		slabUI.fill.Size = UDim2.fromScale(math.clamp(hp / math.max(1, maxHp), 0, 1), 1)
 		slabUI.text.Text = `{if slab:GetAttribute("Geode") then "💎 GEODE" else "🪨 " .. slab.Name} · {fmt(math.ceil(hp))} / {fmt(maxHp)}`
@@ -3533,6 +3538,193 @@ end
 	end)
 end)()
 
+-- ROCK CAVE, ACCESSORIES AND TNT -------------------------------------------------------
+;(function()
+	-- 🪨 Rocks counter next to the Strength pill
+	local strengthPill = gui:FindFirstChild("Strength")
+	local row = create("Frame", {
+		Name = "StatRow",
+		Position = UDim2.new(0, 14, 0, 150),
+		Size = UDim2.fromOffset(0, 42),
+		AutomaticSize = Enum.AutomaticSize.X,
+		BackgroundTransparency = 1,
+		Parent = gui,
+	}, { create("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }) })
+	if strengthPill then
+		strengthPill.Position = UDim2.new()
+		strengthPill.LayoutOrder = 1
+		strengthPill.Parent = row
+	end
+	local rockPill = create("Frame", {
+		Name = "Rocks",
+		LayoutOrder = 2,
+		Size = UDim2.fromOffset(0, 42),
+		AutomaticSize = Enum.AutomaticSize.X,
+		BackgroundColor3 = WHITE,
+		Parent = row,
+	}, {
+		corner(),
+		stroke(4, Color3.fromRGB(60, 50, 60)),
+		create("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 16) }),
+		create("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
+	})
+	create("UIGradient", { Color = bevel(Color3.fromRGB(200, 200, 215), Color3.fromRGB(120, 118, 140)), Rotation = 90, Parent = rockPill })
+	local rockScale = create("UIScale", { Parent = rockPill })
+	label({ parent = rockPill, text = "🪨", size = 26, outline = false, order = 1, sz = UDim2.fromOffset(30, 36) })
+	local rockText = label({ parent = rockPill, text = "0", size = 28, order = 2, sz = UDim2.fromOffset(0, 36) })
+	rockText.AutomaticSize = Enum.AutomaticSize.X
+	local function refreshRocks()
+		rockText.Text = fmt(attr("Rocks", 0))
+		pulse(rockScale, 1.12)
+	end
+	player:GetAttributeChangedSignal("Rocks"):Connect(refreshRocks)
+	rockText.Text = fmt(attr("Rocks", 0))
+
+	-- a rock breaking in the cave
+	local ROCK_COLORS = {}
+	for _, R in CFG.rockTypes do
+		ROCK_COLORS[R.id] = rgb(R.color)
+	end
+	Remotes.RockMined.OnClientEvent:Connect(function(pos, kind, reward)
+		local c = ROCK_COLORS[kind] or WHITE
+		dust(pos, c, 10)
+		chunks(pos, c, Enum.Material.SmoothPlastic, 6)
+		sparkle(pos, c:Lerp(WHITE, 0.3), 12, 16)
+		popup(pos + Vector3.new(0, 2, 0), `+{reward} 🪨`, c:Lerp(WHITE, 0.25), 26 + math.min(reward, 30) / 2, 6, 1.4)
+		playSound("Break", 1.1)
+		playSound("Pickup", if reward >= 30 then 1.4 else 1)
+		kick(0.15)
+	end)
+
+	-- 💣 TNT: the button shows while you have TNT and stand in your mine
+	local tntButton, _ = cartoonButton(gui, {
+		name = "TNT",
+		sz = UDim2.fromOffset(110, 58),
+		anchor = Vector2.new(1, 1),
+		pos = if isTouch then UDim2.new(1, -28, 1, -286) else UDim2.new(1, -28, 1, -120),
+		top = Color3.fromRGB(255, 110, 90),
+		bottom = Color3.fromRGB(200, 30, 40),
+		text = "💣 TNT",
+		textSize = 22,
+		onClick = function()
+			Remotes.Action:FireServer("UseTNT")
+		end,
+	})
+	tntButton.Visible = false
+	local tntLabel = tntButton:FindFirstChildOfClass("TextLabel")
+	Remotes.Blast.OnClientEvent:Connect(function(pos, coins, count)
+		local boom = Instance.new("Explosion")
+		boom.Position = pos
+		boom.BlastRadius = 16
+		boom.BlastPressure = 0
+		boom.DestroyJointRadiusPercent = 0
+		boom.ExplosionType = Enum.ExplosionType.NoCraters
+		boom.Parent = workspace
+		for _ = 1, 6 do
+			local spot = pos + Vector3.new(math.random(-9, 9), math.random(0, 4), math.random(-9, 9))
+			dust(spot, Color3.fromRGB(255, 160, 80), 10)
+			chunks(spot, Color3.fromRGB(150, 110, 80), Enum.Material.SmoothPlastic, 5)
+		end
+		playSound("Break", 0.55)
+		playSound("Treasure", 0.8)
+		kick(1.2)
+		confetti(40)
+		toast(`💣 BOOM! {count} blocks · + 💰 {fmt(coins)}`, Color3.fromRGB(255, 170, 90))
+	end)
+
+	-- ACCESSORIES window (opened at the shop counter) ---------------------------------------
+	local _, body = makeWindow("Accessories", "✨ ACCESSORIES", Color3.fromRGB(230, 160, 255), Color3.fromRGB(150, 70, 230))
+	local info = label({ parent = body, text = "", size = 20, sz = UDim2.new(1, 0, 0, 26) })
+	local grid = create("Frame", { Position = UDim2.fromOffset(0, 34), Size = UDim2.new(1, 0, 1, -34), BackgroundTransparency = 1, Parent = body }, {
+		create("UIGridLayout", { CellSize = UDim2.new(0.25, -10, 0.5, -10), CellPadding = UDim2.fromOffset(10, 10), SortOrder = Enum.SortOrder.LayoutOrder }),
+	})
+	local cards = {}
+	for i, A in CFG.accessories do
+		local c = create("Frame", { LayoutOrder = i, BackgroundColor3 = WHITE, Parent = grid }, { corner(UDim.new(0, 12)), stroke(3.5, INK) })
+		gradient(c, Color3.fromRGB(255, 250, 255), Color3.fromRGB(226, 214, 250))
+		label({ parent = c, text = A.icon, size = 38, outline = false, sz = UDim2.new(1, 0, 0.36, 0), pos = UDim2.fromScale(0, 0.02), z = 2 })
+		local name = label({ parent = c, text = A.name, size = 17, color = INK, outline = false, sz = UDim2.new(1, -6, 0.15, 0), pos = UDim2.new(0, 3, 0.38, 0), z = 2 })
+		name.TextScaled = true
+		label({ parent = c, text = `+{math.floor(A.bonus * 100 + 0.5)}% coins · {A.slot}`, size = 13, color = Color3.fromRGB(110, 70, 170), outline = false, sz = UDim2.new(1, -6, 0.12, 0), pos = UDim2.new(0, 3, 0.53, 0), z = 2 })
+		local btn, grad = cartoonButton(c, {
+			sz = UDim2.new(1, -16, 0.27, 0),
+			anchor = Vector2.new(0.5, 1),
+			pos = UDim2.new(0.5, 0, 1, -8),
+			top = Color3.fromRGB(140, 244, 90),
+			bottom = Color3.fromRGB(36, 176, 50),
+			radius = UDim.new(0.25, 0),
+			z = 3,
+			onClick = function()
+				local eq = {}
+				pcall(function()
+					eq = HttpService:JSONDecode(attr("AccEq", "{}"))
+				end)
+				if eq[A.slot] == A.id then
+					Remotes.Action:FireServer("UnequipAccessory", A.slot)
+				else
+					Remotes.Action:FireServer("BuyAccessory", A.id)
+				end
+			end,
+		})
+		local text = label({ parent = btn, text = "", size = 17, sz = UDim2.new(1, -6, 1, 0), pos = UDim2.fromOffset(3, -2), z = 4 })
+		text.TextScaled = true
+		cards[A.id] = { A = A, text = text, grad = grad }
+	end
+	local function refreshAccessories()
+		local owned, eq = {}, {}
+		pcall(function()
+			owned = HttpService:JSONDecode(attr("Accs", "{}"))
+			eq = HttpService:JSONDecode(attr("AccEq", "{}"))
+		end)
+		local rocks = attr("Rocks", 0)
+		info.Text = `🪨 {fmt(rocks)} Rocks · mine them in the Rock Cave next to your mine`
+		for id, card in cards do
+			local A = card.A
+			if eq[A.slot] == id then
+				card.text.Text = "✔ WEARING"
+				card.grad.Color = bevel(Color3.fromRGB(255, 214, 90), Color3.fromRGB(230, 150, 30))
+			elseif owned[id] then
+				card.text.Text = "WEAR"
+				card.grad.Color = bevel(Color3.fromRGB(120, 200, 255), Color3.fromRGB(40, 110, 220))
+			else
+				card.text.Text = `🪨 {fmt(A.price)}`
+				card.grad.Color = if rocks >= A.price then bevel(Color3.fromRGB(140, 244, 90), Color3.fromRGB(36, 176, 50)) else bevel(Color3.fromRGB(200, 204, 215), Color3.fromRGB(140, 146, 165))
+			end
+		end
+	end
+	for _, n in { "Rocks", "Accs", "AccEq" } do
+		player:GetAttributeChangedSignal(n):Connect(refreshAccessories)
+	end
+	refreshAccessories()
+	game:GetService("ProximityPromptService").PromptTriggered:Connect(function(p)
+		if p:GetAttribute("Kind") == "Accessories" and openWindow ~= windows.Accessories then
+			openWindowByKey("Accessories")
+		end
+	end)
+
+	-- TNT button visibility and the price on the TNT stand (per player)
+	task.spawn(function()
+		while true do
+			local count = attr("TNT", 0)
+			tntButton.Visible = count > 0 and slabUI.mySlab() ~= nil
+			if tntLabel then
+				tntLabel.Text = `💣 TNT x{count}`
+			end
+			local income = CFG.income[attr("Pick", 1)] or CFG.income[1]
+			local price = math.max(CFG.tntMinPrice, math.floor(income * CFG.tntMinutes * (1 + attr("Asc", 0) * CFG.ascendBonus)))
+			for _, stand in CollectionService:GetTagged("TNTStand") do
+				local board = stand:FindFirstChild("Info")
+				local priceLabel = board and board:FindFirstChild("Price")
+				if priceLabel then
+					priceLabel.Text = `💰 {fmt(price)}`
+					priceLabel.TextColor3 = if attr("Coins", 0) >= price then GREEN else Color3.fromRGB(255, 214, 90)
+				end
+			end
+			task.wait(0.3)
+		end
+	end)
+end)()
+
 -- HATCH animation ------------------------------------------------------------------
 local hatching = false
 Remotes.Hatched.OnClientEvent:Connect(function(petId, eggId)
@@ -3820,6 +4012,15 @@ do
 		end
 		if best >= CFG.maxDepth then
 			return "⭐ ASCEND at the shrine!", tagged("Shrine"), nil
+		end
+		local ownsAccessory = string.find(attr("Accs", "{}"), "true") ~= nil
+		if not ownsAccessory then
+			local cheapest = CFG.accessories[1].price
+			if attr("Rocks", 0) >= cheapest then
+				return "✨ Buy an accessory with your rocks!", tagged("AccessoryShop"), nil
+			elseif best >= 1 then
+				return `🪨 Mine rocks in your Rock Cave! ({attr("Rocks", 0)}/{cheapest})`, mineCenter + Vector3.new((CFG.caveSide or 1) * (CFG.shaftWidth / 2 + 30), 0, 6), nil -- the ladder hole
+			end
 		end
 		for _, L in CFG.layers do
 			if L.from > best then
