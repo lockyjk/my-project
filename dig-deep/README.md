@@ -36,7 +36,7 @@ The core loop borrows from *+1 Mine Per Click*, one of the biggest mining games 
 - **💪 Strength:** every swing gives Strength, even a click at thin air. A big **+1 💪** pops up at your cursor with a pop sound that climbs in pitch as you keep clicking. Strength multiplies your pickaxe damage (x(1 + √Strength × 0.1)). Deeper layers are much tougher, so you need Strength to get down.
 - **🏋️ Training Area:** four rocks west of the mine. Stand on a rock's glowing pad and your character trains by itself (x1 free, then x3, x10 and x25, unlocked by rebirths).
 - **Milestones:** 25, 50, 100, 250, 500, 1K Strength and so on. Each one pays coins on the spot with a big burst and confetti.
-- **🔁 Rebirth:** reach the Strength goal (250, then x2.6 each time) to reset your Strength for **+0.5x Strength per click** and **+20% cash**, forever. Milestones pay out again on every run.
+- **🔁 Rebirth:** reach the Strength goal (250, then x2.6 each time) to reset your Strength for **+1 Strength per click** and **+20% cash**, forever (+1, +2, +3... per click). Milestones pay out again on every run.
 - **🎁 Free Gifts:** the first gift unlocks after **10 seconds**, then more at 30s, 1m, 2m, 3m, 5m, 7m, 10m, 13m, 16m, 20m and 25m of play: Strength, coins, potions and a free egg. The GIFTS button counts down to the next one.
 - **Offline:** Strength keeps training while you're away, as well as coins.
 - **First steps:** the objective banner now starts with "Click to train Strength" and later sends you to the free training rock.

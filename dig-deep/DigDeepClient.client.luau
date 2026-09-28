@@ -3162,7 +3162,7 @@ end
 		strengthText.Text = fmt(math.floor(v))
 	end)
 	local function refreshMult()
-		multText.Text = `x{attr("StrMult", 1)}/click`
+		multText.Text = `+{attr("StrMult", 1)}/click`
 	end
 	player:GetAttributeChangedSignal("StrMult"):Connect(refreshMult)
 	refreshMult()
@@ -3239,7 +3239,7 @@ end
 	end
 	Remotes.Milestone.OnClientEvent:Connect(function(value, reward)
 		if value == "Rebirth" then
-			celebrate(`🔁 REBIRTH {reward}!`, `Now x{1 + reward * CFG.rebirthStrength} Strength per click · +{math.floor(reward * CFG.rebirthCash * 100 + 0.5)}% cash`, Color3.fromRGB(124, 240, 255))
+			celebrate(`🔁 REBIRTH {reward}!`, `Now +{1 + reward * CFG.rebirthStrength} 💪 every click · +{math.floor(reward * CFG.rebirthCash * 100 + 0.5)}% cash`, Color3.fromRGB(124, 240, 255))
 			confetti(90)
 			playSound("LevelUp", 0.9)
 			return
@@ -3284,8 +3284,8 @@ end
 	local function refreshRebirth()
 		local r, strength, need = attr("Rebirths", 0), attr("Strength", 0), attr("RebirthReq", 250)
 		info.Text = `Rebirth resets your 💪 Strength, but every rebirth makes each click stronger forever. You have {r} rebirth{if r == 1 then "" else "s"}.`
-		nowText.Text = `💪 x{1 + r * CFG.rebirthStrength}\n💰 +{math.floor(r * CFG.rebirthCash * 100 + 0.5)}%`
-		nextText.Text = `💪 x{1 + (r + 1) * CFG.rebirthStrength}\n💰 +{math.floor((r + 1) * CFG.rebirthCash * 100 + 0.5)}%`
+		nowText.Text = `💪 +{1 + r * CFG.rebirthStrength} per click\n💰 +{math.floor(r * CFG.rebirthCash * 100 + 0.5)}% cash`
+		nextText.Text = `💪 +{1 + (r + 1) * CFG.rebirthStrength} per click\n💰 +{math.floor((r + 1) * CFG.rebirthCash * 100 + 0.5)}% cash`
 		local f = math.clamp(strength / math.max(1, need), 0, 1)
 		barFill.Size = UDim2.fromScale(f, 1)
 		barText.Text = `💪 {fmt(strength)} / {fmt(need)}`
@@ -3641,7 +3641,7 @@ do
 		end
 		-- after the tutorial: always the next goal
 		if strength >= attr("RebirthReq", math.huge) then
-			return `🔁 REBIRTH for x{1 + (attr("Rebirths", 0) + 1) * CFG.rebirthStrength} Strength!`, nil, nil
+			return `🔁 REBIRTH for +{1 + (attr("Rebirths", 0) + 1) * CFG.rebirthStrength} 💪 per click!`, nil, nil
 		end
 		if full then
 			return sellStep(nil)

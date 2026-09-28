@@ -225,7 +225,7 @@ local OFFLINE_CAP_MINUTES = 8 * 60
 -- Strength. Strength multiplies pickaxe damage, so deeper, tougher layers need more of it.
 local STRENGTH_DAMAGE = 0.1 -- pickaxe damage x (1 + sqrt(Strength) * this)
 local REBIRTH_BASE, REBIRTH_GROWTH = 250, 2.6 -- Strength needed for rebirth r is BASE * GROWTH^r
-local REBIRTH_STRENGTH, REBIRTH_CASH = 0.5, 0.2 -- each rebirth: +0.5x Strength per click, +0.2x cash
+local REBIRTH_STRENGTH, REBIRTH_CASH = 1, 0.2 -- each rebirth: +1 Strength per click, +20% cash
 local OFFLINE_STRENGTH_PER_MINUTE = 15
 local TRAIN_TICK = 0.4 -- seconds between automatic swings on a training rock
 local TRAINING_ROCKS = {
@@ -2756,11 +2756,7 @@ do
 		if not d then
 			return 1
 		end
-		local m = 1 + (d.rebirths or 0) * REBIRTH_STRENGTH
-		if owns(player, "VIP") then
-			m *= 1.25
-		end
-		return m
+		return 1 + (d.rebirths or 0) * REBIRTH_STRENGTH
 	end
 
 	damageMult = function(d)
@@ -2779,6 +2775,7 @@ do
 		if not d then
 			return
 		end
+		amount = math.max(1, math.floor(amount + 0.5)) -- whole numbers read better in the popups
 		d.strength += amount
 		player:SetAttribute("Strength", d.strength)
 		dirty[player] = true
