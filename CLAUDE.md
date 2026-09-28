@@ -41,5 +41,8 @@ gives a permanent multiplier.
 ## Dig Deep (`dig-deep/`)
 - Two scripts: `DigDeepServer.server.luau` and `DigDeepClient.client.luau`. Build a
   ready-to-play place with `rojo build dig-deep/default.project.json -o dig-deep/DigDeepOfficial.rbxlx`.
-- Keep each script's top-level `local`s well under 200. Luau's register limit is 200 per
-  function, and exceeding it stops the whole script from loading. Wrap subsystems in `do` blocks.
+- Keep each script's top-level `local`s at 160 or fewer. Luau's register limit is 200 per
+  function, and exceeding it stops the whole script from loading. Roblox counts every local,
+  even constants that other Luau compilers fold away, so count them from the source (the old
+  "compiles with N extra locals" check passed at 212 while Roblox refused the script). Put
+  settings in the `K` table and HUD pieces in `U`, and wrap subsystems in `do` blocks.

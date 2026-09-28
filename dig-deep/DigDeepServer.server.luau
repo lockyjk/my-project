@@ -15,6 +15,9 @@ local HttpService = game:GetService("HttpService")
 local MarketplaceService = game:GetService("MarketplaceService")
 local RunService = game:GetService("RunService")
 
+-- Settings live in one table so they do not use up Luau's 200 local-variable slots
+local K = {}
+
 -- STARTUP STATUS: a bar at the top of the screen says what is being built, and any error while
 -- the game starts shows in the middle of the screen, so problems are visible without Output.
 local startupHint = Instance.new("Hint")
@@ -50,31 +53,31 @@ end
 --------------------------------------------------------------------------------
 -- Surface height. The mine digs down 3000 studs from here, so the place file sets
 -- Workspace.FallenPartsDestroyHeight to -4000 (the script also tries to, below).
-local TOP = 100
-local BLOCK = 6 -- studs per block
-local GRID = 24 -- the mine is GRID x GRID blocks wide
-local MAX_DEPTH = 500 -- rows; bedrock below
-local REACH = 20 -- studs from your root part to a block's centre
-local SHAFT_SLOTS = 9 -- one personal shaft per player (set the server size to 9 or fewer)
-local SHAFT_W = 24 -- studs across the inside of a shaft
-local SHAFT_PITCH = 72 -- studs between shaft centres (3 x 3 grid)
-local SLAB_LOOT = 3 -- each slab you break holds this many blocks' worth of loot
-local SLAB_HP = 4 -- slab health = layer hp x this
-local RUSH_EVERY = 12 * 60 -- a Gold Rush starts every 12 minutes on the UTC clock...
-local RUSH_LENGTH = 90 -- ...and lasts this many seconds
-local RUSH_MULT = 3 -- ore chance multiplier during a rush
-local GEODE_CHANCE = 1 / 260
-local GEODE_MIN_DEPTH = 20
-local ELEVATOR_STEP = 25
-local FRIEND_BONUS = 0.1
-local TREASURE_BONUS = 0.1 -- +10% ore value per unique treasure found
-local ASCEND_BONUS = 0.5 -- +50% ore value per Ascension
-local AUTOSAVE_EVERY = 90
-local DATA_STORE = "DigDeep_v1"
+K.TOP = 100
+K.BLOCK = 6 -- studs per block
+K.GRID = 24 -- the mine is GRID x GRID blocks wide
+K.MAX_DEPTH = 500 -- rows; bedrock below
+K.REACH = 20 -- studs from your root part to a block's centre
+K.SHAFT_SLOTS = 9 -- one personal shaft per player (set the server size to 9 or fewer)
+K.SHAFT_W = 24 -- studs across the inside of a shaft
+K.SHAFT_PITCH = 72 -- studs between shaft centres (3 x 3 grid)
+K.SLAB_LOOT = 3 -- each slab you break holds this many blocks' worth of loot
+K.SLAB_HP = 4 -- slab health = layer hp x this
+K.RUSH_EVERY = 12 * 60 -- a Gold Rush starts every 12 minutes on the UTC clock...
+K.RUSH_LENGTH = 90 -- ...and lasts this many seconds
+K.RUSH_MULT = 3 -- ore chance multiplier during a rush
+K.GEODE_CHANCE = 1 / 260
+K.GEODE_MIN_DEPTH = 20
+K.ELEVATOR_STEP = 25
+K.FRIEND_BONUS = 0.1
+K.TREASURE_BONUS = 0.1 -- +10% ore value per unique treasure found
+K.ASCEND_BONUS = 0.5 -- +50% ore value per Ascension
+K.AUTOSAVE_EVERY = 90
+K.DATA_STORE = "DigDeep_v1"
 
 -- Ores. value = coins per block before bonuses. hp = block health multiplier.
 -- tier drives popup size (1 common .. 6 mythic). announce = tell the whole server.
-local ORES = {
+K.ORES = {
 	Coal = { name = "Coal", value = 5, hp = 1.3, color = { 45, 45, 50 }, material = "Slate", tier = 1 },
 	Copper = { name = "Copper", value = 12, hp = 1.4, color = { 206, 122, 72 }, material = "Metal", tier = 1 },
 	Iron = { name = "Iron", value = 30, hp = 1.5, color = { 208, 192, 176 }, material = "Metal", tier = 2 },
@@ -96,7 +99,7 @@ local ORES = {
 
 -- Layers, top to bottom. from = first row. hp = base block health. value = coins for a plain block.
 -- tint = colour grading while you are in this layer.
-local LAYERS = {
+K.LAYERS = {
 	{ name = "Topsoil", band = { 220, 160, 90 }, alt = { material = "Mud", color = { 176, 108, 56 } }, from = 0, hp = 3, value = 1, color = { 196, 128, 70 }, material = "Ground", tint = { 255, 244, 228 },
 		ores = { { id = "Coal", chance = 0.06 }, { id = "Copper", chance = 0.03 } } },
 	{ name = "Stone", band = { 196, 196, 208 }, alt = { material = "Rock", color = { 140, 142, 158 } }, from = 20, hp = 16, value = 2, color = { 160, 162, 176 }, material = "Slate", tint = { 236, 240, 255 },
@@ -113,7 +116,7 @@ local LAYERS = {
 		ores = { { id = "Starshard", chance = 0.01 }, { id = "Corium", chance = 0.02 }, { id = "Singularity", chance = 0.002 } } },
 }
 
-local PICKS = {
+K.PICKS = {
 	{ name = "Rusty Pick", dmg = 1, speed = 0.45, price = 0, color = { 150, 96, 62 }, material = "CorrodedMetal" },
 	{ name = "Stone Pick", dmg = 2, speed = 0.42, price = 40, color = { 140, 140, 144 }, material = "Slate" },
 	{ name = "Iron Pick", dmg = 4, speed = 0.40, price = 700, color = { 205, 205, 212 }, material = "Metal" },
@@ -127,7 +130,7 @@ local PICKS = {
 	{ name = "Rainbow Pick", dmg = 3200, speed = 0.16, price = 3500000000, color = { 255, 110, 220 }, gem = { 120, 255, 255 }, material = "Neon", glow = true },
 }
 
-local BAGS = {
+K.BAGS = {
 	{ name = "Pouch", capacity = 20, price = 0, color = { 165, 124, 84 } },
 	{ name = "Satchel", capacity = 50, price = 90, color = { 125, 82, 52 } },
 	{ name = "Rucksack", capacity = 120, price = 1500, color = { 74, 112, 64 } },
@@ -139,7 +142,7 @@ local BAGS = {
 }
 
 -- Treasures, in museum order. chance is per block broken at or below `depth` metres.
-local TREASURES = {
+K.TREASURES = {
 	{ id = "OldBoot", name = "Old Boot", depth = 0, chance = 1 / 350, reward = 60, color = { 150, 100, 60 }, hint = "Somewhere near the top" },
 	{ id = "AncientCoin", name = "Ancient Coin", depth = 15, chance = 1 / 700, reward = 400, color = { 240, 190, 70 }, hint = "Deeper than 15m" },
 	{ id = "FossilSkull", name = "Fossil Skull", depth = 45, chance = 1 / 1400, reward = 3000, color = { 230, 220, 192 }, hint = "Deeper than 45m" },
@@ -151,11 +154,11 @@ local TREASURES = {
 }
 
 -- Daily chest base reward by pickaxe tier, so it stays useful as you progress.
-local DAILY = { 100, 300, 1500, 8000, 25000, 120000, 700000, 5000000, 35000000, 250000000 }
+K.DAILY = { 100, 300, 1500, 8000, 25000, 120000, 700000, 5000000, 35000000, 250000000 }
 
 -- Rough coins per minute of digging for each pickaxe tier. Coin packs, codes and the spin wheel
 -- pay "N minutes of digging", so rewards stay useful at every stage of the game.
-local INCOME = { 30, 90, 300, 1100, 3500, 14000, 60000, 350000, 2000000, 12000000, 75000000 }
+K.INCOME = { 30, 90, 300, 1100, 3500, 14000, 60000, 350000, 2000000, 12000000, 75000000 }
 
 --------------------------------------------------------------------------------
 -- MONETIZATION
@@ -163,7 +166,7 @@ local INCOME = { 30, 90, 300, 1100, 3500, 14000, 60000, 350000, 2000000, 1200000
 -- While an id is 0: in a live game the item shows "Coming soon"; in Studio, buying it
 -- grants it for free (this session only) so you can test everything.
 --------------------------------------------------------------------------------
-local PASSES = {
+K.PASSES = {
 	{ key = "VIP", id = 0, price = 399, name = "VIP", icon = "👑", desc = "+25% ore value, a VIP tag and a sparkling VIP pickaxe" },
 	{ key = "DoubleCoins", id = 0, price = 349, name = "2x Coins", icon = "💰", desc = "Everything you sell is worth double" },
 	{ key = "AutoMine", id = 0, price = 299, name = "Auto Mine", icon = "🤖", desc = "Dig without clicking. Toggle it any time" },
@@ -173,7 +176,7 @@ local PASSES = {
 	{ key = "InfiniteBag", id = 0, price = 799, name = "Infinite Backpack", icon = "♾️", desc = "Your backpack never fills up" },
 	{ key = "MorePets", id = 0, price = 349, name = "+2 Pet Slots", icon = "🐾", desc = "Equip 5 pets instead of 3" },
 }
-local PRODUCTS = {
+K.PRODUCTS = {
 	{ key = "Starter", id = 0, price = 99, name = "Starter Pack", icon = "🎁", desc = "Starter Pup pet, 15 min of every potion and a coin bundle", starter = true },
 	{ key = "CoinsS", id = 0, price = 49, name = "Pile of Coins", icon = "🪙", coinMinutes = 20 },
 	{ key = "CoinsM", id = 0, price = 199, name = "Sack of Coins", icon = "💰", coinMinutes = 120 },
@@ -188,7 +191,7 @@ local PRODUCTS = {
 -- PETS, EGGS, LEVELS, SPIN WHEEL, CODES
 -- Eggs cost coins only (never Robux), so there are no paid random items.
 --------------------------------------------------------------------------------
-local PETS = {
+K.PETS = {
 	Mole = { style = "critter", variant = "mole", name = "Mole", rarity = "Common", boost = 0.05, color = { 150, 108, 78 }, accent = { 255, 170, 170 }, ears = "round", icon = "🐹" },
 	Bunny = { style = "bunny", name = "Bunny", rarity = "Uncommon", boost = 0.1, color = { 240, 238, 242 }, accent = { 255, 170, 195 }, ears = "long", icon = "🐰" },
 	PebblePup = { style = "critter", variant = "dog", name = "Pebble Pup", rarity = "Rare", boost = 0.2, color = { 150, 150, 162 }, accent = { 90, 90, 104 }, ears = "pointy", tail = true, icon = "🐶" },
@@ -207,18 +210,18 @@ local PETS = {
 	SingularitySpirit = { style = "wisp", variant = "spirit", name = "Singularity Spirit", rarity = "Legendary", boost = 18, color = { 62, 52, 104 }, accent = { 255, 255, 255 }, ears = "none", wings = true, glow = true, icon = "✨" },
 	StarterPup = { style = "critter", variant = "starter", name = "Starter Pup", rarity = "Exclusive", boost = 0.5, color = { 255, 202, 122 }, accent = { 255, 122, 82 }, ears = "round", tail = true, icon = "🐕" },
 }
-local RARITY_COLORS = { Common = { 200, 200, 210 }, Uncommon = { 110, 230, 130 }, Rare = { 80, 170, 255 }, Legendary = { 255, 200, 50 }, Exclusive = { 255, 110, 200 } }
-local EGGS = {
+K.RARITY_COLORS = { Common = { 200, 200, 210 }, Uncommon = { 110, 230, 130 }, Rare = { 80, 170, 255 }, Legendary = { 255, 200, 50 }, Exclusive = { 255, 110, 200 } }
+K.EGGS = {
 	{ id = "DirtEgg", name = "Dirt Egg", price = 250, depth = 0, color = { 176, 124, 82 }, spots = { 120, 80, 50 }, pets = { { "Mole", 60 }, { "Bunny", 28 }, { "PebblePup", 10 }, { "GoldenMole", 2 } } },
 	{ id = "CaveEgg", name = "Cave Egg", price = 6000, depth = 60, color = { 92, 92, 112 }, spots = { 255, 140, 60 }, pets = { { "Bat", 60 }, { "Slime", 28 }, { "RockGolem", 10 }, { "LavaPup", 2 } } },
 	{ id = "CrystalEgg", name = "Crystal Egg", price = 250000, depth = 200, color = { 152, 202, 255 }, spots = { 255, 140, 230 }, pets = { { "CrystalFox", 60 }, { "GemOwl", 28 }, { "PrismDragon", 10 }, { "DiamondDragon", 2 } } },
 	{ id = "VoidEgg", name = "Void Egg", price = 25000000, depth = 300, color = { 44, 22, 74 }, spots = { 202, 142, 255 }, pets = { { "ShadowCat", 60 }, { "VoidWisp", 28 }, { "NebulaSerpent", 10 }, { "SingularitySpirit", 2 } } },
 }
-local PET_SLOTS = 3
-local MAX_PETS = 50
-local LEVEL_BONUS = 0.01 -- +1% ore value per level
-local SPIN_COOLDOWN = 20 * 60
-local SPIN = {
+K.PET_SLOTS = 3
+K.MAX_PETS = 50
+K.LEVEL_BONUS = 0.01 -- +1% ore value per level
+K.SPIN_COOLDOWN = 20 * 60
+K.SPIN = {
 	{ label = "Coins", icon = "🪙", weight = 30, coinMinutes = 3, color = { 255, 206, 70 } },
 	{ label = "2x Coins", icon = "🧪", weight = 14, potion = "Coins", minutes = 10, color = { 255, 150, 60 } },
 	{ label = "Big Coins", icon = "💰", weight = 18, coinMinutes = 8, color = { 110, 220, 110 } },
@@ -229,7 +232,7 @@ local SPIN = {
 	{ label = "JACKPOT", icon = "💎", weight = 0.5, coinMinutes = 120, color = { 255, 80, 80 } },
 }
 -- Daily quests: 3 are picked per day (same for everyone), progress resets at midnight UTC.
-local QUEST_POOL = {
+K.QUEST_POOL = {
 	{ id = "mine", text = "Break %d blocks", goal = 60 },
 	{ id = "ore", text = "Collect %d ores", goal = 25 },
 	{ id = "sell", text = "Sell your bag %d times", goal = 5 },
@@ -239,25 +242,25 @@ local QUEST_POOL = {
 	{ id = "deep", text = "Dig %d new rows deeper", goal = 10 },
 	{ id = "train", text = "Swing your pickaxe %d times", goal = 400 },
 }
-local QUEST_REWARD_MINUTES = 6
-local OFFLINE_RATE = 0.15 -- share of normal income earned while away
-local OFFLINE_CAP_MINUTES = 8 * 60
+K.QUEST_REWARD_MINUTES = 6
+K.OFFLINE_RATE = 0.15 -- share of normal income earned while away
+K.OFFLINE_CAP_MINUTES = 8 * 60
 
 -- +1 STRENGTH EVERY CLICK (the "+1 Mine Per Click" loop): every swing, even at thin air, trains
 -- Strength. Strength multiplies pickaxe damage, so deeper, tougher layers need more of it.
-local STRENGTH_DAMAGE = 0.1 -- pickaxe damage x (1 + sqrt(Strength) * this)
-local REBIRTH_BASE, REBIRTH_GROWTH = 250, 2.6 -- Strength needed for rebirth r is BASE * GROWTH^r
-local REBIRTH_STRENGTH, REBIRTH_CASH = 1, 0.2 -- each rebirth: +1 Strength per click, +20% cash
-local OFFLINE_STRENGTH_PER_MINUTE = 15
-local TRAIN_TICK = 0.4 -- seconds between automatic swings on a training rock
-local TRAINING_ROCKS = {
+K.STRENGTH_DAMAGE = 0.1 -- pickaxe damage x (1 + sqrt(Strength) * this)
+K.REBIRTH_BASE, K.REBIRTH_GROWTH = 250, 2.6 -- Strength needed for rebirth r is BASE * GROWTH^r
+K.REBIRTH_STRENGTH, K.REBIRTH_CASH = 1, 0.2 -- each rebirth: +1 Strength per click, +20% cash
+K.OFFLINE_STRENGTH_PER_MINUTE = 15
+K.TRAIN_TICK = 0.4 -- seconds between automatic swings on a training rock
+K.TRAINING_ROCKS = {
 	{ name = "Pebble Rock", mult = 1, rebirths = 0, color = { 150, 150, 160 } },
 	{ name = "Boulder", mult = 3, rebirths = 1, color = { 196, 136, 84 } },
 	{ name = "Crystal Rock", mult = 10, rebirths = 10, color = { 120, 190, 255 }, gem = { 90, 230, 255 } },
 	{ name = "Star Rock", mult = 25, rebirths = 25, color = { 170, 110, 255 }, gem = { 255, 230, 90 } },
 }
 -- Free gifts for playing: the first one after 10 seconds, then every few minutes (resets each session)
-local GIFTS = {
+K.GIFTS = {
 	{ at = 10, icon = "💪", strengthMinutes = 1 },
 	{ at = 30, icon = "💰", coinMinutes = 2 },
 	{ at = 60, icon = "⚡", potion = "Speed", minutes = 5 },
@@ -273,7 +276,7 @@ local GIFTS = {
 }
 
 -- Codes are case-insensitive. Post new ones in your group/social to bring players back.
-local CODES = {
+K.CODES = {
 	RELEASE = { coinMinutes = 10 },
 	DIGDEEP = { potion = "Luck", minutes = 15 },
 	GOLDRUSH = { potion = "Coins", minutes = 15 },
@@ -282,19 +285,19 @@ local CODES = {
 
 -- SIDE CAVE: once you break the first block, a tunnel in your shaft opens into a cave full of
 -- rocks. Rocks take a set number of clicks and pay 🪨 Rocks, spent on accessories.
-local ROCK_TYPES = {
+K.ROCK_TYPES = {
 	{ id = "Pebble", name = "Pebble Rock", color = { 150, 150, 162 }, hits = 4, reward = 1, weight = 70 },
 	{ id = "Gold", name = "Gold Rock", color = { 255, 200, 60 }, hits = 8, reward = 6, weight = 24 },
 	{ id = "Gem", name = "Gem Rock", color = { 180, 100, 255 }, hits = 15, reward = 30, weight = 6, glow = true },
 }
-local CAVE_ROCKS = 7 -- rocks in each cave
-local CAVE_LENGTH = 36 -- studs the cave runs out from the side of the shaft (3 grass tiles)
-local CAVE_DOOR = 10 -- width of the tunnel from the shaft into the cave
-local CAVE_SIDE = -1 -- the cave is on your right (-X) when you face the mine from spawn
-local ROCK_RESPAWN = 15 -- seconds
+K.CAVE_ROCKS = 7 -- rocks in each cave
+K.CAVE_LENGTH = 36 -- studs the cave runs out from the side of the shaft (3 grass tiles)
+K.CAVE_DOOR = 10 -- width of the tunnel from the shaft into the cave
+K.CAVE_SIDE = -1 -- the cave is on your right (-X) when you face the mine from spawn
+K.ROCK_RESPAWN = 15 -- seconds
 
 -- Accessories (bought with 🪨 Rocks). One per slot; each adds coin value while you wear it.
-local ACCESSORIES = {
+K.ACCESSORIES = {
 	{ id = "PartyHat", name = "Party Hat", slot = "Head", price = 40, bonus = 0.03, icon = "🥳" },
 	{ id = "MinerHelmet", name = "Miner Helmet", slot = "Head", price = 150, bonus = 0.06, icon = "⛑️" },
 	{ id = "CoolShades", name = "Cool Shades", slot = "Face", price = 250, bonus = 0.05, icon = "😎" },
@@ -307,9 +310,9 @@ local ACCESSORIES = {
 
 -- TNT: bought with coins at the TNT stand (it costs a lot). One stick blasts through
 -- TNT_SLABS blocks in your mine at once, and everything it blows up is sold on the spot.
-local TNT_SLABS = 5
-local TNT_MINUTES = 25 -- price = this many minutes of digging with your current pickaxe
-local TNT_MIN_PRICE = 2500
+K.TNT_SLABS = 5
+K.TNT_MINUTES = 25 -- price = this many minutes of digging with your current pickaxe
+K.TNT_MIN_PRICE = 2500
 
 --------------------------------------------------------------------------------
 -- HELPERS
@@ -325,10 +328,10 @@ local function material(name)
 end
 
 local function W(x, y, z)
-	return Vector3.new(x, TOP + y, z)
+	return Vector3.new(x, K.TOP + y, z)
 end
 
-local SUFFIX = { "", "K", "M", "B", "T", "Qa", "Qi" }
+K.SUFFIX = { "", "K", "M", "B", "T", "Qa", "Qi" }
 local function fmt(n)
 	n = math.floor(n)
 	if n < 1000 then
@@ -336,7 +339,7 @@ local function fmt(n)
 	end
 	local i = 1
 	local v = n
-	while v >= 1000 and i < #SUFFIX do
+	while v >= 1000 and i < #K.SUFFIX do
 		v /= 1000
 		i += 1
 	end
@@ -352,18 +355,18 @@ local function fmt(n)
 		s = string.gsub(s, "0+$", "")
 		s = string.gsub(s, "%.$", "")
 	end
-	return s .. SUFFIX[i]
+	return s .. K.SUFFIX[i]
 end
 
 -- The world is built from thousands of parts. Studio stops a script that runs too long without
 -- a break, so while the world is being built we yield for a frame every few hundred parts.
-local BUILD_YIELD_EVERY = 300
+K.BUILD_YIELD_EVERY = 300
 local building, builtParts = false, 0
 
 local function newPart(props, parent)
 	if building then
 		builtParts += 1
-		if builtParts % BUILD_YIELD_EVERY == 0 then
+		if builtParts % K.BUILD_YIELD_EVERY == 0 then
 			task.wait()
 		end
 	end
@@ -481,11 +484,11 @@ local function piece(model, props)
 end
 
 -- Themed eggs (about 4.6 x 6 studs, centred on the origin): each one hints at what's inside.
-local EGG_R, EGG_H = 2.3, 3
+K.EGG_R, K.EGG_H = 2.3, 3
 local function eggPoint(angle, h, out)
-	local r = EGG_R * math.sqrt(math.max(0, 1 - h * h))
-	local p = Vector3.new(math.cos(angle) * r, h * EGG_H, math.sin(angle) * r)
-	local n = Vector3.new(p.X / (EGG_R * EGG_R), p.Y / (EGG_H * EGG_H), p.Z / (EGG_R * EGG_R)).Unit
+	local r = K.EGG_R * math.sqrt(math.max(0, 1 - h * h))
+	local p = Vector3.new(math.cos(angle) * r, h * K.EGG_H, math.sin(angle) * r)
+	local n = Vector3.new(p.X / (K.EGG_R * K.EGG_R), p.Y / (K.EGG_H * K.EGG_H), p.Z / (K.EGG_R * K.EGG_R)).Unit
 	return p + n * (out or 0), n
 end
 
@@ -592,7 +595,7 @@ end
 -- A banded wooden handle with a wrapped grip and pommel, and a curved head that tapers to two
 -- points with a gem set in the middle. Higher tiers glow and sparkle.
 local function buildPick(tier)
-	local P = PICKS[tier]
+	local P = K.PICKS[tier]
 	local m = Instance.new("Model")
 	m.Name = P.name
 	local wood = Color3.fromRGB(128, 84, 50)
@@ -630,7 +633,7 @@ local function buildPick(tier)
 end
 
 local function buildBag(tier, s)
-	local B = BAGS[tier]
+	local B = K.BAGS[tier]
 	local m = Instance.new("Model")
 	m.Name = B.name
 	local color = rgb(B.color)
@@ -647,9 +650,9 @@ local function buildBag(tier, s)
 	return m
 end
 
-local TREASURE_BUILDERS = {}
+K.TREASURE_BUILDERS = {}
 
-TREASURE_BUILDERS.OldBoot = function(m)
+K.TREASURE_BUILDERS.OldBoot = function(m)
 	local leather = Color3.fromRGB(110, 72, 45)
 	local foot = piece(m, { Size = Vector3.new(2.5, 0.8, 1.1), CFrame = CFrame.new(0.25, -0.35, 0), Color = leather, Material = Enum.Material.Fabric })
 	piece(m, { Size = Vector3.new(2.7, 0.35, 1.2), CFrame = CFrame.new(0.25, -0.9, 0), Color = Color3.fromRGB(55, 38, 28), Material = Enum.Material.Wood })
@@ -659,7 +662,7 @@ TREASURE_BUILDERS.OldBoot = function(m)
 	return foot
 end
 
-TREASURE_BUILDERS.AncientCoin = function(m)
+K.TREASURE_BUILDERS.AncientCoin = function(m)
 	local disc = piece(m, { Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.35, 2.6, 2.6), CFrame = CFrame.new(), Color = Color3.fromRGB(235, 185, 60), Material = Enum.Material.Foil })
 	piece(m, { Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.42, 1.8, 1.8), CFrame = CFrame.new(), Color = Color3.fromRGB(200, 145, 40), Material = Enum.Material.Foil })
 	piece(m, { Size = Vector3.new(0.5, 0.5, 0.5), CFrame = CFrame.new(), Color = Color3.fromRGB(20, 16, 12), Material = Enum.Material.SmoothPlastic })
@@ -667,7 +670,7 @@ TREASURE_BUILDERS.AncientCoin = function(m)
 	return disc
 end
 
-TREASURE_BUILDERS.FossilSkull = function(m)
+K.TREASURE_BUILDERS.FossilSkull = function(m)
 	local bone = Color3.fromRGB(228, 218, 190)
 	local skull = piece(m, { Shape = Enum.PartType.Ball, Size = Vector3.new(2.4, 2.4, 2.4), CFrame = CFrame.new(), Color = bone, Material = Enum.Material.Limestone })
 	piece(m, { Size = Vector3.new(1.6, 0.6, 1.4), CFrame = CFrame.new(0, -1.1, -0.5), Color = bone, Material = Enum.Material.Limestone })
@@ -678,7 +681,7 @@ TREASURE_BUILDERS.FossilSkull = function(m)
 	return skull
 end
 
-TREASURE_BUILDERS.GoldenIdol = function(m)
+K.TREASURE_BUILDERS.GoldenIdol = function(m)
 	local gold = Color3.fromRGB(245, 188, 50)
 	piece(m, { Size = Vector3.new(1.8, 0.5, 1.8), CFrame = CFrame.new(0, -1.4, 0), Color = gold:Lerp(Color3.new(0, 0, 0), 0.2), Material = Enum.Material.Foil })
 	local body = piece(m, { Size = Vector3.new(1.3, 1.6, 1), CFrame = CFrame.new(0, -0.35, 0), Color = gold, Material = Enum.Material.Foil })
@@ -691,7 +694,7 @@ TREASURE_BUILDERS.GoldenIdol = function(m)
 	return body
 end
 
-TREASURE_BUILDERS.DragonEgg = function(m)
+K.TREASURE_BUILDERS.DragonEgg = function(m)
 	local shell = piece(m, { Size = Vector3.new(2.2, 3, 2.2), CFrame = CFrame.new(), Color = Color3.fromRGB(150, 30, 42), Material = Enum.Material.SmoothPlastic, Reflectance = 0.1 })
 	local mesh = Instance.new("SpecialMesh")
 	mesh.MeshType = Enum.MeshType.Sphere
@@ -703,7 +706,7 @@ TREASURE_BUILDERS.DragonEgg = function(m)
 	return shell
 end
 
-TREASURE_BUILDERS.Meteorite = function(m)
+K.TREASURE_BUILDERS.Meteorite = function(m)
 	local r = Random.new(7)
 	local rock = piece(m, { Shape = Enum.PartType.Ball, Size = Vector3.new(2.8, 2.8, 2.8), CFrame = CFrame.new(), Color = Color3.fromRGB(55, 45, 45), Material = Enum.Material.Basalt })
 	piece(m, { Shape = Enum.PartType.Ball, Size = Vector3.new(1.3, 1.3, 1.3), CFrame = CFrame.new(1, 0.8, 0.3), Color = Color3.fromRGB(50, 40, 40), Material = Enum.Material.Basalt })
@@ -716,7 +719,7 @@ TREASURE_BUILDERS.Meteorite = function(m)
 	return rock
 end
 
-TREASURE_BUILDERS.CrownOfTheDeep = function(m)
+K.TREASURE_BUILDERS.CrownOfTheDeep = function(m)
 	local gold = Color3.fromRGB(250, 196, 60)
 	local upright = CFrame.Angles(0, 0, math.rad(90))
 	local band = piece(m, { Shape = Enum.PartType.Cylinder, Size = Vector3.new(1, 2.8, 2.8), CFrame = upright, Color = gold, Material = Enum.Material.Foil })
@@ -732,7 +735,7 @@ TREASURE_BUILDERS.CrownOfTheDeep = function(m)
 	return band
 end
 
-TREASURE_BUILDERS.RubberDuck = function(m)
+K.TREASURE_BUILDERS.RubberDuck = function(m)
 	local yellow = Color3.fromRGB(255, 215, 40)
 	local body = piece(m, { Shape = Enum.PartType.Ball, Size = Vector3.new(2.2, 2.2, 2.2), CFrame = CFrame.new(), Color = yellow, Material = Enum.Material.SmoothPlastic })
 	piece(m, { Shape = Enum.PartType.Ball, Size = Vector3.new(1.5, 1.5, 1.5), CFrame = CFrame.new(0, 1.25, -0.55), Color = yellow, Material = Enum.Material.SmoothPlastic })
@@ -746,10 +749,10 @@ end
 
 local treasureFolder = Instance.new("Folder")
 treasureFolder.Name = "DigTreasures"
-for _, T in TREASURES do
+for _, T in K.TREASURES do
 	local m = Instance.new("Model")
 	m.Name = T.id
-	m.PrimaryPart = TREASURE_BUILDERS[T.id](m)
+	m.PrimaryPart = K.TREASURE_BUILDERS[T.id](m)
 	m.Parent = treasureFolder
 end
 treasureFolder.Parent = ReplicatedStorage
@@ -769,35 +772,35 @@ end
 
 do
 	local cfg = {
-		top = TOP, block = BLOCK, grid = GRID, maxDepth = MAX_DEPTH, reach = REACH, shaftWidth = SHAFT_W,
-		rushEvery = RUSH_EVERY, rushLength = RUSH_LENGTH, elevatorStep = ELEVATOR_STEP, treasureBonus = TREASURE_BONUS,
+		top = K.TOP, block = K.BLOCK, grid = K.GRID, maxDepth = K.MAX_DEPTH, reach = K.REACH, shaftWidth = K.SHAFT_W,
+		rushEvery = K.RUSH_EVERY, rushLength = K.RUSH_LENGTH, elevatorStep = K.ELEVATOR_STEP, treasureBonus = K.TREASURE_BONUS,
 		layers = {}, ores = {}, picks = {}, bags = {}, treasures = {}, treasureOrder = {},
-		passes = PASSES, products = PRODUCTS, pets = PETS, eggs = EGGS, rarityColors = RARITY_COLORS,
-		petSlots = PET_SLOTS, maxPets = MAX_PETS, spin = SPIN, spinCooldown = SPIN_COOLDOWN, income = INCOME,
-		levelBonus = LEVEL_BONUS, ascendBonus = ASCEND_BONUS, questRewardMinutes = QUEST_REWARD_MINUTES,
-		strengthDamage = STRENGTH_DAMAGE, rebirthStrength = REBIRTH_STRENGTH, rebirthCash = REBIRTH_CASH, trainingRocks = TRAINING_ROCKS, gifts = GIFTS,
-		rockTypes = ROCK_TYPES, accessories = ACCESSORIES, caveSide = CAVE_SIDE, tntSlabs = TNT_SLABS, tntMinutes = TNT_MINUTES, tntMinPrice = TNT_MIN_PRICE,
+		passes = K.PASSES, products = K.PRODUCTS, pets = K.PETS, eggs = K.EGGS, rarityColors = K.RARITY_COLORS,
+		petSlots = K.PET_SLOTS, maxPets = K.MAX_PETS, spin = K.SPIN, spinCooldown = K.SPIN_COOLDOWN, income = K.INCOME,
+		levelBonus = K.LEVEL_BONUS, ascendBonus = K.ASCEND_BONUS, questRewardMinutes = K.QUEST_REWARD_MINUTES,
+		strengthDamage = K.STRENGTH_DAMAGE, rebirthStrength = K.REBIRTH_STRENGTH, rebirthCash = K.REBIRTH_CASH, trainingRocks = K.TRAINING_ROCKS, gifts = K.GIFTS,
+		rockTypes = K.ROCK_TYPES, accessories = K.ACCESSORIES, caveSide = K.CAVE_SIDE, tntSlabs = K.TNT_SLABS, tntMinutes = K.TNT_MINUTES, tntMinPrice = K.TNT_MIN_PRICE,
 		petCount = (function()
 			local n = 0
-			for _ in PETS do
+			for _ in K.PETS do
 				n += 1
 			end
 			return n
 		end)(),
 	}
-	for _, L in LAYERS do
+	for _, L in K.LAYERS do
 		table.insert(cfg.layers, { name = L.name, from = L.from, tint = L.tint, color = L.color })
 	end
-	for id, O in ORES do
+	for id, O in K.ORES do
 		cfg.ores[id] = { name = O.name, color = O.color, tier = O.tier }
 	end
-	for _, P in PICKS do
+	for _, P in K.PICKS do
 		table.insert(cfg.picks, { name = P.name, dmg = P.dmg, speed = P.speed, price = P.price })
 	end
-	for _, B in BAGS do
+	for _, B in K.BAGS do
 		table.insert(cfg.bags, { name = B.name, capacity = B.capacity, price = B.price })
 	end
-	for _, T in TREASURES do
+	for _, T in K.TREASURES do
 		cfg.treasures[T.id] = { name = T.name, depth = T.depth, hint = T.hint, color = T.color }
 		table.insert(cfg.treasureOrder, T.id)
 	end
@@ -810,10 +813,10 @@ end
 --------------------------------------------------------------------------------
 -- WORLD
 --------------------------------------------------------------------------------
-local PIT = SHAFT_PITCH + SHAFT_W / 2 + 12 -- half-width of the fenced mine yard in studs (96)
-local SELL_POS = W(0, 0, -90)
-local SPAWN_POS = W(0, 0, -122)
-local CHEST_POS = W(-16, 0, -121)
+K.PIT = K.SHAFT_PITCH + K.SHAFT_W / 2 + 12 -- half-width of the fenced mine yard in studs (96)
+K.SELL_POS = W(0, 0, -90)
+K.SPAWN_POS = W(0, 0, -122)
+K.CHEST_POS = W(-16, 0, -121)
 
 local town = Instance.new("Folder")
 town.Name = "Town"
@@ -886,12 +889,12 @@ local function buildWorld()
 			local inShaft, overCave = false, false
 			for sx = -1, 1 do
 				for sz = -1, 1 do
-					local dx, dz = cx - sx * SHAFT_PITCH, cz - sz * SHAFT_PITCH
-					if math.abs(dx) < SHAFT_W / 2 and math.abs(dz) < SHAFT_W / 2 then
+					local dx, dz = cx - sx * K.SHAFT_PITCH, cz - sz * K.SHAFT_PITCH
+					if math.abs(dx) < K.SHAFT_W / 2 and math.abs(dz) < K.SHAFT_W / 2 then
 						inShaft = true
-					elseif dx * CAVE_SIDE > SHAFT_W / 2 + CAVE_LENGTH - 12 and dx * CAVE_SIDE < SHAFT_W / 2 + CAVE_LENGTH and dz > 0 and dz < SHAFT_W / 2 then
+					elseif dx * K.CAVE_SIDE > K.SHAFT_W / 2 + K.CAVE_LENGTH - 12 and dx * K.CAVE_SIDE < K.SHAFT_W / 2 + K.CAVE_LENGTH and dz > 0 and dz < K.SHAFT_W / 2 then
 						inShaft = true -- the ladder hole at the far end of the side cave
-					elseif dx * CAVE_SIDE > SHAFT_W / 2 and dx * CAVE_SIDE < SHAFT_W / 2 + CAVE_LENGTH and math.abs(dz) < SHAFT_W / 2 then
+					elseif dx * K.CAVE_SIDE > K.SHAFT_W / 2 and dx * K.CAVE_SIDE < K.SHAFT_W / 2 + K.CAVE_LENGTH and math.abs(dz) < K.SHAFT_W / 2 then
 						overCave = true -- the side cave runs just under the grass here
 					end
 				end
@@ -900,14 +903,14 @@ local function buildWorld()
 			if overCave then
 				newPart({ Name = "Tile", Size = Vector3.new(TILE, 0.25, TILE), Position = W(cx, -0.125, cz), Color = color, Material = Enum.Material.SmoothPlastic }, tiles)
 			elseif not inShaft then
-				newPart({ Name = "Tile", Size = Vector3.new(TILE, BLOCK, TILE), Position = W(cx, -BLOCK / 2, cz), Color = color, Material = Enum.Material.SmoothPlastic }, tiles)
+				newPart({ Name = "Tile", Size = Vector3.new(TILE, K.BLOCK, TILE), Position = W(cx, -K.BLOCK / 2, cz), Color = color, Material = Enum.Material.SmoothPlastic }, tiles)
 			end
 		end
 	end
 	-- a grass skirt outside the walls so the edge of the world never shows
 	local midZ, spanZ, wide = (MAP_Z0 + MAP_Z1) / 2, MAP_Z1 - MAP_Z0, MAP_X * 2 + 600
 	for _, sk in { { 0, MAP_Z1 + 150, wide, 300 }, { 0, MAP_Z0 - 150, wide, 300 }, { MAP_X + 150, midZ, 300, spanZ }, { -MAP_X - 150, midZ, 300, spanZ } } do
-		newPart({ Name = "OuterGrass", Size = Vector3.new(sk[3], BLOCK, sk[4]), Position = W(sk[1], -BLOCK / 2 - 0.05, sk[2]), Color = grassB, Material = Enum.Material.SmoothPlastic }, tiles)
+		newPart({ Name = "OuterGrass", Size = Vector3.new(sk[3], K.BLOCK, sk[4]), Position = W(sk[1], -K.BLOCK / 2 - 0.05, sk[2]), Color = grassB, Material = Enum.Material.SmoothPlastic }, tiles)
 	end
 
 	startupStep("walls")
@@ -987,7 +990,7 @@ local function buildWorld()
 			end
 		end
 	end
-	local fenceEdge = PIT + 1.5
+	local fenceEdge = K.PIT + 1.5
 	fenceRun(Vector3.new(-fenceEdge, 0, -fenceEdge), Vector3.new(-14, 0, -fenceEdge))
 	fenceRun(Vector3.new(14, 0, -fenceEdge), Vector3.new(fenceEdge, 0, -fenceEdge))
 	fenceRun(Vector3.new(-fenceEdge, 0, fenceEdge), Vector3.new(-14, 0, fenceEdge))
@@ -996,7 +999,7 @@ local function buildWorld()
 	fenceRun(Vector3.new(fenceEdge, 0, -fenceEdge), Vector3.new(fenceEdge, 0, fenceEdge))
 
 	-- Hanging lanterns around the pit
-	local e = PIT + 3
+	local e = K.PIT + 3
 	for _, c in { { -e, -e }, { e, -e }, { -e, e }, { e, e }, { 0, e }, { -e, 0 }, { e, 0 }, { 30, -e }, { -30, -e } } do
 		local inward = Vector3.new(-math.sign(c[1]), 0, -math.sign(c[2]))
 		if inward.Magnitude > 0 then
@@ -1015,7 +1018,7 @@ local function buildWorld()
 
 	-- Mine headframe: an A-frame tower with a big wheel over the pit, the landmark you see from spawn.
 	do
-		local hx, hz = PIT + 12, -30
+		local hx, hz = K.PIT + 12, -30
 		local top = W(hx, 34, hz)
 		local timber = Color3.fromRGB(92, 64, 42)
 		local function beam(a, b, thick)
@@ -1032,7 +1035,7 @@ local function buildWorld()
 			local corners = {}
 			for i, f in feet do
 				local flat = W(hx, 0, hz) + (f - W(hx, 0, hz)) * k
-				corners[i] = Vector3.new(flat.X, TOP + hgt, flat.Z)
+				corners[i] = Vector3.new(flat.X, K.TOP + hgt, flat.Z)
 			end
 			beam(corners[1], corners[2], 0.9)
 			beam(corners[3], corners[4], 0.9)
@@ -1060,9 +1063,9 @@ local function buildWorld()
 	end
 
 	-- Pit sign
-	newPart({ Name = "SignPost", Size = Vector3.new(0.8, 9, 0.8), Position = W(-22, 4.5, -PIT - 4), Color = darkWood, Material = Enum.Material.Wood }, town)
-	newPart({ Name = "SignPost", Size = Vector3.new(0.8, 9, 0.8), Position = W(-8, 4.5, -PIT - 4), Color = darkWood, Material = Enum.Material.Wood }, town)
-	local pitSign = newPart({ Name = "PitSign", Size = Vector3.new(16, 4, 0.6), Position = W(-15, 7, -PIT - 4), Color = wood, Material = Enum.Material.WoodPlanks }, town)
+	newPart({ Name = "SignPost", Size = Vector3.new(0.8, 9, 0.8), Position = W(-22, 4.5, -K.PIT - 4), Color = darkWood, Material = Enum.Material.Wood }, town)
+	newPart({ Name = "SignPost", Size = Vector3.new(0.8, 9, 0.8), Position = W(-8, 4.5, -K.PIT - 4), Color = darkWood, Material = Enum.Material.Wood }, town)
+	local pitSign = newPart({ Name = "PitSign", Size = Vector3.new(16, 4, 0.6), Position = W(-15, 7, -K.PIT - 4), Color = wood, Material = Enum.Material.WoodPlanks }, town)
 	signText(pitSign, Enum.NormalId.Front, "⛏ THE PIT ⛏", Color3.fromRGB(255, 225, 150))
 
 	-- Spawn (rotated so players face the pit)
@@ -1072,21 +1075,21 @@ local function buildWorld()
 	spawn.Neutral = true
 	spawn.Duration = 0
 	spawn.Size = Vector3.new(10, 1, 10)
-	spawn.CFrame = CFrame.new(SPAWN_POS + Vector3.new(0, 0.5, 0)) * CFrame.Angles(0, math.pi, 0)
+	spawn.CFrame = CFrame.new(K.SPAWN_POS + Vector3.new(0, 0.5, 0)) * CFrame.Angles(0, math.pi, 0)
 	spawn.Color = stone
 	spawn.Material = Enum.Material.Cobblestone
 	spawn.TopSurface = Enum.SurfaceType.Smooth
 	spawn.Parent = town
 
 	-- Sell pad + mine cart
-	local ring = newPart({ Name = "SellRing", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.3, 17, 17), CFrame = CFrame.new(SELL_POS + Vector3.new(0, 0.15, 0)) * CFrame.Angles(0, 0, math.rad(90)), Color = Color3.fromRGB(120, 84, 30), Material = Enum.Material.Metal, CanCollide = false }, town)
+	local ring = newPart({ Name = "SellRing", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.3, 17, 17), CFrame = CFrame.new(K.SELL_POS + Vector3.new(0, 0.15, 0)) * CFrame.Angles(0, 0, math.rad(90)), Color = Color3.fromRGB(120, 84, 30), Material = Enum.Material.Metal, CanCollide = false }, town)
 	ring.CanQuery = false
-	local pad = newPart({ Name = "SellPad", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.5, 15, 15), CFrame = CFrame.new(SELL_POS + Vector3.new(0, 0.25, 0)) * CFrame.Angles(0, 0, math.rad(90)), Color = Color3.fromRGB(255, 196, 60), Material = Enum.Material.Neon, Transparency = 0.35, CanCollide = false }, town)
+	local pad = newPart({ Name = "SellPad", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.5, 15, 15), CFrame = CFrame.new(K.SELL_POS + Vector3.new(0, 0.25, 0)) * CFrame.Angles(0, 0, math.rad(90)), Color = Color3.fromRGB(255, 196, 60), Material = Enum.Material.Neon, Transparency = 0.35, CanCollide = false }, town)
 	CollectionService:AddTag(pad, "SellPad")
 	addLight(pad, Color3.fromRGB(255, 200, 90), 14, 0.8)
 	billboard(pad, 7, { { "Sub", "Step on the pad to sell your ore", 15, Color3.fromRGB(240, 240, 240) } }, 90)
 	do
-		local k = SELL_POS + Vector3.new(-13, 0, 0)
+		local k = K.SELL_POS + Vector3.new(-13, 0, 0)
 		local plank = Color3.fromRGB(140, 98, 60)
 		newPart({ Name = "KioskFloor", Size = Vector3.new(7, 0.4, 7), Position = k + Vector3.new(0, 0.2, 0), Color = plank, Material = Enum.Material.WoodPlanks }, town)
 		for _, dx in { -3.2, 3.2 } do
@@ -1112,7 +1115,7 @@ local function buildWorld()
 		local lamp = newPart({ Name = "KioskLamp", Size = Vector3.new(0.8, 0.8, 0.8), Position = k + Vector3.new(0, 7.4, 0), Color = Color3.fromRGB(255, 210, 140), Material = Enum.Material.Neon, CanCollide = false }, town)
 		addLight(lamp, Color3.fromRGB(255, 200, 130), 14, 1)
 	end
-	local cartPos = SELL_POS + Vector3.new(12, 0, 0)
+	local cartPos = K.SELL_POS + Vector3.new(12, 0, 0)
 	newPart({ Name = "Cart", Size = Vector3.new(6, 2.6, 4), Position = cartPos + Vector3.new(0, 2.2, 0), Color = darkWood, Material = Enum.Material.WoodPlanks }, town)
 	newPart({ Name = "CartRim", Size = Vector3.new(6.4, 0.4, 4.4), Position = cartPos + Vector3.new(0, 3.6, 0), Color = Color3.fromRGB(80, 80, 88), Material = Enum.Material.Metal }, town)
 	for _, wx in { -2, 2 } do
@@ -1122,7 +1125,7 @@ local function buildWorld()
 	end
 	local cartRng = Random.new(3)
 	for _ = 1, 9 do
-		local o = ORES[({ "Coal", "Copper", "Iron", "Gold", "Ruby", "Emerald" })[cartRng:NextInteger(1, 6)]]
+		local o = K.ORES[({ "Coal", "Copper", "Iron", "Gold", "Ruby", "Emerald" })[cartRng:NextInteger(1, 6)]]
 		newPart({ Name = "Ore", Shape = Enum.PartType.Ball, Size = Vector3.one * cartRng:NextNumber(1, 1.6), Position = cartPos + Vector3.new(cartRng:NextNumber(-2, 2), 3.9, cartRng:NextNumber(-1.2, 1.2)), Color = rgb(o.color), Material = material(o.material), CanCollide = false }, town)
 	end
 
@@ -1167,8 +1170,8 @@ local function buildWorld()
 	end
 
 	local pickStart = -24
-	stall(pickStart - (#PICKS - 1) * 6, #PICKS, Color3.fromRGB(205, 62, 52), "⛏ PICKAXES")
-	for i, P in PICKS do
+	stall(pickStart - (#K.PICKS - 1) * 6, #K.PICKS, Color3.fromRGB(205, 62, 52), "⛏ PICKAXES")
+	for i, P in K.PICKS do
 		local x = pickStart - (i - 1) * 12
 		pedestal(x, -104, "Pick", i, P.name, `⛏ {fmt(P.dmg)} power · {string.format("%.1f", 1 / P.speed)} swings/s`, P.price)
 		local model = buildPick(i)
@@ -1179,8 +1182,8 @@ local function buildWorld()
 	end
 
 	local bagStart = 24
-	stall(bagStart + (#BAGS - 1) * 6, #BAGS, Color3.fromRGB(52, 110, 205), "🎒 BACKPACKS")
-	for i, B in BAGS do
+	stall(bagStart + (#K.BAGS - 1) * 6, #K.BAGS, Color3.fromRGB(52, 110, 205), "🎒 BACKPACKS")
+	for i, B in K.BAGS do
 		local x = bagStart + (i - 1) * 12
 		pedestal(x, -104, "Bag", i, B.name, `🎒 holds {fmt(B.capacity)} blocks`, B.price)
 		local model = buildBag(i, 1.1)
@@ -1207,12 +1210,12 @@ local function buildWorld()
 	prompt(platform, "Elevator", "Ride down", "Elevator", 0.4)
 
 	-- Daily chest
-	local chest = newPart({ Name = "DailyChest", Size = Vector3.new(4, 2.4, 3), Position = CHEST_POS + Vector3.new(0, 1.2, 0), Color = Color3.fromRGB(140, 86, 44), Material = Enum.Material.WoodPlanks }, town)
-	newPart({ Name = "ChestLid", Size = Vector3.new(4.2, 1, 3.2), Position = CHEST_POS + Vector3.new(0, 2.9, 0), Color = Color3.fromRGB(120, 72, 36), Material = Enum.Material.WoodPlanks }, town)
+	local chest = newPart({ Name = "DailyChest", Size = Vector3.new(4, 2.4, 3), Position = K.CHEST_POS + Vector3.new(0, 1.2, 0), Color = Color3.fromRGB(140, 86, 44), Material = Enum.Material.WoodPlanks }, town)
+	newPart({ Name = "ChestLid", Size = Vector3.new(4.2, 1, 3.2), Position = K.CHEST_POS + Vector3.new(0, 2.9, 0), Color = Color3.fromRGB(120, 72, 36), Material = Enum.Material.WoodPlanks }, town)
 	for _, dx in { -1.4, 1.4 } do
-		newPart({ Name = "ChestBand", Size = Vector3.new(0.4, 3.5, 3.3), Position = CHEST_POS + Vector3.new(dx, 1.75, 0), Color = Color3.fromRGB(240, 190, 70), Material = Enum.Material.Foil, CanCollide = false }, town)
+		newPart({ Name = "ChestBand", Size = Vector3.new(0.4, 3.5, 3.3), Position = K.CHEST_POS + Vector3.new(dx, 1.75, 0), Color = Color3.fromRGB(240, 190, 70), Material = Enum.Material.Foil, CanCollide = false }, town)
 	end
-	local lock = newPart({ Name = "ChestLock", Size = Vector3.new(0.7, 0.8, 0.3), Position = CHEST_POS + Vector3.new(0, 2.4, 1.65), Color = Color3.fromRGB(255, 210, 80), Material = Enum.Material.Foil, CanCollide = false }, town)
+	local lock = newPart({ Name = "ChestLock", Size = Vector3.new(0.7, 0.8, 0.3), Position = K.CHEST_POS + Vector3.new(0, 2.4, 1.65), Color = Color3.fromRGB(255, 210, 80), Material = Enum.Material.Foil, CanCollide = false }, town)
 	addLight(lock, Color3.fromRGB(255, 210, 100), 10, 0.9)
 	CollectionService:AddTag(chest, "DailyChest")
 	billboard(chest, 5, { { "Title", "🎁 DAILY CHEST", 20, Color3.fromRGB(255, 214, 90) }, { "Sub", "", 15, Color3.fromRGB(240, 240, 240) } }, 60)
@@ -1271,7 +1274,7 @@ local function buildWorld()
 		CollectionService:AddTag(star, "Spin")
 		star.Parent = town
 		CollectionService:AddTag(altar, "Shrine")
-		billboard(altar, 9, { { "Sub", "Reach bedrock (" .. MAX_DEPTH .. "m) to unlock", 14, Color3.fromRGB(235, 235, 245) } }, 70)
+		billboard(altar, 9, { { "Sub", "Reach bedrock (" .. K.MAX_DEPTH .. "m) to unlock", 14, Color3.fromRGB(235, 235, 245) } }, 70)
 		prompt(altar, "Ascend", "Ascend", "Ascension Shrine", 2)
 	end
 
@@ -1327,7 +1330,7 @@ local function buildWorld()
 		for i = 0, 5 do
 			newPart({ Name = "PetShopAwning", Size = Vector3.new(84 / 6, 0.5, 8), CFrame = CFrame.new(W(-97 - 42 + (i + 0.5) * 84 / 6, 12.4, -156)) * CFrame.Angles(math.rad(-18), 0, 0), Color = if i % 2 == 0 then Color3.fromRGB(255, 120, 170) else Color3.fromRGB(255, 244, 250), Material = Enum.Material.Fabric }, town)
 		end
-		for i, egg in EGGS do
+		for i, egg in K.EGGS do
 			local x = -124 + (i - 1) * 18
 			local base = newPart({ Name = "EggStand", Shape = Enum.PartType.Cylinder, Size = Vector3.new(2.4, 7, 7), CFrame = CFrame.new(W(x, 1.6, -150)) * CFrame.Angles(0, 0, math.rad(90)), Color = rgb(egg.spots):Lerp(Color3.new(1, 1, 1), 0.55), Material = Enum.Material.SmoothPlastic }, town)
 			newPart({ Name = "EggStandTrim", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.5, 7.6, 7.6), CFrame = CFrame.new(W(x, 0.45, -150)) * CFrame.Angles(0, 0, math.rad(90)), Color = Color3.fromRGB(255, 205, 70), Material = Enum.Material.SmoothPlastic }, town)
@@ -1340,7 +1343,7 @@ local function buildWorld()
 			model.Parent = town
 			local odds = {}
 			for _, entry in egg.pets do
-				table.insert(odds, `{PETS[entry[1]].name} {entry[2]}%`)
+				table.insert(odds, `{K.PETS[entry[1]].name} {entry[2]}%`)
 			end
 			base:SetAttribute("Egg", i)
 			CollectionService:AddTag(base, "EggStand")
@@ -1348,7 +1351,7 @@ local function buildWorld()
 				{ "Title", egg.name, 20, Color3.fromRGB(255, 255, 255) },
 				{ "Price", "💰 " .. fmt(egg.price), 18, Color3.fromRGB(255, 214, 90) },
 				{ "Odds1", odds[1] .. " · " .. odds[2], 12, Color3.fromRGB(215, 215, 225) },
-				{ "Odds2", odds[3] .. " · " .. odds[4], 12, rgb(RARITY_COLORS.Legendary) },
+				{ "Odds2", odds[3] .. " · " .. odds[4], 12, rgb(K.RARITY_COLORS.Legendary) },
 			}, 45)
 			local pr = prompt(base, "Egg", "Hatch", egg.name, 0.3)
 			pr:SetAttribute("Egg", i)
@@ -1394,8 +1397,8 @@ local function buildWorld()
 	local progress = newPart({ Name = "MuseumProgress", Size = Vector3.new(1, 1, 1), Position = W(0, 3, mz + 12), Transparency = 1, CanCollide = false }, town)
 	progress.CanQuery = false
 	CollectionService:AddTag(progress, "MuseumSign")
-	billboard(progress, 1.5, { { "Title", "0 / " .. #TREASURES .. " treasures found", 20, Color3.fromRGB(255, 255, 255) }, { "Sub", "Each new treasure: +10% ore value forever", 14, Color3.fromRGB(255, 214, 90) } }, 80)
-	for i, T in TREASURES do
+	billboard(progress, 1.5, { { "Title", "0 / " .. #K.TREASURES .. " treasures found", 20, Color3.fromRGB(255, 255, 255) }, { "Sub", "Each new treasure: +10% ore value forever", 14, Color3.fromRGB(255, 214, 90) } }, 80)
+	for i, T in K.TREASURES do
 		local x = -42 + (i - 1) * 12
 		local base = newPart({ Name = "MuseumPedestal", Size = Vector3.new(5, 4, 5), Position = W(x, 3, mz - 4), Color = Color3.fromRGB(245, 242, 236), Material = Enum.Material.Marble }, town)
 		newPart({ Name = "MuseumPedestalTop", Size = Vector3.new(5.6, 0.4, 5.6), Position = W(x, 5.2, mz - 4), Color = Color3.fromRGB(200, 170, 110), Material = Enum.Material.Foil }, town)
@@ -1418,10 +1421,10 @@ local function buildWorld()
 		local sr = Random.new(42)
 		local function blocked(x, z, pad)
 			pad = pad or 0
-			if math.abs(x) < PIT + 10 + pad and math.abs(z) < PIT + 10 + pad then
+			if math.abs(x) < K.PIT + 10 + pad and math.abs(z) < K.PIT + 10 + pad then
 				return true -- mine yard
 			end
-			if math.abs(x) < PIT + 34 + pad and math.abs(z) < PIT + 10 + pad then
+			if math.abs(x) < K.PIT + 34 + pad and math.abs(z) < K.PIT + 10 + pad then
 				return true -- side caves and headframe along the edges of the yard
 			end
 			if (Vector2.new(x, z) - Vector2.new(250, 190)).Magnitude < 28 + pad then
@@ -1543,7 +1546,7 @@ local function buildWorld()
 
 	-- Training Area (west of the mine): stand on a rock's pad and you train Strength by yourself
 	title(W(-112, 30, 0), "🏋️ TRAINING AREA", Color3.fromRGB(255, 200, 80), 32)
-	for i, R in TRAINING_ROCKS do
+	for i, R in K.TRAINING_ROCKS do
 		local x, z = -112, -54 + (i - 1) * 36
 		local c = Color3.fromRGB(R.color[1], R.color[2], R.color[3])
 		local rock = newPart({ Name = "TrainingRock", Size = Vector3.new(9, 6, 8), Position = W(x, 3, z), Color = c, Material = Enum.Material.SmoothPlastic }, town)
@@ -1635,7 +1638,7 @@ local function buildWorld()
 			end
 		end
 	end
-	SELL_POS, SPAWN_POS, CHEST_POS = spread(SELL_POS), spread(SPAWN_POS), spread(CHEST_POS)
+	K.SELL_POS, K.SPAWN_POS, K.CHEST_POS = spread(K.SELL_POS), spread(K.SPAWN_POS), spread(K.CHEST_POS)
 	startupStep("trees")
 	scatter()
 
@@ -1662,7 +1665,7 @@ local function buildWorld()
 				spark.Parent = fuse
 			end
 		end
-		billboard(crate, 5.5, { { "Sub", `Blasts {TNT_SLABS} blocks at once. Loot sells on the spot`, 15, Color3.fromRGB(240, 240, 240) }, { "Price", "", 18, Color3.fromRGB(255, 214, 90) } }, 70)
+		billboard(crate, 5.5, { { "Sub", `Blasts {K.TNT_SLABS} blocks at once. Loot sells on the spot`, 15, Color3.fromRGB(240, 240, 240) }, { "Price", "", 18, Color3.fromRGB(255, 214, 90) } }, 70)
 		CollectionService:AddTag(crate, "TNTStand")
 		prompt(crate, "TNT", "Buy TNT", "💣 TNT", 0.4)
 		title(W(tx, 17, tz), "💣 TNT", Color3.fromRGB(255, 110, 90), 14)
@@ -1717,7 +1720,7 @@ local function buildWorld()
 	startupStep("colours")
 	-- Cartoon pass: flat, saturated plastic everywhere (Neon and Glass stay as they are)
 	for n, part in town:GetDescendants() do
-		if n % (BUILD_YIELD_EVERY * 4) == 0 then
+		if n % (K.BUILD_YIELD_EVERY * 4) == 0 then
 			task.wait()
 		end
 		if part:IsA("BasePart") and part.Material ~= Enum.Material.Neon and part.Material ~= Enum.Material.Glass then
@@ -1745,11 +1748,11 @@ mineFolder.Name = "Mine"
 mineFolder.Parent = workspace
 
 local blockInfo = {} -- slab part -> { shaft, row, kinds, value, hp, maxHp, color, pos, geode }
-local GEODE_COLOR = Color3.fromRGB(170, 95, 255)
+K.GEODE_COLOR = Color3.fromRGB(170, 95, 255)
 
 local function layerAt(y)
-	local found = LAYERS[1]
-	for _, L in LAYERS do
+	local found = K.LAYERS[1]
+	for _, L in K.LAYERS do
 		if y >= L.from then
 			found = L
 		end
@@ -1760,17 +1763,17 @@ end
 local function layerAverage(L)
 	local avg = L.value
 	for _, o in L.ores do
-		avg += o.chance * ORES[o.id].value
+		avg += o.chance * K.ORES[o.id].value
 	end
 	return avg
 end
 
 local function rushActive()
-	return workspace:GetServerTimeNow() % RUSH_EVERY < RUSH_LENGTH
+	return workspace:GetServerTimeNow() % K.RUSH_EVERY < K.RUSH_LENGTH
 end
 
 local function rollOre(L)
-	local boost = if rushActive() then RUSH_MULT else 1
+	local boost = if rushActive() then K.RUSH_MULT else 1
 	local r = rng:NextNumber()
 	local acc = 0
 	for _, o in L.ores do
@@ -1799,24 +1802,24 @@ local function orePiece(parent, color, mat)
 end
 
 startupStep("mine shafts")
-local SHAFTS = {}
+K.SHAFTS = {}
 do
 	local STONE_A, STONE_B = Color3.fromRGB(176, 176, 206), Color3.fromRGB(156, 156, 188)
-	for i = 0, SHAFT_SLOTS - 1 do
+	for i = 0, K.SHAFT_SLOTS - 1 do
 		local col, rowIdx = i % 3, math.floor(i / 3)
-		local cx, cz = (col - 1) * SHAFT_PITCH, (rowIdx - 1) * SHAFT_PITCH
+		local cx, cz = (col - 1) * K.SHAFT_PITCH, (rowIdx - 1) * K.SHAFT_PITCH
 		local folder = Instance.new("Folder")
 		folder.Name = "Shaft" .. (i + 1)
 		folder.Parent = mineFolder
 		local shaft = { index = i + 1, x = cx, z = cz, folder = folder, rows = {}, owner = nil, slab = nil, oldWall = nil }
 		-- Stone rim around the opening, in 6-stud blocks of two shades
-		local h = SHAFT_W / 2
+		local h = K.SHAFT_W / 2
 		local k = 0
 		for _, side in { { -1, 0 }, { 1, 0 }, { 0, -1 }, { 0, 1 } } do
 			for s = -h - 3, h, 6 do
 				k += 1
 				local along = s + 3
-				local pos = if side[1] ~= 0 then Vector3.new(cx + side[1] * (h + 1.5), TOP + 0.6, cz + along) else Vector3.new(cx + along, TOP + 0.6, cz + side[2] * (h + 1.5))
+				local pos = if side[1] ~= 0 then Vector3.new(cx + side[1] * (h + 1.5), K.TOP + 0.6, cz + along) else Vector3.new(cx + along, K.TOP + 0.6, cz + side[2] * (h + 1.5))
 				local size = if side[1] ~= 0 then Vector3.new(3, 1.2, 6) else Vector3.new(6, 1.2, 3)
 				newPart({ Name = "Rim", Size = size, Position = pos, Color = if k % 2 == 0 then STONE_A else STONE_B, Material = Enum.Material.SmoothPlastic }, folder)
 			end
@@ -1824,8 +1827,8 @@ do
 		-- Side cave: a rocky room just under the grass on the right of the shaft. A tunnel in the
 		-- top row of the shaft leads in, and a ladder at the far end climbs out to the surface.
 		do
-			local S = CAVE_SIDE
-			local near, far = cx + S * h, cx + S * (h + CAVE_LENGTH) -- edge by the shaft, far end
+			local S = K.CAVE_SIDE
+			local near, far = cx + S * h, cx + S * (h + K.CAVE_LENGTH) -- edge by the shaft, far end
 			local midX = (near + far) / 2
 			local caveRock, caveDark = Color3.fromRGB(150, 108, 74), Color3.fromRGB(118, 82, 56)
 			local function caveWall(size, pos, color)
@@ -1833,63 +1836,63 @@ do
 				p.CanQuery = false
 				return p
 			end
-			caveWall(Vector3.new(CAVE_LENGTH, 1, SHAFT_W), Vector3.new(midX, TOP - BLOCK - 0.5, cz), caveDark) -- floor
-			caveWall(Vector3.new(1, BLOCK, SHAFT_W), Vector3.new(far - S * 0.5, TOP - BLOCK / 2, cz)) -- far wall (inside the cave, so its face never meets the grass tiles')
+			caveWall(Vector3.new(K.CAVE_LENGTH, 1, K.SHAFT_W), Vector3.new(midX, K.TOP - K.BLOCK - 0.5, cz), caveDark) -- floor
+			caveWall(Vector3.new(1, K.BLOCK, K.SHAFT_W), Vector3.new(far - S * 0.5, K.TOP - K.BLOCK / 2, cz)) -- far wall (inside the cave, so its face never meets the grass tiles')
 			for _, dir in { -1, 1 } do
-				caveWall(Vector3.new(CAVE_LENGTH, BLOCK, 1), Vector3.new(midX, TOP - BLOCK / 2, cz + dir * (h - 0.5)))
+				caveWall(Vector3.new(K.CAVE_LENGTH, K.BLOCK, 1), Vector3.new(midX, K.TOP - K.BLOCK / 2, cz + dir * (h - 0.5)))
 			end
 			-- rock ceiling under the thin grass, with a hole over the ladder
-			caveWall(Vector3.new(CAVE_LENGTH - 12, 0.25, SHAFT_W), Vector3.new(near + S * (CAVE_LENGTH - 12) / 2, TOP - 0.375, cz), caveDark)
-			caveWall(Vector3.new(12, 0.25, h), Vector3.new(far - S * 6, TOP - 0.375, cz - h / 2), caveDark)
+			caveWall(Vector3.new(K.CAVE_LENGTH - 12, 0.25, K.SHAFT_W), Vector3.new(near + S * (K.CAVE_LENGTH - 12) / 2, K.TOP - 0.375, cz), caveDark)
+			caveWall(Vector3.new(12, 0.25, h), Vector3.new(far - S * 6, K.TOP - 0.375, cz - h / 2), caveDark)
 			local ladder = Instance.new("TrussPart")
 			ladder.Name = "CaveLadder"
 			ladder.Anchored = true
 			ladder.Size = Vector3.new(2, 8, 2)
-			ladder.Position = Vector3.new(far - S * 2.5, TOP - BLOCK + 4, cz + h / 2)
+			ladder.Position = Vector3.new(far - S * 2.5, K.TOP - K.BLOCK + 4, cz + h / 2)
 			ladder.Color = Color3.fromRGB(150, 100, 60)
 			ladder.CanQuery = false
 			ladder.Parent = folder
 			for _, lx in { near + S * 8, far - S * 16 } do
-				local lamp = newPart({ Name = "CaveLamp", Size = Vector3.new(1.2, 1.2, 1.2), Position = Vector3.new(lx, TOP - 1.4, cz), Color = Color3.fromRGB(255, 200, 110), Material = Enum.Material.Neon, CanCollide = false }, folder)
+				local lamp = newPart({ Name = "CaveLamp", Size = Vector3.new(1.2, 1.2, 1.2), Position = Vector3.new(lx, K.TOP - 1.4, cz), Color = Color3.fromRGB(255, 200, 110), Material = Enum.Material.Neon, CanCollide = false }, folder)
 				lamp.CanQuery = false
 				addLight(lamp, Color3.fromRGB(255, 190, 120), 26, 1.4)
 			end
-			local signAnchor = newPart({ Name = "SignAnchor", Size = Vector3.new(1, 1, 1), Position = Vector3.new(far - S * 6, TOP + 1, cz + h / 2), Transparency = 1, CanCollide = false }, folder)
+			local signAnchor = newPart({ Name = "SignAnchor", Size = Vector3.new(1, 1, 1), Position = Vector3.new(far - S * 6, K.TOP + 1, cz + h / 2), Transparency = 1, CanCollide = false }, folder)
 			signAnchor.CanQuery = false
 			billboard(signAnchor, 6, { { "Title", "🪨 ROCK CAVE", 22, Color3.fromRGB(255, 214, 140) }, { "Sub", "Mine rocks for accessories", 14, Color3.fromRGB(240, 240, 240) } }, 70)
 			shaft.cave = { near = near, lo = math.min(near, far), hi = math.max(near, far), rocks = {} }
 		end
 		-- Lid shown while nobody owns the shaft
-		local lid = newPart({ Name = "Lid", Size = Vector3.new(SHAFT_W, 0.6, SHAFT_W), Position = Vector3.new(cx, TOP + 0.3, cz), Color = Color3.fromRGB(150, 100, 60), Material = Enum.Material.SmoothPlastic }, folder)
+		local lid = newPart({ Name = "Lid", Size = Vector3.new(K.SHAFT_W, 0.6, K.SHAFT_W), Position = Vector3.new(cx, K.TOP + 0.3, cz), Color = Color3.fromRGB(150, 100, 60), Material = Enum.Material.SmoothPlastic }, folder)
 		for p = -1, 1 do
-			newPart({ Name = "LidPlank", Size = Vector3.new(SHAFT_W, 0.7, 1.2), Position = Vector3.new(cx, TOP + 0.35, cz + p * 8), Color = Color3.fromRGB(120, 78, 44), Material = Enum.Material.SmoothPlastic }, lid)
+			newPart({ Name = "LidPlank", Size = Vector3.new(K.SHAFT_W, 0.7, 1.2), Position = Vector3.new(cx, K.TOP + 0.35, cz + p * 8), Color = Color3.fromRGB(120, 78, 44), Material = Enum.Material.SmoothPlastic }, lid)
 		end
 		shaft.lid = lid
 		-- Owner sign floating over the shaft
-		local anchor = newPart({ Name = "SignAnchor", Size = Vector3.new(1, 1, 1), Position = Vector3.new(cx, TOP + 1, cz - h - 1.5), Transparency = 1, CanCollide = false }, folder)
+		local anchor = newPart({ Name = "SignAnchor", Size = Vector3.new(1, 1, 1), Position = Vector3.new(cx, K.TOP + 1, cz - h - 1.5), Transparency = 1, CanCollide = false }, folder)
 		anchor.CanQuery = false
 		billboard(anchor, 7, { { "Title", "⛏ FREE MINE", 26, Color3.fromRGB(255, 214, 90) }, { "Sub", "Join to claim it", 16, Color3.fromRGB(240, 240, 240) } }, 120)
 		shaft.sign = anchor:FindFirstChild("Info")
-		table.insert(SHAFTS, shaft)
+		table.insert(K.SHAFTS, shaft)
 	end
 end
 
 local function shaftRowY(row)
-	return TOP - row * BLOCK - BLOCK / 2
+	return K.TOP - row * K.BLOCK - K.BLOCK / 2
 end
 
 -- Rock colour of a row: the layer colour with strata bands, every other row a shade lighter
-local STRATA = { 0, 0.4, 0.12, 0.55, 0.25, 0.05, 0.45, 0.18 }
+K.STRATA = { 0, 0.4, 0.12, 0.55, 0.25, 0.05, 0.45, 0.18 }
 local function rowColor(row)
-	local L = layerAt(math.min(row, MAX_DEPTH - 1))
-	local c = rgb(L.color):Lerp(rgb(L.band), STRATA[math.floor(row / 2) % #STRATA + 1])
+	local L = layerAt(math.min(row, K.MAX_DEPTH - 1))
+	local c = rgb(L.color):Lerp(rgb(L.band), K.STRATA[math.floor(row / 2) % #K.STRATA + 1])
 	if row % 2 == 0 then
 		c = c:Lerp(Color3.new(1, 1, 1), 0.1)
 	end
 	return c
 end
 
-local KEEP_ROWS = 40
+K.KEEP_ROWS = 40
 
 -- Rows 0..cut become one tall wall per side, to keep the part count low far above you
 local function mergeAbove(shaft, cut)
@@ -1907,11 +1910,11 @@ local function mergeAbove(shaft, cut)
 		end
 	end
 	shaft.oldWall = {}
-	local h = SHAFT_W / 2
-	local height = (cut + 1) * BLOCK
+	local h = K.SHAFT_W / 2
+	local height = (cut + 1) * K.BLOCK
 	for _, side in { { -1, 0 }, { 1, 0 }, { 0, -1 }, { 0, 1 } } do
-		local size = if side[1] ~= 0 then Vector3.new(3, height, SHAFT_W + 6) else Vector3.new(SHAFT_W, height, 3)
-		local p = newPart({ Name = "OldWall", Size = size, Position = Vector3.new(shaft.x + side[1] * (h + 1.5), TOP - height / 2, shaft.z + side[2] * (h + 1.5)), Color = rowColor(cut), Material = Enum.Material.SmoothPlastic }, shaft.folder)
+		local size = if side[1] ~= 0 then Vector3.new(3, height, K.SHAFT_W + 6) else Vector3.new(K.SHAFT_W, height, 3)
+		local p = newPart({ Name = "OldWall", Size = size, Position = Vector3.new(shaft.x + side[1] * (h + 1.5), K.TOP - height / 2, shaft.z + side[2] * (h + 1.5)), Color = rowColor(cut), Material = Enum.Material.SmoothPlastic }, shaft.folder)
 		p.CanQuery = false
 		table.insert(shaft.oldWall, p)
 	end
@@ -1923,30 +1926,30 @@ local function buildRow(shaft, row)
 		return
 	end
 	local parts = {}
-	local h, y = SHAFT_W / 2, shaftRowY(row)
+	local h, y = K.SHAFT_W / 2, shaftRowY(row)
 	local base = rowColor(row)
 	for i, side in { { -1, 0 }, { 1, 0 }, { 0, -1 }, { 0, 1 } } do
 		local color = if i % 2 == 0 then base else base:Lerp(Color3.new(0, 0, 0), 0.06)
-		if row == 0 and side[1] == CAVE_SIDE then
+		if row == 0 and side[1] == K.CAVE_SIDE then
 			-- the top row's right-hand wall has a tunnel into the side cave
-			local gap = CAVE_DOOR / 2
+			local gap = K.CAVE_DOOR / 2
 			for _, dir in { -1, 1 } do
 				local len = h + 3 - gap
-				local p = newPart({ Name = "Wall", Size = Vector3.new(3, BLOCK, len), Position = Vector3.new(shaft.x + CAVE_SIDE * (h + 1.5), y, shaft.z + dir * (gap + len / 2)), Color = color, Material = Enum.Material.SmoothPlastic }, shaft.folder)
+				local p = newPart({ Name = "Wall", Size = Vector3.new(3, K.BLOCK, len), Position = Vector3.new(shaft.x + K.CAVE_SIDE * (h + 1.5), y, shaft.z + dir * (gap + len / 2)), Color = color, Material = Enum.Material.SmoothPlastic }, shaft.folder)
 				p.CanQuery = false
 				table.insert(parts, p)
 			end
 			continue
 		end
-		local size = if side[1] ~= 0 then Vector3.new(3, BLOCK, SHAFT_W + 6) else Vector3.new(SHAFT_W, BLOCK, 3)
+		local size = if side[1] ~= 0 then Vector3.new(3, K.BLOCK, K.SHAFT_W + 6) else Vector3.new(K.SHAFT_W, K.BLOCK, 3)
 		local pos = Vector3.new(shaft.x + side[1] * (h + 1.5), y, shaft.z + side[2] * (h + 1.5))
 		local p = newPart({ Name = "Wall", Size = size, Position = pos, Color = color, Material = Enum.Material.SmoothPlastic }, shaft.folder)
 		p.CanQuery = false
 		table.insert(parts, p)
 	end
 	shaft.rows[row] = parts
-	if row - KEEP_ROWS >= 0 and shaft.rows[row - KEEP_ROWS] then
-		mergeAbove(shaft, row - KEEP_ROWS)
+	if row - K.KEEP_ROWS >= 0 and shaft.rows[row - K.KEEP_ROWS] then
+		mergeAbove(shaft, row - K.KEEP_ROWS)
 	end
 end
 
@@ -1960,12 +1963,12 @@ local function spawnSlab(shaft, row)
 	buildRow(shaft, row)
 	local p = Instance.new("Part")
 	p.Anchored = true
-	p.Size = Vector3.new(SHAFT_W, BLOCK, SHAFT_W)
+	p.Size = Vector3.new(K.SHAFT_W, K.BLOCK, K.SHAFT_W)
 	p.CFrame = CFrame.new(shaft.x, shaftRowY(row), shaft.z)
 	p.TopSurface = Enum.SurfaceType.Smooth
 	p.BottomSurface = Enum.SurfaceType.Smooth
 	p.Material = Enum.Material.SmoothPlastic
-	if row >= MAX_DEPTH then
+	if row >= K.MAX_DEPTH then
 		p.Name = "Bedrock"
 		p.Color = Color3.fromRGB(28, 24, 34)
 		p:SetAttribute("Bedrock", true)
@@ -1974,37 +1977,37 @@ local function spawnSlab(shaft, row)
 		return
 	end
 	local L = layerAt(row)
-	local info = { shaft = shaft, row = row, kinds = {}, value = 0, pos = p.Position + Vector3.new(0, BLOCK / 2, 0) }
-	local hp = L.hp * SLAB_HP
-	local top = p.Position.Y + BLOCK / 2
-	if row >= GEODE_MIN_DEPTH and rng:NextNumber() < GEODE_CHANCE * SLAB_LOOT then
+	local info = { shaft = shaft, row = row, kinds = {}, value = 0, pos = p.Position + Vector3.new(0, K.BLOCK / 2, 0) }
+	local hp = L.hp * K.SLAB_HP
+	local top = p.Position.Y + K.BLOCK / 2
+	if row >= K.GEODE_MIN_DEPTH and rng:NextNumber() < K.GEODE_CHANCE * K.SLAB_LOOT then
 		p.Name = "Geode"
 		p.Color = Color3.fromRGB(70, 50, 92)
 		info.geode = true
-		info.value = math.floor(layerAverage(L) * 60 * SLAB_LOOT)
+		info.value = math.floor(layerAverage(L) * 60 * K.SLAB_LOOT)
 		hp *= 6
 		for _ = 1, 7 do
 			local base = Vector3.new(shaft.x + rng:NextNumber(-9, 9), top, shaft.z + rng:NextNumber(-9, 9))
 			for _ = 1, 3 do
 				local len = rng:NextNumber(1.4, 3)
-				local spike = orePiece(p, GEODE_COLOR, Enum.Material.Neon)
+				local spike = orePiece(p, K.GEODE_COLOR, Enum.Material.Neon)
 				spike.Size = Vector3.new(0.6, len, 0.6)
 				spike.CFrame = CFrame.new(base) * CFrame.Angles(rng:NextNumber(-0.5, 0.5), rng:NextNumber(0, 6), rng:NextNumber(-0.5, 0.5)) * CFrame.new(0, len * 0.35, 0)
 			end
 		end
-		addLight(p, GEODE_COLOR, 24, 1.6)
+		addLight(p, K.GEODE_COLOR, 24, 1.6)
 		p:SetAttribute("Geode", true)
 	else
 		p.Name = L.name
 		local c = rowColor(row)
 		p.Color = c:Lerp(Color3.new(1, 1, 1), 0.08)
-		for _ = 1, SLAB_LOOT do
+		for _ = 1, K.SLAB_LOOT do
 			local kind = rollOre(L)
 			table.insert(info.kinds, kind)
 			if kind ~= "" then
-				local O = ORES[kind]
+				local O = K.ORES[kind]
 				info.value += O.value
-				hp += L.hp * SLAB_HP * (O.hp - 1) / SLAB_LOOT
+				hp += L.hp * K.SLAB_HP * (O.hp - 1) / K.SLAB_LOOT
 				local oreColor = rgb(O.color)
 				local crystal = O.material == "Glass" or O.material == "Neon"
 				for _ = 1, 4 do
@@ -2041,20 +2044,20 @@ end
 
 -- Cave rocks --------------------------------------------------------------------------
 local rockInfo = {} -- rock part -> { shaft, spot, kind, hits }
-local ROCK_SPOTS = { { 6, -6 }, { 7, 6 }, { 13, -1 }, { 19, -7 }, { 19, 5 }, { 26, -6 }, { 13, 8 } }
+K.ROCK_SPOTS = { { 6, -6 }, { 7, 6 }, { 13, -1 }, { 19, -7 }, { 19, 5 }, { 26, -6 }, { 13, 8 } }
 
 local function spawnRock(shaft, spot)
 	local cave = shaft.cave
-	local at = ROCK_SPOTS[spot]
+	local at = K.ROCK_SPOTS[spot]
 	if not cave or not at or cave.rocks[spot] then
 		return
 	end
 	local total = 0
-	for _, R in ROCK_TYPES do
+	for _, R in K.ROCK_TYPES do
 		total += R.weight
 	end
-	local roll, kind = rng:NextNumber() * total, ROCK_TYPES[1]
-	for _, R in ROCK_TYPES do
+	local roll, kind = rng:NextNumber() * total, K.ROCK_TYPES[1]
+	for _, R in K.ROCK_TYPES do
 		roll -= R.weight
 		if roll <= 0 then
 			kind = R
@@ -2062,8 +2065,8 @@ local function spawnRock(shaft, spot)
 		end
 	end
 	local color = rgb(kind.color)
-	local floorY = TOP - BLOCK
-	local pos = Vector3.new(cave.near + CAVE_SIDE * at[1], floorY + 1.3, shaft.z + at[2])
+	local floorY = K.TOP - K.BLOCK
+	local pos = Vector3.new(cave.near + K.CAVE_SIDE * at[1], floorY + 1.3, shaft.z + at[2])
 	local rock = newPart({ Name = kind.name, Size = Vector3.new(3.6, 2.8, 3.2), CFrame = CFrame.new(pos) * CFrame.Angles(0, rng:NextNumber(0, 6), 0), Color = color, Material = Enum.Material.SmoothPlastic })
 	local mesh = Instance.new("SpecialMesh")
 	mesh.MeshType = Enum.MeshType.Sphere
@@ -2096,8 +2099,8 @@ local function spawnRock(shaft, spot)
 end
 
 local function fillCave(shaft)
-	for spot = 1, #ROCK_SPOTS do
-		if spot <= CAVE_ROCKS then
+	for spot = 1, #K.ROCK_SPOTS do
+		if spot <= K.CAVE_ROCKS then
 			spawnRock(shaft, spot)
 		end
 	end
@@ -2141,11 +2144,11 @@ end
 local function openShaft(shaft, depth)
 	clearShaft(shaft)
 	shaft.lid.Parent = nil
-	depth = math.clamp(depth, 0, MAX_DEPTH)
-	if depth - 1 - KEEP_ROWS >= 0 then
-		mergeAbove(shaft, depth - 1 - KEEP_ROWS)
+	depth = math.clamp(depth, 0, K.MAX_DEPTH)
+	if depth - 1 - K.KEEP_ROWS >= 0 then
+		mergeAbove(shaft, depth - 1 - K.KEEP_ROWS)
 	end
-	for r = math.max(0, depth - KEEP_ROWS), depth - 1 do
+	for r = math.max(0, depth - K.KEEP_ROWS), depth - 1 do
 		buildRow(shaft, r)
 	end
 	spawnSlab(shaft, depth)
@@ -2157,7 +2160,7 @@ end
 --------------------------------------------------------------------------------
 local store = nil
 pcall(function()
-	store = DataStoreService:GetDataStore(DATA_STORE)
+	store = DataStoreService:GetDataStore(K.DATA_STORE)
 end)
 
 local sessions = {}
@@ -2233,17 +2236,17 @@ local function saveData(player)
 	end
 end
 
-local PASS_BY_KEY, PASS_BY_ID, PRODUCT_BY_KEY, PRODUCT_BY_ID = {}, {}, {}, {}
-for _, pass in PASSES do
-	PASS_BY_KEY[pass.key] = pass
+K.PASS_BY_KEY, K.PASS_BY_ID, K.PRODUCT_BY_KEY, K.PRODUCT_BY_ID = {}, {}, {}, {}
+for _, pass in K.PASSES do
+	K.PASS_BY_KEY[pass.key] = pass
 	if pass.id ~= 0 then
-		PASS_BY_ID[pass.id] = pass
+		K.PASS_BY_ID[pass.id] = pass
 	end
 end
-for _, product in PRODUCTS do
-	PRODUCT_BY_KEY[product.key] = product
+for _, product in K.PRODUCTS do
+	K.PRODUCT_BY_KEY[product.key] = product
 	if product.id ~= 0 then
-		PRODUCT_BY_ID[product.id] = product
+		K.PRODUCT_BY_ID[product.id] = product
 	end
 end
 
@@ -2259,15 +2262,15 @@ local function potionActive(player, name)
 end
 
 local function petSlots(player)
-	return PET_SLOTS + (if owns(player, "MorePets") then 2 else 0)
+	return K.PET_SLOTS + (if owns(player, "MorePets") then 2 else 0)
 end
 
 local function petBoost(d)
 	local total = 0
 	for _, uid in d.equipped do
 		for _, pet in d.pets do
-			if pet.uid == uid and PETS[pet.id] then
-				total += PETS[pet.id].boost
+			if pet.uid == uid and K.PETS[pet.id] then
+				total += K.PETS[pet.id].boost
 			end
 		end
 	end
@@ -2279,7 +2282,7 @@ local function capacity(player)
 	if owns(player, "InfiniteBag") then
 		return 1e9
 	end
-	return BAGS[d.bag].capacity
+	return K.BAGS[d.bag].capacity
 end
 
 -- Multiplier on the time between swings (lower is faster).
@@ -2319,19 +2322,19 @@ end
 
 local function valueMult(player)
 	local d = sessions[player]
-	local m = (1 + uniqueTreasures(d) * TREASURE_BONUS) * (1 + (d.asc or 0) * ASCEND_BONUS)
-	m *= 1 + (d.level - 1) * LEVEL_BONUS
+	local m = (1 + uniqueTreasures(d) * K.TREASURE_BONUS) * (1 + (d.asc or 0) * K.ASCEND_BONUS)
+	m *= 1 + (d.level - 1) * K.LEVEL_BONUS
 	m *= 1 + petBoost(d)
-	m *= 1 + (d.rebirths or 0) * REBIRTH_CASH
+	m *= 1 + (d.rebirths or 0) * K.REBIRTH_CASH
 	for _, id in d.accEq or {} do
-		for _, A in ACCESSORIES do
+		for _, A in K.ACCESSORIES do
 			if A.id == id and d.accs[id] then
 				m *= 1 + A.bonus
 			end
 		end
 	end
 	if player:GetAttribute("FriendBonus") then
-		m *= 1 + FRIEND_BONUS
+		m *= 1 + K.FRIEND_BONUS
 	end
 	if owns(player, "VIP") then
 		m *= 1.25
@@ -2373,7 +2376,7 @@ local function sync(player)
 	player:SetAttribute("FirstJoin", d.firstJoin)
 	player:SetAttribute("Strength", d.strength)
 	player:SetAttribute("Rebirths", d.rebirths)
-	player:SetAttribute("RebirthReq", math.floor(REBIRTH_BASE * REBIRTH_GROWTH ^ d.rebirths))
+	player:SetAttribute("RebirthReq", math.floor(K.REBIRTH_BASE * K.REBIRTH_GROWTH ^ d.rebirths))
 	player:SetAttribute("StrMult", strengthMult(player))
 	player:SetAttribute("Rocks", d.rocks or 0)
 	player:SetAttribute("TNT", d.tnt or 0)
@@ -2382,7 +2385,7 @@ local function sync(player)
 	for name, expiry in d.potions do
 		player:SetAttribute("Potion_" .. name, expiry)
 	end
-	for _, pass in PASSES do
+	for _, pass in K.PASSES do
 		player:SetAttribute("Pass_" .. pass.key, owns(player, pass.key))
 	end
 	local stats = player:FindFirstChild("leaderstats")
@@ -2400,19 +2403,19 @@ end
 
 -- DAILY QUESTS ------------------------------------------------------------------
 local function questDef(id)
-	for _, q in QUEST_POOL do
+	for _, q in K.QUEST_POOL do
 		if q.id == id then
 			return q
 		end
 	end
-	return QUEST_POOL[1]
+	return K.QUEST_POOL[1]
 end
 
 local function todayQuests(d)
 	local day = math.floor(os.time() / 86400)
 	if type(d.quests) ~= "table" or d.quests.day ~= day then
 		local r = Random.new(day * 7919)
-		local pool = table.clone(QUEST_POOL)
+		local pool = table.clone(K.QUEST_POOL)
 		local list = {}
 		for _ = 1, 3 do
 			local q = table.remove(pool, r:NextInteger(1, #pool))
@@ -2482,7 +2485,7 @@ local function givePick(player)
 	tool.Name = "Pickaxe"
 	tool.CanBeDropped = false
 	tool.RequiresHandle = true
-	tool.ToolTip = PICKS[d.pick].name
+	tool.ToolTip = K.PICKS[d.pick].name
 	-- Same grip as the classic sword: handle points up out of the fist, head swings forward.
 	tool.Grip = CFrame.new(0, 0, -1.6, 0, 0, 1, 1, 0, 0, 0, 1, 0)
 	for _, p in model:GetChildren() do
@@ -2695,11 +2698,11 @@ local function teleportTo(player, position)
 end
 
 local function spawnPoint()
-	return SPAWN_POS + Vector3.new(rng:NextNumber(-3, 3), 3.5, rng:NextNumber(-3, 3))
+	return K.SPAWN_POS + Vector3.new(rng:NextNumber(-3, 3), 3.5, rng:NextNumber(-3, 3))
 end
 
 -- ACCESSORIES: little part-built hats, shades, wings and auras welded to your character -------
-local ACC_BUILDERS = {}
+K.ACC_BUILDERS = {}
 do
 	local function acc(model, size, cf, color, material, shape)
 		local p = Instance.new("Part")
@@ -2726,7 +2729,7 @@ do
 	local UP = CFrame.Angles(0, 0, math.rad(90)) -- turns a cylinder upright
 	local GOLD_C = Color3.fromRGB(255, 205, 60)
 
-	ACC_BUILDERS.PartyHat = function(m, head)
+	K.ACC_BUILDERS.PartyHat = function(m, head)
 		local top = head.CFrame * CFrame.new(0, head.Size.Y / 2, 0)
 		local colors = { Color3.fromRGB(255, 90, 160), Color3.fromRGB(255, 220, 60), Color3.fromRGB(90, 200, 255) }
 		for k = 0, 2 do
@@ -2734,7 +2737,7 @@ do
 		end
 		acc(m, Vector3.one * 0.4, top * CFrame.new(0, 1.55, 0), Color3.new(1, 1, 1), nil, Enum.PartType.Ball)
 	end
-	ACC_BUILDERS.MinerHelmet = function(m, head)
+	K.ACC_BUILDERS.MinerHelmet = function(m, head)
 		local top = head.CFrame * CFrame.new(0, head.Size.Y / 2, 0)
 		sphere(m, Vector3.new(1.5, 1, 1.5), top * CFrame.new(0, 0, 0), Color3.fromRGB(255, 200, 40))
 		acc(m, Vector3.new(0.12, 1.75, 1.75), top * CFrame.new(0, -0.25, 0) * UP, Color3.fromRGB(230, 170, 30), nil, Enum.PartType.Cylinder)
@@ -2746,7 +2749,7 @@ do
 		beam.Brightness = 2
 		beam.Parent = lamp
 	end
-	ACC_BUILDERS.CoolShades = function(m, head)
+	K.ACC_BUILDERS.CoolShades = function(m, head)
 		local face = head.CFrame * CFrame.new(0, 0.12, -head.Size.Z / 2 - 0.05)
 		for _, x in { -0.27, 0.27 } do
 			acc(m, Vector3.new(0.46, 0.3, 0.1), face * CFrame.new(x, 0, 0), Color3.fromRGB(20, 20, 26))
@@ -2754,7 +2757,7 @@ do
 		end
 		acc(m, Vector3.new(0.2, 0.06, 0.08), face * CFrame.new(0, 0.08, 0), Color3.fromRGB(20, 20, 26))
 	end
-	ACC_BUILDERS.GoldCrown = function(m, head)
+	K.ACC_BUILDERS.GoldCrown = function(m, head)
 		local top = head.CFrame * CFrame.new(0, head.Size.Y / 2 + 0.15, 0)
 		acc(m, Vector3.new(0.4, 1.15, 1.15), top * UP, GOLD_C, nil, Enum.PartType.Cylinder)
 		for k = 0, 4 do
@@ -2772,20 +2775,20 @@ do
 			sphere(m, Vector3.new(0.18, 1.1 * span, 1.7 * span), back * CFrame.new(x * 1.45 * span, -0.35, 0.4) * CFrame.Angles(0, x * 0.55, x * 0.9), edge)
 		end
 	end
-	ACC_BUILDERS.AngelWings = function(m, _, torso)
+	K.ACC_BUILDERS.AngelWings = function(m, _, torso)
 		wings(m, torso, Color3.fromRGB(255, 255, 255), Color3.fromRGB(230, 240, 255), 1)
 	end
-	ACC_BUILDERS.DragonWings = function(m, _, torso)
+	K.ACC_BUILDERS.DragonWings = function(m, _, torso)
 		wings(m, torso, Color3.fromRGB(200, 50, 70), Color3.fromRGB(255, 120, 60), 1.3)
 	end
-	ACC_BUILDERS.Halo = function(m, head)
+	K.ACC_BUILDERS.Halo = function(m, head)
 		local top = head.CFrame * CFrame.new(0, head.Size.Y / 2 + 0.75, 0)
 		for k = 0, 11 do
 			local a = k * math.pi / 6
 			acc(m, Vector3.one * 0.24, top * CFrame.new(math.cos(a) * 0.6, 0, math.sin(a) * 0.6), Color3.fromRGB(255, 240, 120), Enum.Material.Neon, Enum.PartType.Ball)
 		end
 	end
-	ACC_BUILDERS.RainbowAura = function(m, _, _, root)
+	K.ACC_BUILDERS.RainbowAura = function(m, _, _, root)
 		local p = acc(m, Vector3.new(1, 1, 1), root.CFrame, Color3.new(1, 1, 1))
 		p.Transparency = 1
 		local fx = Instance.new("ParticleEmitter")
@@ -2823,7 +2826,7 @@ local function applyAccessories(player)
 		return
 	end
 	for slot, id in d.accEq or {} do
-		local build = ACC_BUILDERS[id]
+		local build = K.ACC_BUILDERS[id]
 		if build and d.accs[id] then
 			local model = Instance.new("Model")
 			model.Name = "DigAccessory"
@@ -2857,7 +2860,7 @@ local function onCharacter(player, char)
 	hum.UseJumpPower = false
 	hum.JumpHeight = 7.6 -- enough to hop up one block
 	task.wait() -- let the rig settle before welding things to it
-	if root.Position.Y < TOP - 40 then
+	if root.Position.Y < K.TOP - 40 then
 		teleportTo(player, spawnPoint())
 	end
 	givePick(player)
@@ -2884,8 +2887,8 @@ local function article(name)
 	return "a"
 end
 
-local TREASURE_ROLL = table.clone(TREASURES)
-table.sort(TREASURE_ROLL, function(a, b)
+K.TREASURE_ROLL = table.clone(K.TREASURES)
+table.sort(K.TREASURE_ROLL, function(a, b)
 	return a.chance < b.chance -- rarest first
 end)
 
@@ -2914,7 +2917,7 @@ local function updateShaftSign(shaft)
 	if title and sub then
 		if d then
 			title.Text = `⛏ {owner.DisplayName}'s Mine`
-			sub.Text = `{d.best}m · {layerAt(math.min(d.best, MAX_DEPTH - 1)).name}`
+			sub.Text = `{d.best}m · {layerAt(math.min(d.best, K.MAX_DEPTH - 1)).name}`
 		else
 			title.Text = "⛏ FREE MINE"
 			sub.Text = "Join to claim it"
@@ -2923,19 +2926,19 @@ local function updateShaftSign(shaft)
 end
 
 local function slabTop(shaft)
-	return TOP - (shaft.slab and shaft.slab:GetAttribute("Row") or 0) * BLOCK
+	return K.TOP - (shaft.slab and shaft.slab:GetAttribute("Row") or 0) * K.BLOCK
 end
 
 local function claimShaft(player)
 	local d = sessions[player]
-	for _, shaft in SHAFTS do
+	for _, shaft in K.SHAFTS do
 		if not shaft.owner then
 			shaft.owner = player
 			d._shaft = shaft
 			openShaft(shaft, d.best)
 			slabTop(shaft)
 			player:SetAttribute("Shaft", shaft.index)
-			player:SetAttribute("ShaftPos", Vector3.new(shaft.x, TOP, shaft.z))
+			player:SetAttribute("ShaftPos", Vector3.new(shaft.x, K.TOP, shaft.z))
 			updateShaftSign(shaft)
 			return shaft
 		end
@@ -2944,7 +2947,7 @@ local function claimShaft(player)
 end
 
 local function releaseShaft(player)
-	for _, shaft in SHAFTS do
+	for _, shaft in K.SHAFTS do
 		if shaft.owner == player then
 			shaft.owner = nil
 			clearShaft(shaft)
@@ -2961,8 +2964,8 @@ local function toMyShaft(player)
 		notify(player, "Every mine is taken right now", Color3.fromRGB(255, 180, 120))
 		return
 	end
-	local row = math.min(d.best, MAX_DEPTH)
-	teleportTo(player, Vector3.new(shaft.x + rng:NextNumber(-4, 4), TOP - row * BLOCK + 3.5, shaft.z + rng:NextNumber(-4, 4)))
+	local row = math.min(d.best, K.MAX_DEPTH)
+	teleportTo(player, Vector3.new(shaft.x + rng:NextNumber(-4, 4), K.TOP - row * K.BLOCK + 3.5, shaft.z + rng:NextNumber(-4, 4)))
 end
 
 -- `blast` is set when TNT did it: the loot is sold on the spot (added to blast.coins)
@@ -3014,16 +3017,16 @@ local function breakSlab(player, part, info, blast)
 	end
 
 	for _, kind in info.kinds do
-		if kind ~= "" and ORES[kind].announce then
-			local O = ORES[kind]
+		if kind ~= "" and K.ORES[kind].announce then
+			local O = K.ORES[kind]
 			announce(`💎 {player.DisplayName} mined {article(O.name)} {O.name} at {depth}m!`, rgb(O.color))
 		end
 	end
 
 	-- a slab holds SLAB_LOOT blocks' worth of rock, so it gets that many treasure rolls
-	for _ = 1, SLAB_LOOT do
+	for _ = 1, K.SLAB_LOOT do
 		local found = false
-		for _, T in TREASURE_ROLL do
+		for _, T in K.TREASURE_ROLL do
 			if depth >= T.depth and rng:NextNumber() < T.chance * luckMult(player) then
 				awardTreasure(player, T, info.pos, depth)
 				found = true
@@ -3036,11 +3039,11 @@ local function breakSlab(player, part, info, blast)
 	end
 
 	-- XP: deeper layers are worth more
-	d.xp += (table.find(LAYERS, layerAt(row)) or 1) * SLAB_LOOT
+	d.xp += (table.find(K.LAYERS, layerAt(row)) or 1) * K.SLAB_LOOT
 	while d.xp >= xpForLevel(d.level) do
 		d.xp -= xpForLevel(d.level)
 		d.level += 1
-		local reward = math.floor(INCOME[d.pick] * 2 * (1 + (d.asc or 0) * ASCEND_BONUS))
+		local reward = math.floor(K.INCOME[d.pick] * 2 * (1 + (d.asc or 0) * K.ASCEND_BONUS))
 		d.coins += reward
 		Remotes.LevelUp:FireClient(player, d.level, reward)
 		updateNameplate(player)
@@ -3048,7 +3051,7 @@ local function breakSlab(player, part, info, blast)
 
 	-- the next slab, one row down
 	spawnSlab(shaft, depth)
-	if depth >= MAX_DEPTH then
+	if depth >= K.MAX_DEPTH then
 		notify(player, "⭐ You hit bedrock! Ascend at the shrine in town", Color3.fromRGB(215, 175, 255))
 	end
 	updateShaftSign(shaft)
@@ -3062,12 +3065,12 @@ local function hitRock(player, d, part, rock)
 		return
 	end
 	local now = os.clock()
-	if now - (lastHit[player] or 0) < PICKS[d.pick].speed * swingMult(player) * 0.75 then
+	if now - (lastHit[player] or 0) < K.PICKS[d.pick].speed * swingMult(player) * 0.75 then
 		return
 	end
 	local char = player.Character
 	local root = char and char:FindFirstChild("HumanoidRootPart")
-	if not root or (root.Position - part.Position).Magnitude > REACH + 4 then
+	if not root or (root.Position - part.Position).Magnitude > K.REACH + 4 then
 		return
 	end
 	lastHit[player] = now
@@ -3085,7 +3088,7 @@ local function hitRock(player, d, part, rock)
 	d.rocks = (d.rocks or 0) + kind.reward
 	player:SetAttribute("Rocks", d.rocks)
 	Remotes.RockMined:FireClient(player, pos, kind.id, kind.reward)
-	task.delay(ROCK_RESPAWN, function()
+	task.delay(K.ROCK_RESPAWN, function()
 		if shaft.owner == player then
 			spawnRock(shaft, spot)
 		end
@@ -3107,7 +3110,7 @@ Remotes.Hit.OnServerEvent:Connect(function(player, part)
 	if not info or info.shaft ~= d._shaft or info.shaft.owner ~= player then
 		return
 	end
-	local pick = PICKS[d.pick]
+	local pick = K.PICKS[d.pick]
 	local now = os.clock()
 	if now - (lastHit[player] or 0) < pick.speed * swingMult(player) * 0.75 then
 		return
@@ -3119,7 +3122,7 @@ Remotes.Hit.OnServerEvent:Connect(function(player, part)
 		return
 	end
 	local offset = root.Position - part.Position
-	if math.abs(offset.X) > SHAFT_W / 2 + 2 or math.abs(offset.Z) > SHAFT_W / 2 + 2 or offset.Y < 0 or offset.Y > REACH then
+	if math.abs(offset.X) > K.SHAFT_W / 2 + 2 or math.abs(offset.Z) > K.SHAFT_W / 2 + 2 or offset.Y < 0 or offset.Y > K.REACH then
 		return
 	end
 	lastHit[player] = now
@@ -3139,24 +3142,24 @@ end)
 task.spawn(function()
 	while true do
 		task.wait(0.25)
-		for _, shaft in SHAFTS do
-			local h = SHAFT_W / 2
+		for _, shaft in K.SHAFTS do
+			local h = K.SHAFT_W / 2
 			for _, player in Players:GetPlayers() do
 				local char = player.Character
 				local root = char and char:FindFirstChild("HumanoidRootPart")
 				if root and root:IsA("BasePart") then
 					local pos = root.Position
-					if math.abs(pos.X - shaft.x) < h and math.abs(pos.Z - shaft.z) < h and pos.Y < TOP - 1 then
+					if math.abs(pos.X - shaft.x) < h and math.abs(pos.Z - shaft.z) < h and pos.Y < K.TOP - 1 then
 						if shaft.owner == player then
 							-- falling from the top: skip the long drop
 							if pos.Y > slabTop(shaft) + 14 then
 								toMyShaft(player)
 							end
-						elseif shaft.owner ~= nil or pos.Y < TOP - 4 then
+						elseif shaft.owner ~= nil or pos.Y < K.TOP - 4 then
 							teleportTo(player, spawnPoint())
 							notify(player, "That's someone else's mine! Yours has your name on it", Color3.fromRGB(255, 180, 120))
 						end
-					elseif shaft.cave and pos.X > shaft.cave.lo and pos.X < shaft.cave.hi and math.abs(pos.Z - shaft.z) < h and pos.Y < TOP - 1 and pos.Y > TOP - BLOCK * 2 and shaft.owner ~= player then
+					elseif shaft.cave and pos.X > shaft.cave.lo and pos.X < shaft.cave.hi and math.abs(pos.Z - shaft.z) < h and pos.Y < K.TOP - 1 and pos.Y > K.TOP - K.BLOCK * 2 and shaft.owner ~= player then
 						teleportTo(player, spawnPoint())
 						notify(player, "That's someone else's Rock Cave! Yours is next to your mine", Color3.fromRGB(255, 180, 120))
 					end
@@ -3208,7 +3211,7 @@ end)
 --------------------------------------------------------------------------------
 local function coinMinutes(player, minutes)
 	local d = sessions[player]
-	local amount = math.floor(INCOME[d.pick] * minutes * (1 + (d.asc or 0) * ASCEND_BONUS))
+	local amount = math.floor(K.INCOME[d.pick] * minutes * (1 + (d.asc or 0) * K.ASCEND_BONUS))
 	d.coins += amount
 	d.earned += amount
 	return amount
@@ -3235,7 +3238,7 @@ local function syncPets(player)
 	player:SetAttribute("PetSlots", petSlots(player))
 	local indexed = 0
 	for id in d.petIndex do
-		if PETS[id] then
+		if K.PETS[id] then
 			indexed += 1
 		end
 	end
@@ -3255,7 +3258,7 @@ local function equipBest(player)
 	local d = sessions[player]
 	local sorted = table.clone(d.pets)
 	table.sort(sorted, function(a, b)
-		return (PETS[a.id] and PETS[a.id].boost or 0) > (PETS[b.id] and PETS[b.id].boost or 0)
+		return (K.PETS[a.id] and K.PETS[a.id].boost or 0) > (K.PETS[b.id] and K.PETS[b.id].boost or 0)
 	end)
 	d.equipped = {}
 	for i = 1, math.min(petSlots(player), #sorted) do
@@ -3274,12 +3277,12 @@ local function givePet(player, id)
 		local weakest, weakestBoost = nil, math.huge
 		for i, uid in d.equipped do
 			local pet = findPet(d, uid)
-			local b = pet and PETS[pet.id] and PETS[pet.id].boost or 0
+			local b = pet and K.PETS[pet.id] and K.PETS[pet.id].boost or 0
 			if b < weakestBoost then
 				weakest, weakestBoost = i, b
 			end
 		end
-		if weakest and PETS[id].boost > weakestBoost then
+		if weakest and K.PETS[id].boost > weakestBoost then
 			d.equipped[weakest] = d.petUid
 		end
 	end
@@ -3289,7 +3292,7 @@ end
 local lastHatch = {}
 local function hatch(player, index, free)
 	local d = sessions[player]
-	local egg = EGGS[index]
+	local egg = K.EGGS[index]
 	if not d or not egg then
 		return
 	end
@@ -3306,7 +3309,7 @@ local function hatch(player, index, free)
 			return
 		end
 	end
-	if #d.pets >= MAX_PETS then
+	if #d.pets >= K.MAX_PETS then
 		notify(player, "Your pet inventory is full! Delete some pets first.", Color3.fromRGB(255, 130, 110))
 		return
 	end
@@ -3334,18 +3337,18 @@ local function hatch(player, index, free)
 	syncPets(player)
 	sync(player)
 	Remotes.Hatched:FireClient(player, chosen, egg.id)
-	if PETS[chosen].rarity == "Legendary" then
-		announce(`🐾 {player.DisplayName} hatched a LEGENDARY {PETS[chosen].name}!`, rgb(RARITY_COLORS.Legendary))
+	if K.PETS[chosen].rarity == "Legendary" then
+		announce(`🐾 {player.DisplayName} hatched a LEGENDARY {K.PETS[chosen].name}!`, rgb(K.RARITY_COLORS.Legendary))
 	end
 end
 
 local function pickSpin()
 	local total = 0
-	for _, seg in SPIN do
+	for _, seg in K.SPIN do
 		total += seg.weight
 	end
 	local roll = rng:NextNumber() * total
-	for i, seg in SPIN do
+	for i, seg in K.SPIN do
 		roll -= seg.weight
 		if roll <= 0 then
 			return i
@@ -3356,7 +3359,7 @@ end
 
 local function bestUnlockedEgg(d)
 	local best = 1
-	for i, egg in EGGS do
+	for i, egg in K.EGGS do
 		if d.best >= egg.depth then
 			best = i
 		end
@@ -3373,9 +3376,9 @@ local function spin(player)
 		notify(player, "The wheel is still recharging", Color3.fromRGB(220, 220, 230))
 		return
 	end
-	d.spinAt = os.time() + SPIN_COOLDOWN
+	d.spinAt = os.time() + K.SPIN_COOLDOWN
 	local index = pickSpin()
-	local seg = SPIN[index]
+	local seg = K.SPIN[index]
 	local text
 	if seg.coinMinutes then
 		text = "+ 💰 " .. fmt(coinMinutes(player, seg.coinMinutes))
@@ -3406,7 +3409,7 @@ local function redeem(player, code)
 		return
 	end
 	code = string.upper((string.gsub(code, "%s", "")))
-	local reward = CODES[code]
+	local reward = K.CODES[code]
 	if not reward then
 		Remotes.Purchased:FireClient(player, "code", false, "That code doesn't exist")
 		return
@@ -3450,7 +3453,7 @@ end
 
 local function grantProduct(player, key)
 	local d = sessions[player]
-	local product = PRODUCT_BY_KEY[key]
+	local product = K.PRODUCT_BY_KEY[key]
 	if not d or not product then
 		return false
 	end
@@ -3472,10 +3475,10 @@ local function grantProduct(player, key)
 		addPotion(player, product.potion, product.minutes)
 		text = `{product.name} · {product.minutes} min`
 	elseif key == "NextPick" then
-		if d.pick < #PICKS then
+		if d.pick < #K.PICKS then
 			d.pick += 1
 			givePick(player)
-			text = "Equipped the " .. PICKS[d.pick].name .. "!"
+			text = "Equipped the " .. K.PICKS[d.pick].name .. "!"
 		else
 			text = "+ 💰 " .. fmt(coinMinutes(player, 120))
 		end
@@ -3494,7 +3497,7 @@ MarketplaceService.ProcessReceipt = function(receipt)
 	if table.find(d.receipts, receipt.PurchaseId) then
 		return Enum.ProductPurchaseDecision.PurchaseGranted
 	end
-	local product = PRODUCT_BY_ID[receipt.ProductId]
+	local product = K.PRODUCT_BY_ID[receipt.ProductId]
 	if not product then
 		return Enum.ProductPurchaseDecision.NotProcessedYet
 	end
@@ -3511,7 +3514,7 @@ MarketplaceService.ProcessReceipt = function(receipt)
 end
 
 MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, passId, purchased)
-	local pass = PASS_BY_ID[passId]
+	local pass = K.PASS_BY_ID[passId]
 	if purchased and pass then
 		applyPass(player, pass.key)
 		Remotes.Purchased:FireClient(player, pass.key, true, pass.name .. " unlocked!")
@@ -3519,7 +3522,7 @@ MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, passI
 end)
 
 local function loadPasses(player)
-	for _, pass in PASSES do
+	for _, pass in K.PASSES do
 		if pass.id ~= 0 then
 			local ok, has = pcall(function()
 				return MarketplaceService:UserOwnsGamePassAsync(player.UserId, pass.id)
@@ -3540,11 +3543,11 @@ do
 		if not d then
 			return 1
 		end
-		return 1 + (d.rebirths or 0) * REBIRTH_STRENGTH
+		return 1 + (d.rebirths or 0) * K.REBIRTH_STRENGTH
 	end
 
 	damageMult = function(d)
-		return 1 + math.sqrt(math.max(0, d.strength or 0)) * STRENGTH_DAMAGE
+		return 1 + math.sqrt(math.max(0, d.strength or 0)) * K.STRENGTH_DAMAGE
 	end
 
 	-- Strength milestones 25, 50, 100, 250, 500, 1K, 2.5K ... each one pays out on the spot
@@ -3582,7 +3585,7 @@ do
 		if not d then
 			return
 		end
-		local need = math.floor(REBIRTH_BASE * REBIRTH_GROWTH ^ d.rebirths)
+		local need = math.floor(K.REBIRTH_BASE * K.REBIRTH_GROWTH ^ d.rebirths)
 		if d.strength < need then
 			notify(player, `You need 💪 {fmt(need - d.strength)} more Strength to rebirth`, Color3.fromRGB(255, 130, 110))
 			return
@@ -3601,7 +3604,7 @@ do
 	local POTION_NAMES = { Coins = "2x Coins", Luck = "Luck", Speed = "Speed" }
 	claimGift = function(player, index)
 		local d = sessions[player]
-		local g = if type(index) == "number" then GIFTS[index] else nil
+		local g = if type(index) == "number" then K.GIFTS[index] else nil
 		if not d or not g or not d._gifts or d._gifts[index] then
 			return
 		end
@@ -3641,7 +3644,7 @@ do
 		local warned = {}
 		local rocks = CollectionService:GetTagged("TrainingRock") -- built once with the world
 		while true do
-			task.wait(TRAIN_TICK)
+			task.wait(K.TRAIN_TICK)
 			for player, d in sessions do
 				local char = player.Character
 				local root = char and char:FindFirstChild("HumanoidRootPart")
@@ -3658,7 +3661,7 @@ do
 						end
 					end
 				end
-				local R = TRAINING_ROCKS[on]
+				local R = K.TRAINING_ROCKS[on]
 				if R and (d.rebirths or 0) < R.rebirths then
 					if not warned[player] or os.clock() - warned[player] > 4 then
 						warned[player] = os.clock()
@@ -3691,7 +3694,7 @@ end
 -- TNT AND ACCESSORIES
 --------------------------------------------------------------------------------
 local function tntPrice(d)
-	return math.max(TNT_MIN_PRICE, math.floor(INCOME[d.pick] * TNT_MINUTES * (1 + (d.asc or 0) * ASCEND_BONUS)))
+	return math.max(K.TNT_MIN_PRICE, math.floor(K.INCOME[d.pick] * K.TNT_MINUTES * (1 + (d.asc or 0) * K.ASCEND_BONUS)))
 end
 
 local function buyTNT(player)
@@ -3723,15 +3726,15 @@ local function useTNT(player)
 		return
 	end
 	local offset = root.Position - shaft.slab.CFrame.Position
-	if math.abs(offset.X) > SHAFT_W / 2 + 2 or math.abs(offset.Z) > SHAFT_W / 2 + 2 or offset.Y < 0 or offset.Y > REACH then
+	if math.abs(offset.X) > K.SHAFT_W / 2 + 2 or math.abs(offset.Z) > K.SHAFT_W / 2 + 2 or offset.Y < 0 or offset.Y > K.REACH then
 		notify(player, "💣 Stand in your mine to use TNT", Color3.fromRGB(255, 180, 120))
 		return
 	end
 	d.tnt -= 1
 	local blast = { coins = 0 }
-	local startPos = shaft.slab.CFrame.Position + Vector3.new(0, BLOCK / 2, 0)
+	local startPos = shaft.slab.CFrame.Position + Vector3.new(0, K.BLOCK / 2, 0)
 	local broke = 0
-	for _ = 1, TNT_SLABS do
+	for _ = 1, K.TNT_SLABS do
 		local slab = shaft.slab
 		local info = slab and blockInfo[slab]
 		if not info then
@@ -3749,7 +3752,7 @@ end
 local function buyAccessory(player, id)
 	local d = sessions[player]
 	local A
-	for _, item in ACCESSORIES do
+	for _, item in K.ACCESSORIES do
 		if item.id == id then
 			A = item
 		end
@@ -3791,7 +3794,7 @@ Remotes.Action.OnServerEvent:Connect(function(player, action, arg, arg2)
 	if action == "Train" then
 		-- a swing at thin air: same rate limit as mining, +Strength every click
 		local now = os.clock()
-		if now - (lastHit[player] or 0) < PICKS[d.pick].speed * swingMult(player) * 0.75 then
+		if now - (lastHit[player] or 0) < K.PICKS[d.pick].speed * swingMult(player) * 0.75 then
 			return
 		end
 		lastHit[player] = now
@@ -3868,7 +3871,7 @@ Remotes.Action.OnServerEvent:Connect(function(player, action, arg, arg2)
 		local item = todayQuests(d).list[arg]
 		if item and not item.claimed and item.progress >= item.goal then
 			item.claimed = true
-			local amount = coinMinutes(player, QUEST_REWARD_MINUTES)
+			local amount = coinMinutes(player, K.QUEST_REWARD_MINUTES)
 			sync(player)
 			syncQuests(player)
 			Remotes.Sold:FireClient(player, amount)
@@ -3904,10 +3907,10 @@ Remotes.Action.OnServerEvent:Connect(function(player, action, arg, arg2)
 		if not RunService:IsStudio() then
 			return
 		end
-		if arg == "Pass" and PASS_BY_KEY[arg2] and PASS_BY_KEY[arg2].id == 0 then
+		if arg == "Pass" and K.PASS_BY_KEY[arg2] and K.PASS_BY_KEY[arg2].id == 0 then
 			applyPass(player, arg2)
-			Remotes.Purchased:FireClient(player, arg2, true, PASS_BY_KEY[arg2].name .. " unlocked! (Studio test)")
-		elseif arg == "Product" and PRODUCT_BY_KEY[arg2] and PRODUCT_BY_KEY[arg2].id == 0 then
+			Remotes.Purchased:FireClient(player, arg2, true, K.PASS_BY_KEY[arg2].name .. " unlocked! (Studio test)")
+		elseif arg == "Product" and K.PRODUCT_BY_KEY[arg2] and K.PRODUCT_BY_KEY[arg2].id == 0 then
 			grantProduct(player, arg2)
 		end
 	end
@@ -3921,17 +3924,17 @@ Remotes.Surface.OnServerEvent:Connect(function(player)
 	local char = player.Character
 	local root = char and char:FindFirstChild("HumanoidRootPart")
 	local hum = char and char:FindFirstChildOfClass("Humanoid")
-	if not root or not hum or hum.Health <= 0 or root.Position.Y > TOP - 1 then
+	if not root or not hum or hum.Health <= 0 or root.Position.Y > K.TOP - 1 then
 		return
 	end
 	lastSurface[player] = os.clock()
-	teleportTo(player, SELL_POS + Vector3.new(rng:NextNumber(-3, 3), 3.5, rng:NextNumber(-3, 3)))
+	teleportTo(player, K.SELL_POS + Vector3.new(rng:NextNumber(-3, 3), 3.5, rng:NextNumber(-3, 3)))
 	task.delay(0.15, trySell, player)
 end)
 
 local function buy(player, kind, tier)
 	local d = sessions[player]
-	local list = if kind == "Pick" then PICKS else BAGS
+	local list = if kind == "Pick" then K.PICKS else K.BAGS
 	local item = list[tier]
 	if not d or not item then
 		return
@@ -3965,8 +3968,8 @@ local function ascend(player)
 	if not d then
 		return
 	end
-	if d.best < MAX_DEPTH then
-		notify(player, `Reach bedrock ({MAX_DEPTH}m) to Ascend. Deepest so far: {d.best}m`, Color3.fromRGB(200, 170, 255))
+	if d.best < K.MAX_DEPTH then
+		notify(player, `Reach bedrock ({K.MAX_DEPTH}m) to Ascend. Deepest so far: {d.best}m`, Color3.fromRGB(200, 170, 255))
 		return
 	end
 	d.asc = (d.asc or 0) + 1
@@ -3984,7 +3987,7 @@ local function ascend(player)
 	givePick(player)
 	attachBag(player)
 	sync(player)
-	announce(`⭐ {player.DisplayName} ASCENDED! (Ascension {d.asc}: ore worth x{string.format("%.1f", 1 + d.asc * ASCEND_BONUS)})`, Color3.fromRGB(200, 160, 255))
+	announce(`⭐ {player.DisplayName} ASCENDED! (Ascension {d.asc}: ore worth x{string.format("%.1f", 1 + d.asc * K.ASCEND_BONUS)})`, Color3.fromRGB(200, 160, 255))
 end
 
 -- The elevator takes you back down to your slab
@@ -4020,11 +4023,11 @@ local function claimDaily(player)
 	d.lastDay = today
 	local day = ((d.streak - 1) % 7) + 1
 	local mult = if day == 7 then 3 else 1 + 0.25 * (day - 1)
-	local reward = math.floor(DAILY[d.pick] * mult)
+	local reward = math.floor(K.DAILY[d.pick] * mult)
 	d.coins += reward
 	d.earned += reward
 	sync(player)
-	Remotes.Reward:FireClient(player, reward, day, CHEST_POS + Vector3.new(0, 3, 0))
+	Remotes.Reward:FireClient(player, reward, day, K.CHEST_POS + Vector3.new(0, 3, 0))
 end
 
 ProximityPromptService.PromptTriggered:Connect(function(p, player)
@@ -4123,10 +4126,10 @@ local function onJoin(player)
 		local away = if (d.lastSeen or 0) > 0 then now - d.lastSeen else 0
 		local amount, minutes, strengthAway = 0, 0, 0
 		if away >= 300 then
-			minutes = math.min(away / 60, OFFLINE_CAP_MINUTES)
-			amount = math.floor(INCOME[d.pick] * minutes * OFFLINE_RATE * (1 + (d.asc or 0) * ASCEND_BONUS))
+			minutes = math.min(away / 60, K.OFFLINE_CAP_MINUTES)
+			amount = math.floor(K.INCOME[d.pick] * minutes * K.OFFLINE_RATE * (1 + (d.asc or 0) * K.ASCEND_BONUS))
 			-- Strength trains while you're away too
-			strengthAway = math.floor(minutes * OFFLINE_STRENGTH_PER_MINUTE * (1 + d.rebirths * REBIRTH_STRENGTH))
+			strengthAway = math.floor(minutes * K.OFFLINE_STRENGTH_PER_MINUTE * (1 + d.rebirths * K.REBIRTH_STRENGTH))
 			d.strength += strengthAway
 		end
 		d._offline = amount
@@ -4190,7 +4193,7 @@ end)
 
 task.spawn(function()
 	while true do
-		task.wait(AUTOSAVE_EVERY)
+		task.wait(K.AUTOSAVE_EVERY)
 		for player in sessions do
 			task.spawn(saveData, player)
 		end
@@ -4298,7 +4301,7 @@ task.spawn(function()
 		task.wait(1)
 		local rush = rushActive()
 		if rush and not wasRush then
-			announce(`✨ GOLD RUSH! Ore is {RUSH_MULT}x more common for {RUSH_LENGTH} seconds!`, Color3.fromRGB(255, 214, 70))
+			announce(`✨ GOLD RUSH! Ore is {K.RUSH_MULT}x more common for {K.RUSH_LENGTH} seconds!`, Color3.fromRGB(255, 214, 70))
 		end
 		wasRush = rush
 	end
