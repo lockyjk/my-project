@@ -2018,7 +2018,7 @@ local buildPet, animatePet
 		local c = create("Frame", {
 			Name = item.key,
 			LayoutOrder = order,
-			Size = UDim2.new(1, -6, 0, if featured then 164 else 138),
+			Size = UDim2.new(1, -6, 0, if featured then 172 else 152),
 			BackgroundColor3 = WHITE,
 			Parent = scroll,
 		}, { corner(UDim.new(0, 14)), stroke(4, INK) })
@@ -2042,7 +2042,9 @@ local buildPet, animatePet
 		local titleLabel = label({ parent = c, text = item.name, size = if featured then 42 else 34, color = if featured then c3(255, 214, 40) else WHITE, alignX = Enum.TextXAlignment.Right, sz = UDim2.new(1, -180, 0, 46), pos = UDim2.fromOffset(160, 8), z = 3 })
 		titleLabel.TextScaled = true
 		create("UITextSizeConstraint", { MaxTextSize = if featured then 42 else 34, Parent = titleLabel })
-		local desc = label({ parent = c, text = item.desc or "", size = 19, color = DESC_COLORS[item.key] or c3(255, 246, 170), alignX = Enum.TextXAlignment.Right, wrap = true, sz = UDim2.new(1, -180, 0, 44), pos = UDim2.fromOffset(160, 54), z = 3 })
+		local desc = label({ parent = c, text = item.desc or "", size = 19, color = DESC_COLORS[item.key] or c3(255, 246, 170), alignX = Enum.TextXAlignment.Right, wrap = true, sz = UDim2.new(1, -180, 0, 38), pos = UDim2.new(0, 160, 0, if featured then 58 else 52), z = 3 })
+		desc.TextScaled = true
+		create("UITextSizeConstraint", { MaxTextSize = 19, Parent = desc })
 		local btn, bgrad = cartoonButton(c, {
 			sz = UDim2.fromOffset(186, 50),
 			anchor = Vector2.new(1, 1),
@@ -2639,7 +2641,7 @@ end
 -- PETS window ---------------------------------------------------------------------
 do
 	local _, body = makeWindow("Pets", "🐾 PETS", Color3.fromRGB(255, 150, 200), Color3.fromRGB(230, 70, 140))
-	local info = label({ parent = body, text = "", size = 18, color = INK, outline = false, sz = UDim2.new(1, -190, 0, 30), alignX = Enum.TextXAlignment.Left })
+	local info = label({ parent = body, text = "", size = 18, color = WHITE, sz = UDim2.new(1, -190, 0, 30), alignX = Enum.TextXAlignment.Left })
 	cartoonButton(body, {
 		sz = UDim2.fromOffset(170, 40),
 		pos = UDim2.new(1, 0, 0, -4),
@@ -2666,7 +2668,7 @@ do
 		create("UIGridLayout", { CellSize = UDim2.fromOffset(112, 138), CellPadding = UDim2.fromOffset(10, 10), SortOrder = Enum.SortOrder.LayoutOrder }),
 		create("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingLeft = UDim.new(0, 4) }),
 	})
-	local empty = label({ parent = body, text = "No pets yet!\nHatch eggs at the 🥚 Pet Shop next to the museum.", size = 20, color = INK, outline = false, wrap = true, sz = UDim2.new(1, 0, 0, 80), pos = UDim2.fromScale(0, 0.4) })
+	local empty = label({ parent = body, text = "No pets yet!\nHatch eggs at the 🥚 Pet Shop next to the museum.", size = 20, color = WHITE, wrap = true, sz = UDim2.new(1, 0, 0, 80), pos = UDim2.fromScale(0, 0.4) })
 	local function refresh()
 		for _, c in scroll:GetChildren() do
 			if c:IsA("Frame") then
@@ -2766,7 +2768,7 @@ do
 	end
 	create("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.16, 0.16), BackgroundColor3 = GOLD, ZIndex = 3, Parent = wheel }, { corner(), stroke(4, INK) })
 	label({ parent = holder, text = "▼", size = 44, color = Color3.fromRGB(255, 70, 70), sz = UDim2.fromOffset(60, 50), pos = UDim2.new(0.5, 0, 0, -30), anchor = Vector2.new(0.5, 0), z = 5 })
-	spinResult = label({ parent = body, text = "", size = 22, color = INK, outline = false, sz = UDim2.new(1, 0, 0, 28), pos = UDim2.new(0, 0, 0.66, 30) })
+	spinResult = label({ parent = body, text = "", size = 22, color = WHITE, sz = UDim2.new(1, 0, 0, 28), pos = UDim2.new(0, 0, 0.66, 30) })
 	spinButton = cartoonButton(body, {
 		sz = UDim2.fromOffset(230, 56),
 		pos = UDim2.new(0.5, 0, 1, -4),
@@ -2813,7 +2815,7 @@ end)
 -- CODES window -----------------------------------------------------------------
 do
 	local _, body = makeWindow("Codes", "🎟️ CODES", Color3.fromRGB(200, 150, 255), Color3.fromRGB(130, 70, 220))
-	label({ parent = body, text = "Enter a code for free rewards!", size = 22, color = INK, outline = false, sz = UDim2.new(1, 0, 0, 30), pos = UDim2.fromOffset(0, 10) })
+	label({ parent = body, text = "Enter a code for free rewards!", size = 22, color = WHITE, sz = UDim2.new(1, 0, 0, 30), pos = UDim2.fromOffset(0, 10) })
 	local boxFrame = create("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 60), Size = UDim2.new(0.8, 0, 0, 56), BackgroundColor3 = WHITE, Parent = body }, { corner(UDim.new(0, 16)), stroke(4, INK) })
 	local box = create("TextBox", {
 		Size = UDim2.new(1, -24, 1, 0),
@@ -2828,7 +2830,7 @@ do
 		ClearTextOnFocus = false,
 		Parent = boxFrame,
 	})
-	local result = label({ parent = body, text = "", size = 20, color = INK, outline = false, sz = UDim2.new(1, 0, 0, 28), pos = UDim2.fromOffset(0, 196) })
+	local result = label({ parent = body, text = "", size = 20, color = WHITE, sz = UDim2.new(1, 0, 0, 28), pos = UDim2.fromOffset(0, 196) })
 	cartoonButton(body, {
 		sz = UDim2.fromOffset(220, 54),
 		pos = UDim2.new(0.5, 0, 0, 132),
@@ -2863,7 +2865,7 @@ end
 -- QUESTS window ------------------------------------------------------------------
 do
 	local _, body = makeWindow("Quests", "📜 DAILY QUESTS", Color3.fromRGB(255, 190, 120), Color3.fromRGB(220, 110, 40))
-	local resetLabel = label({ parent = body, text = "", size = 17, color = INK, outline = false, sz = UDim2.new(1, 0, 0, 22), alignX = Enum.TextXAlignment.Left })
+	local resetLabel = label({ parent = body, text = "", size = 17, color = WHITE, sz = UDim2.new(1, 0, 0, 22), alignX = Enum.TextXAlignment.Left })
 	local rows = {}
 	for i = 1, 3 do
 		local r = create("Frame", { Position = UDim2.new(0, 0, 0, 30 + (i - 1) * 76), Size = UDim2.new(1, 0, 0, 66), BackgroundColor3 = WHITE, Parent = body }, { corner(UDim.new(0, 16)), stroke(3, INK) })
@@ -2904,7 +2906,7 @@ do
 			end
 		end,
 	})
-	label({ parent = body, text = "Playing with a friend gives +10% coins!", size = 15, color = Color3.fromRGB(90, 90, 110), outline = false, sz = UDim2.new(1, 0, 0, 20), pos = UDim2.new(0, 0, 0, 320) })
+	label({ parent = body, text = "Playing with a friend gives +10% coins!", size = 15, color = Color3.fromRGB(255, 240, 150), sz = UDim2.new(1, 0, 0, 20), pos = UDim2.new(0, 0, 0, 320) })
 	local data = { list = {}, bonus = false, resets = 0 }
 	local function refresh()
 		local raw = player:GetAttribute("Quests")
@@ -2964,6 +2966,7 @@ end
 -- WELCOME BACK popup (offline earnings + daily chest reminder) -----------------------
 Remotes.Welcome.OnClientEvent:Connect(function(amount, minutes, dailyReady, streak)
 	local panel = create("Frame", {
+		Name = "WelcomePopup",
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.45),
 		Size = UDim2.fromOffset(440, if amount > 0 then 270 else 190),
