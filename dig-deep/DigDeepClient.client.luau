@@ -2776,7 +2776,7 @@ do
 	CollectionService:GetInstanceAddedSignal("EggStand"):Connect(function()
 		task.defer(buildPreviews)
 	end)
-	RunService.Heartbeat:Connect(function()
+	RunService.RenderStepped:Connect(function()
 		local cam = workspace.CurrentCamera
 		if not cam then
 			return
