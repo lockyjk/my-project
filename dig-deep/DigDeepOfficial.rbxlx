@@ -899,7 +899,7 @@ local function buildWorld()
 	-- Checkerboard grass: 12-stud tiles in two lime greens. One block thick, so the
 	-- mine's top row sits flush with it.
 	local TILE = 12
-	local MAP_X, MAP_Z0, MAP_Z1 = 336, -420, 276 -- multiples of the 12-stud tile, so tiles line up with the shafts
+	local MAP_X, MAP_Z0, MAP_Z1 = 276, -360, 228 -- multiples of the 12-stud tile, so tiles line up with the shafts
 	local grassA, grassB = Color3.fromRGB(126, 214, 52), Color3.fromRGB(112, 200, 44)
 	local tiles = Instance.new("Folder")
 	tiles.Name = "Ground"
@@ -973,7 +973,7 @@ local function buildWorld()
 
 	-- Light sandy paths so the town reads at a glance
 	local sand = Color3.fromRGB(236, 206, 146)
-	for _, pth in { { 0, -214, MAP_X * 2 - 24, 14 }, { 0, -173, 16, 68 }, { 0, -132, 180, 16 }, { 0, -266, 50, 30 }, { 0, -300, 20, 40 }, { -220, -270, 12, 100 }, { 220, -270, 12, 100 }, { -250, -140, 12, 150 }, { 230, -125, 12, 170 } } do
+	for _, pth in { { 0, -194, MAP_X * 2 - 24, 14 }, { 0, -160, 16, 54 }, { 0, -126, 170, 16 }, { 0, -238, 50, 30 }, { 0, -270, 20, 36 }, { -190, -238, 12, 88 }, { 190, -238, 12, 88 }, { -220, -130, 12, 128 }, { 200, -115, 12, 150 } } do
 		newPart({ Name = "Path", Size = Vector3.new(pth[3], 0.3, pth[4]), Position = W(pth[1], 0.15, pth[2]), Color = sand, Material = Enum.Material.SmoothPlastic, CanCollide = false }, tiles)
 	end
 
@@ -1448,19 +1448,19 @@ local function buildWorld()
 			if math.abs(x) < K.PIT + 34 + pad and math.abs(z) < K.PIT + 10 + pad then
 				return true -- side caves and headframe along the edges of the yard
 			end
-			if (Vector2.new(x, z) - Vector2.new(250, 190)).Magnitude < 28 + pad then
+			if (Vector2.new(x, z) - Vector2.new(220, 170)).Magnitude < 28 + pad then
 				return true -- pond
 			end
-			if x < -220 + pad and x > -282 - pad and math.abs(z) < 78 + pad then
+			if x < -190 + pad and x > -252 - pad and math.abs(z) < 78 + pad then
 				return true -- training area
 			end
-			if x > 190 - pad and x < 270 + pad and z > -84 - pad and z < 4 + pad then
+			if x > 160 - pad and x < 240 + pad and z > -84 - pad and z < 4 + pad then
 				return true -- accessory shop
 			end
 			if math.abs(x) > MAP_X - 10 - pad or z > MAP_Z1 - 8 - pad or z < MAP_Z0 + 8 + pad then
 				return true -- map edge
 			end
-			return z < -110 + pad and z > -366 - pad and math.abs(x) < 290 + pad -- the town
+			return z < -104 + pad and z > -322 - pad and math.abs(x) < 250 + pad -- the town
 		end
 		local leafColors = { Color3.fromRGB(70, 200, 70), Color3.fromRGB(96, 214, 60), Color3.fromRGB(56, 180, 80) }
 		local function voxelTree(x, z)
@@ -1472,7 +1472,7 @@ local function buildWorld()
 			newPart({ Name = "Leaves", Size = Vector3.new(size - 1, size - 2, size - 1), Position = W(x, h + size + 0.5, z), Color = leaf:Lerp(Color3.new(1, 1, 1), 0.12), Material = Enum.Material.SmoothPlastic }, town)
 		end
 		local placed, tries = 0, 0
-		while placed < 130 and tries < 9000 do
+		while placed < 110 and tries < 9000 do
 			tries += 1
 			local x, z = sr:NextNumber(-MAP_X + 12, MAP_X - 12), sr:NextNumber(MAP_Z0 + 12, MAP_Z1 - 12)
 			if not blocked(x, z, 5) then
@@ -1481,7 +1481,7 @@ local function buildWorld()
 			end
 		end
 		placed, tries = 0, 0
-		while placed < 100 and tries < 9000 do
+		while placed < 80 and tries < 9000 do
 			tries += 1
 			local x, z = sr:NextNumber(-MAP_X + 12, MAP_X - 12), sr:NextNumber(MAP_Z0 + 12, MAP_Z1 - 12)
 			if not blocked(x, z, 2) then
@@ -1492,7 +1492,7 @@ local function buildWorld()
 		end
 		local flowerColors = { Color3.fromRGB(255, 90, 140), Color3.fromRGB(255, 220, 60), Color3.fromRGB(255, 255, 255), Color3.fromRGB(180, 120, 255), Color3.fromRGB(255, 140, 60) }
 		placed, tries = 0, 0
-		while placed < 70 and tries < 9000 do
+		while placed < 60 and tries < 9000 do
 			tries += 1
 			local x, z = sr:NextNumber(-MAP_X + 12, MAP_X - 12), sr:NextNumber(MAP_Z0 + 12, MAP_Z1 - 12)
 			if not blocked(x, z) then
@@ -1592,16 +1592,16 @@ local function buildWorld()
 	-- as one piece, to its place on the bigger map. The ground, walls, paths, fences and mine
 	-- yard were already built at their final size, so they stay where they are.
 	local ZONES = {
-		{ x0 = 95, x1 = 160, z0 = 68, z1 = 125, dx = 130, dz = 96 }, -- pond
-		{ x0 = -130, x1 = -95, z0 = -76, z1 = 76, dx = -138, dz = 0 }, -- training rocks
-		{ x0 = -156, x1 = -14, z0 = -116, z1 = -92, dx = -66, dz = -92 }, -- pickaxe stall
-		{ x0 = 14, x1 = 118, z0 = -116, z1 = -92, dx = 84, dz = -92 }, -- backpack stall
-		{ x0 = -28, x1 = 18, z0 = -100, z1 = -80, dx = 0, dz = -42 }, -- sell pad
-		{ x0 = 36, x1 = 52, z0 = -92, z1 = -76, dx = 28, dz = -48 }, -- elevator
-		{ x0 = -145, x1 = -56, z0 = -165, z1 = -134, dx = -123, dz = -180 }, -- pet shop
-		{ x0 = -56, x1 = 60, z0 = -186, z1 = -144, dx = 0, dz = -172 }, -- museum
-		{ x0 = 62, x1 = 95, z0 = -168, z1 = -134, dx = 142, dz = -180 }, -- ascension shrine
-		{ x0 = -130, x1 = 130, z0 = -145, z1 = -112, dx = 0, dz = -128 }, -- spawn plaza
+		{ x0 = 95, x1 = 160, z0 = 68, z1 = 125, dx = 100, dz = 76 }, -- pond
+		{ x0 = -130, x1 = -95, z0 = -76, z1 = 76, dx = -108, dz = 0 }, -- training rocks
+		{ x0 = -156, x1 = -14, z0 = -116, z1 = -92, dx = -50, dz = -72 }, -- pickaxe stall
+		{ x0 = 14, x1 = 118, z0 = -116, z1 = -92, dx = 68, dz = -72 }, -- backpack stall
+		{ x0 = -28, x1 = 18, z0 = -100, z1 = -80, dx = 0, dz = -36 }, -- sell pad
+		{ x0 = 36, x1 = 52, z0 = -92, z1 = -76, dx = 24, dz = -42 }, -- elevator
+		{ x0 = -145, x1 = -56, z0 = -165, z1 = -134, dx = -93, dz = -142 }, -- pet shop
+		{ x0 = -56, x1 = 60, z0 = -186, z1 = -144, dx = 0, dz = -136 }, -- museum
+		{ x0 = 62, x1 = 95, z0 = -168, z1 = -134, dx = 112, dz = -142 }, -- ascension shrine
+		{ x0 = -130, x1 = 130, z0 = -145, z1 = -112, dx = 0, dz = -100 }, -- spawn plaza
 	}
 	local STAY = { "Fence", "Lantern", "Headframe", "Footing", "Bucket", "Rope", "Spoke", "Wheel", "PitSign", "SignPost" }
 	local function zoneOf(pos)
@@ -1666,7 +1666,7 @@ local function buildWorld()
 	startupStep("TNT stand")
 	-- TNT stand beside the sell pad (built straight in the final layout)
 	do
-		local tx, tz = -72, -132
+		local tx, tz = -68, -126
 		local red, black = Color3.fromRGB(220, 50, 50), Color3.fromRGB(40, 36, 40)
 		newPart({ Name = "TNTFloor", Size = Vector3.new(20, 0.4, 14), Position = W(tx, 0.2, tz), Color = Color3.fromRGB(150, 110, 72), Material = Enum.Material.SmoothPlastic }, town)
 		newPart({ Name = "TNTBack", Size = Vector3.new(20, 10, 1), Position = W(tx, 5, tz + 6.5), Color = Color3.fromRGB(90, 60, 40), Material = Enum.Material.SmoothPlastic }, town)
@@ -1696,7 +1696,7 @@ local function buildWorld()
 	startupStep("accessory shop")
 	-- Accessory shop east of the mine yard: spend 🪨 Rocks from your Rock Cave
 	do
-		local ax, az = 230, -40
+		local ax, az = 200, -40
 		local pink, white = Color3.fromRGB(200, 120, 255), Color3.fromRGB(250, 245, 255)
 		newPart({ Name = "AccFloor", Size = Vector3.new(44, 0.4, 26), Position = W(ax, 0.2, az), Color = Color3.fromRGB(240, 226, 250), Material = Enum.Material.SmoothPlastic }, town)
 		newPart({ Name = "AccBack", Size = Vector3.new(44, 14, 1), Position = W(ax, 7, az + 12.5), Color = Color3.fromRGB(230, 200, 255), Material = Enum.Material.SmoothPlastic }, town)

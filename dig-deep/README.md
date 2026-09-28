@@ -8,6 +8,10 @@ A Roblox mining game made of two scripts. The server script builds the whole wor
 
 Open **`DigDeepOfficial.rbxlx`** in Roblox Studio and press Play. There are 9 mines, so set **Game Settings → Places → Max Players** to 9 when you publish. The place file already contains both scripts, ShadowMap lighting, and a kill floor set low enough for the 500m mine.
 
+## Keep your game up to date (no new files)
+
+Install **Dig Deep Sync** once: in Studio, open the **Plugins** tab, click **Plugins Folder**, put [`DigDeepSync.lua`](DigDeepSync.lua) in that folder, and restart Studio. From then on, whenever you open your Dig Deep game it downloads the newest scripts from this repository into that same game. You can also click **Update Dig Deep** on the Plugins tab. The first time, allow the two permissions Studio asks for: web requests to raw.githubusercontent.com, and changing scripts.
+
 ## Or put the scripts in your own place (2 minutes)
 
 1. In Roblox Studio, create a new **Baseplate** place. The script removes the baseplate and spawn for you.
@@ -95,7 +99,7 @@ While an ID is `0`, the item shows **"Soon"** in the live game. **In Studio, buy
 - **Red arrow trail** on the ground from you to the current objective.
 - **Avatar headshot tags** over every player, with name, level, 👑 VIP and ⭐ Ascension.
 
-- **Big, spread-out map** (about 670 × 700 studs): the mine yard with 9 shafts sits in the middle, the pickaxe and backpack stalls line the main road, and the spawn plaza, museum, pet shop, Ascension shrine, training rocks and pond each have their own space.
+- **Big, spread-out map** (about 550 × 590 studs): the mine yard with 9 shafts sits in the middle, the pickaxe and backpack stalls line the main road, and the spawn plaza, museum, pet shop, Ascension shrine, training rocks and pond each have their own space.
 - **Themed eggs:** the Dirt Egg has a grassy top with flowers, the Cave Egg has glowing orange crystals and cracks, the Crystal Egg is see-through glass with a pink crystal inside, and the Void Egg is dark with neon cracks and orbiting moons. The pets inside each egg float above its stand, and hatching shows the real 3D egg shaking.
 - **Pets:** a round, mossy Rock Golem with a glowing crystal heart, dragons with belly plates, wing bones and tail spikes, brighter Void pets, and a little gold crown on every Legendary and Exclusive pet.
 
