@@ -15,6 +15,25 @@ local HttpService = game:GetService("HttpService")
 local MarketplaceService = game:GetService("MarketplaceService")
 local RunService = game:GetService("RunService")
 
+-- STARTUP STATUS: a bar at the top of the screen says what is being built, and any error while
+-- the game starts shows in the middle of the screen, so problems are visible without Output.
+local startupHint = Instance.new("Hint")
+startupHint.Text = "⛏ Dig Deep is starting..."
+startupHint.Parent = workspace
+local function startupStep(text)
+	if startupHint then
+		startupHint.Text = "⛏ Dig Deep is building: " .. text
+	end
+	print("[DigDeep] " .. text)
+end
+pcall(function()
+	game:GetService("ScriptContext").Error:Connect(function(message, trace)
+		local m = Instance.new("Message")
+		m.Text = "Dig Deep error (send Claude a screenshot):\n" .. tostring(message) .. "\n" .. tostring(trace)
+		m.Parent = workspace
+	end)
+end)
+
 pcall(function()
 	workspace.FallenPartsDestroyHeight = -4000
 end)
@@ -852,6 +871,7 @@ local function buildWorld()
 	clouds.Color = Color3.fromRGB(255, 255, 255)
 	clouds.Parent = terrain
 
+	startupStep("ground")
 	-- Checkerboard grass: 12-stud tiles in two lime greens. One block thick, so the
 	-- mine's top row sits flush with it.
 	local TILE = 12
@@ -890,6 +910,7 @@ local function buildWorld()
 		newPart({ Name = "OuterGrass", Size = Vector3.new(sk[3], BLOCK, sk[4]), Position = W(sk[1], -BLOCK / 2 - 0.05, sk[2]), Color = grassB, Material = Enum.Material.SmoothPlastic }, tiles)
 	end
 
+	startupStep("walls")
 	-- Checkered dirt walls with a bright grass trim around the whole map
 	local dirtA, dirtB = Color3.fromRGB(214, 146, 82), Color3.fromRGB(196, 128, 68)
 	local WALL_ROWS, WALL_T = 3, 6
@@ -1105,6 +1126,7 @@ local function buildWorld()
 		newPart({ Name = "Ore", Shape = Enum.PartType.Ball, Size = Vector3.one * cartRng:NextNumber(1, 1.6), Position = cartPos + Vector3.new(cartRng:NextNumber(-2, 2), 3.9, cartRng:NextNumber(-1.2, 1.2)), Color = rgb(o.color), Material = material(o.material), CanCollide = false }, town)
 	end
 
+	startupStep("shops")
 	-- Market stalls: pickaxes on the left of the path, backpacks on the right.
 	-- Market stalls face the spawn plaza, with their back walls towards the quarry.
 	local function stall(centerX, count, roofA, title)
@@ -1295,6 +1317,7 @@ local function buildWorld()
 		sg.Parent = board
 	end
 
+	startupStep("pet shop")
 	-- Pet shop: four egg stands (odds shown on each, like every simulator)
 	do
 		newPart({ Name = "PetShopFloor", Size = Vector3.new(84, 0.4, 18), Position = W(-97, 0.2, -150), Color = Color3.fromRGB(236, 214, 170), Material = Enum.Material.WoodPlanks }, town)
@@ -1332,6 +1355,7 @@ local function buildWorld()
 		end
 	end
 
+	startupStep("museum")
 	-- Museum: a small marble temple with steps, columns, a frieze and a pediment
 	local mz = -164
 	local marble = Color3.fromRGB(238, 234, 226)
@@ -1539,6 +1563,7 @@ local function buildWorld()
 		billboard(rock, 9, { { "Sub", if R.rebirths == 0 then "FREE! Stand on the pad to train" else `🔒 Needs {R.rebirths} Rebirth{if R.rebirths == 1 then "" else "s"}`, 16, Color3.fromRGB(240, 240, 240) } }, 90)
 	end
 
+	startupStep("spreading out the town")
 	-- SPREAD THE TOWN OUT. Everything above was laid out close together. Each area now moves,
 	-- as one piece, to its place on the bigger map. The ground, walls, paths, fences and mine
 	-- yard were already built at their final size, so they stay where they are.
@@ -1611,8 +1636,10 @@ local function buildWorld()
 		end
 	end
 	SELL_POS, SPAWN_POS, CHEST_POS = spread(SELL_POS), spread(SPAWN_POS), spread(CHEST_POS)
+	startupStep("trees")
 	scatter()
 
+	startupStep("TNT stand")
 	-- TNT stand beside the sell pad (built straight in the final layout)
 	do
 		local tx, tz = -72, -132
@@ -1642,6 +1669,7 @@ local function buildWorld()
 		glowPad(W(tx, 0, tz - 10), 6, Color3.fromRGB(255, 110, 90))
 	end
 
+	startupStep("accessory shop")
 	-- Accessory shop east of the mine yard: spend 🪨 Rocks from your Rock Cave
 	do
 		local ax, az = 230, -40
@@ -1686,6 +1714,7 @@ local function buildWorld()
 		glowPad(W(ax, 0, az - 16), 7, Color3.fromRGB(220, 150, 255))
 	end
 
+	startupStep("colours")
 	-- Cartoon pass: flat, saturated plastic everywhere (Neon and Glass stay as they are)
 	for n, part in town:GetDescendants() do
 		if n % (BUILD_YIELD_EVERY * 4) == 0 then
@@ -1769,6 +1798,7 @@ local function orePiece(parent, color, mat)
 	return piece
 end
 
+startupStep("mine shafts")
 local SHAFTS = {}
 do
 	local STONE_A, STONE_B = Color3.fromRGB(176, 176, 206), Color3.fromRGB(156, 156, 188)
@@ -4275,3 +4305,7 @@ task.spawn(function()
 end)
 
 print("[DigDeep] Server ready.")
+if startupHint then
+	startupHint:Destroy()
+	startupHint = nil
+end
