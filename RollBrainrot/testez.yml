@@ -1,0 +1,12 @@
+---
+base: roblox
+globals:
+  describe: { args: [{ type: string }, { type: function }] }
+  it: { args: [{ type: string }, { type: function }] }
+  expect: { args: [{ type: any }] }
+  beforeEach: { args: [{ type: function }] }
+  afterEach: { args: [{ type: function }] }
+  beforeAll: { args: [{ type: function }] }
+  afterAll: { args: [{ type: function }] }
+  FOCUS: { args: [] }
+  SKIP: { args: [] }
