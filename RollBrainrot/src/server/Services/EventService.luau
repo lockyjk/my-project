@@ -33,6 +33,7 @@ local endsAt = 0
 local nextAt = 0
 local invasion: Battle.BattleT? = nil
 local forced: string? = nil
+local leftInvasion: { [Player]: boolean } = {} -- pressed LEAVE: don't pull them back in until they walk out
 
 local function serverNow(): number
 	return Workspace:GetServerTimeNow()
@@ -89,6 +90,7 @@ local function endInvasion(text: string?)
 		Net.Server.fireAll("Announce", text, Color3.fromRGB(180, 60, 255))
 	end
 	CombatService.destroy(b)
+	table.clear(leftInvasion)
 end
 
 local function startInvasion()
@@ -154,7 +156,10 @@ local function invasionStep()
 				Vector3.new(root.Position.X, 0, root.Position.Z) - Vector3.new(field.center.X, 0, field.center.Z)
 			).Magnitude
 			local inThis = b.participants[player] ~= nil
-			if not inThis and d < field.radius and not CombatService.battleOf(player) and DataService.get(player) then
+			if leftInvasion[player] and d > field.radius + 10 then
+				leftInvasion[player] = nil
+			end
+			if not inThis and not leftInvasion[player] and d < field.radius and not CombatService.battleOf(player) and DataService.get(player) then
 				CombatService.addParticipant(b, player)
 				Net.Server.fire(
 					"Notify",
@@ -262,6 +267,14 @@ function EventService.init()
 end
 
 function EventService.start()
+	CombatService.ParticipantRemoved:Connect(function(b, player: Player, reason: string)
+		if b == invasion and reason == "left" then
+			leftInvasion[player] = true
+		end
+	end)
+	Players.PlayerRemoving:Connect(function(player)
+		leftInvasion[player] = nil
+	end)
 	task.spawn(function()
 		local strikeAcc = 0
 		while true do
