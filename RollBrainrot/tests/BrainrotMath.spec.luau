@@ -32,7 +32,7 @@ return function()
 			local c1 = BrainrotMath.levelUpCost(def, 1)
 			local c5 = BrainrotMath.levelUpCost(def, 5)
 			expect((c5 :: number) > (c1 :: number)).to.equal(true)
-			expect(BrainrotMath.levelUpCost(def, 30)).to.equal(nil)
+			expect((BrainrotMath.levelUpCost(def, 30))).to.equal(nil)
 		end)
 
 		it("affinity habitat pays more", function()

@@ -575,22 +575,25 @@ GameConfig.World = {
 	-- Stadium
 	Arena = {
 		center = Vector3.new(0, 0, -1320),
-		fieldRadius = 540,
+		fieldRadius = 540, -- open battlefield (inner wall at 540..548)
 		wallHeight = 42,
 		standsInner = 548,
-		standsOuter = 700,
-		standsHeight = 150,
-		gateAngle = 0, -- south side (towards the hub)
+		tierCount = 6, -- stepped stands; two crowd rows per tier
+		tierDepth = 24,
+		tierRise = 18,
+		facadeHeight = 175,
+		gateHalfWidth = 30, -- south tunnel towards the hub
+		bossGateHalfWidth = 46, -- north boss entrance
 	},
-	ArenaGate = Vector3.new(0, 0, -620), -- outside the south gate
-	ArenaEntry = Vector3.new(0, 4, -840), -- where fighters appear inside
+	ArenaGate = Vector3.new(0, 4, -585), -- forecourt outside the south gate (players return here)
+	ArenaEntry = Vector3.new(0, 4, -840), -- where fighters appear inside the battlefield
 	InvasionField = { center = Vector3.new(0, 0, 380), radius = 120 },
 	Stands = {
 		Shop = Vector3.new(-120, 0, 110),
 		Upgrades = Vector3.new(120, 0, 110),
 		Daily = Vector3.new(-130, 0, -90),
 		Events = Vector3.new(130, 0, -90),
-	},
+	} :: { [string]: Vector3 },
 }
 
 GameConfig.Crowd = {

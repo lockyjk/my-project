@@ -8,7 +8,7 @@ local Types = require(script.Parent.Types)
 
 local RollMath = {}
 
-export type Rng = { NextNumber: (any, number?, number?) -> number, NextInteger: (any, number, number) -> number }
+export type Rng = Random
 export type Odds = { { rarity: Types.RarityDef, chance: number } }
 
 -- Probability of each rarity at the given luck (luck multiplies luckAffected weights)
