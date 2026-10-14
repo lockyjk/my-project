@@ -29,6 +29,7 @@ local player = Players.LocalPlayer
 local folder: Folder
 local spirits: { [number]: Spirit } = {}
 local recent: { [number]: Vector3 } = {} -- positions of just-removed spirits (for catch popups)
+local recentColor: { [number]: Color3 } = {}
 local pools: { [string]: { Model } } = {}
 local currentZone = ""
 local lastSend = 0
@@ -96,8 +97,11 @@ local function remove(id: number)
 	if s then
 		spirits[id] = nil
 		recent[id] = s.pos
+		local body = s.model.PrimaryPart
+		recentColor[id] = if body then (body :: BasePart).Color else Theme.Colors.Static
 		task.delay(3, function()
 			recent[id] = nil
+			recentColor[id] = nil
 		end)
 		release(s)
 	end
@@ -178,6 +182,57 @@ local function beam(target: Vector3, color: Color3)
 	task.delay(0.18, function()
 		a0:Destroy()
 		holder:Destroy()
+	end)
+end
+
+-- A glowing orb of the caught spirit flies from where it was into the player's jar
+local function orbToJar(from: Vector3, color: Color3, big: boolean)
+	local hrp = rootPart()
+	if not hrp then
+		return
+	end
+	local orb = Instance.new("Part")
+	orb.Shape = Enum.PartType.Ball
+	orb.Size = Vector3.one * (if big then 1.8 else 1.1)
+	orb.Material = Enum.Material.Neon
+	orb.Color = color
+	orb.Anchored = true
+	orb.CanCollide = false
+	orb.CanQuery = false
+	orb.CanTouch = false
+	orb.CastShadow = false
+	orb.CFrame = CFrame.new(from)
+	orb.Parent = folder
+	local a0 = Instance.new("Attachment")
+	a0.Position = Vector3.new(0, 0.4, 0)
+	a0.Parent = orb
+	local a1 = Instance.new("Attachment")
+	a1.Position = Vector3.new(0, -0.4, 0)
+	a1.Parent = orb
+	local trail = Instance.new("Trail")
+	trail.Attachment0 = a0
+	trail.Attachment1 = a1
+	trail.Color = ColorSequence.new(color, Theme.Colors.Static)
+	trail.LightEmission = 1
+	trail.Lifetime = 0.2
+	trail.Transparency = NumberSequence.new(0.1, 1)
+	trail.Parent = orb
+	local start = os.clock()
+	local duration = 0.32
+	local side = Vector3.new(math.random() - 0.5, 0, math.random() - 0.5) * 6
+	local conn: RBXScriptConnection
+	conn = RunService.RenderStepped:Connect(function()
+		local t = math.min(1, (os.clock() - start) / duration)
+		local target = hrp.Position + Vector3.new(0, 1, 0)
+		-- curve out to the side, then swoop into the player
+		local p = from:Lerp(target, t * t) + side * math.sin(t * math.pi) + Vector3.new(0, math.sin(t * math.pi) * 3, 0)
+		orb.CFrame = CFrame.new(p)
+		orb.Size = Vector3.one * (if big then 1.8 else 1.1) * (1 - t * 0.6)
+		if t >= 1 then
+			conn:Disconnect()
+			orb:Destroy()
+			Effects.burst(target, color, if big then 14 else 5, 0.5)
+		end
 	end)
 end
 
@@ -355,6 +410,7 @@ function SpiritController.start()
 		end
 		Effects.popupWorld(pos + Vector3.new(0, 3, 0), text, color, if shiny then 52 else 38)
 		local order = Defs.rarityOrder(rarity)
+		orbToJar(pos, recentColor[spiritId] or color, shiny or order >= 4)
 		if shiny or order >= 4 then
 			Effects.shake(if shiny then 0.5 else 0.3)
 			Effects.burst(pos, color, 30, 1.4)

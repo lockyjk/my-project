@@ -212,6 +212,11 @@ Fake.__newindex = function(self, key, value)
 		return
 	end
 	local prop = findMember(cls, key, "Properties")
+	if not prop and type(value) == "function" then
+		-- callbacks (OnServerInvoke, ProcessReceipt, OnIncomingMessage, …) aren't in the dump
+		rawget(self, "_props")[key] = value
+		return
+	end
 	if not prop then
 		fail(`cannot set {key}: not a property of {cls}`)
 	end
@@ -382,6 +387,31 @@ function methods.GetServerTimeNow()
 	return os.time()
 end
 function methods.BulkMoveTo() end
+-- CollectionService
+local tagged = {}
+function methods.AddTag(self, inst, tag)
+	if rawget(self, "ClassName") == "CollectionService" then
+		tagged[tag] = tagged[tag] or {}
+		table.insert(tagged[tag], inst)
+	else
+		-- Instance:AddTag(tag)
+		tagged[inst] = tagged[inst] or {}
+		table.insert(tagged[inst], self)
+	end
+end
+function methods.GetTagged(_, tag)
+	return table.clone(tagged[tag] or {})
+end
+function methods.HasTag(self, inst, tag)
+	local list = tagged[tag] or {}
+	return table.find(list, inst) ~= nil
+end
+function methods.GetInstanceAddedSignal()
+	return fakeSignal()
+end
+function methods.GetInstanceRemovedSignal()
+	return fakeSignal()
+end
 
 ---------------------------------------------------------------------------
 -- Fake DataModel + module tree

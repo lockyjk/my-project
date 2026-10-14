@@ -121,7 +121,7 @@ Luck multiplies the weights of Rare-or-better pets. Egg luck comes from the Luck
 | Achievements | 11 stat families, 39 tiers. Rewards include Charge minutes, Pass XP and Tokens at high tiers |
 | Index | Collection log of every Stormling. Discovering all pets from an egg gives +5% permanent Charge + reward |
 | Leaderboards | Global OrderedDataStores for Lifetime Charge (log-encoded), Ascensions and Rarest Stormling, plus in-server `leaderstats` |
-| Live events | Add an entry to `Config.LiveEvents` (start/end UTC, multipliers, extra spirits, event egg). No code needed |
+| Live events | Add an entry to `Config.LiveEvents` (start/end UTC, multipliers, extra spirits, event egg). No code needed. Scheduled: Blossom Breeze (spring), **Spooky Squall** (24 Oct – 3 Nov 2026: Ghost Wisps + Pumpkin Egg) and **Winter Whiteout** (18 Dec 2026 – 4 Jan 2027: Snowflake Sprites + Gift Egg) |
 | Trading | Two-sided Ready → 3 s delay → Confirm flow. Any change resets both sides. Changed items are highlighted and there is a change log. Locked pets can't be offered. Both players need 20 min of total playtime. Pets from paid eggs follow `PolicyService.IsPaidItemTradingAllowed` |
 | Friend boost | +10% Charge while a friend is in the server |
 | Group reward | One-time Group Gust pet + 10 min Charge for group members |
@@ -195,6 +195,12 @@ These are ethical and follow the Roblox rules. Most of the audience is under 13.
 See `src/shared/Theme.luau`. Every placeholder part carries the `Placeholder` CollectionService tag and an `ArtistNote` attribute that describes what should replace it.
 
 - **World:**
+  - Every zone has themed scenery from `World/ZoneScenery.luau`, all in the outer 12-stud ring so spirit spawns are untouched:
+    - organic cliff edges with grass overhangs, stalactites under the islands and floating islets
+    - waterfalls on the wet islands (Drizzle Meadows, Monsoon Marsh, Rainbow Lagoon)
+    - theme props, for example mushrooms and puddles, windmills, lightning rods, ice boulders, snowmen, reeds, cacti and dunes, aurora crystals, canyon pillars, storm obelisks and candy trees
+    - an ambient particle layer for each zone (rain, leaves, sparks, hail, snow, sand, aurora motes, embers)
+  - The hub has a storm-tower centrepiece, lamps placed between the plot bridges, benches and clouds.
   - Stepped block islands (12-stud blocks, 4-stud terraces) in SmoothPlastic, with Neon trims in each zone's accent colour.
   - Clouds are stacked white cubes.
   - Gates are 44 studs tall with a glowing frame and a giant price sign.

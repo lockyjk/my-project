@@ -12,6 +12,7 @@ local order: { Instance } = {
 	Controllers.WeatherController,
 	Controllers.SpiritController,
 	UI.HUD,
+	UI.ComboUI,
 	UI.HatchAnimation,
 	UI.RewardPopup,
 	UI.UpgradesUI,

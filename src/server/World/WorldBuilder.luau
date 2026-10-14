@@ -14,6 +14,7 @@ local Defs = require(Shared.Defs)
 local Format = require(Shared.Format)
 local Theme = require(Shared.Theme)
 local WorldLayout = require(Shared.WorldLayout)
+local ZoneScenery = require(script.Parent.ZoneScenery)
 
 local WorldBuilder = {}
 
@@ -358,9 +359,11 @@ local function buildZone(zoneDef: any)
 	local rng = Random.new(zoneDef.index * 7919 + 17)
 	local half = layout.size / 2
 	islandBody(folder, layout.center, layout.size, zoneDef.ground, zoneDef.name)
+	-- Themed cliffs, islets, waterfalls, props and ambient weather (outer ring only)
+	ZoneScenery.decorate(folder, zoneDef, layout, rng)
 
-	-- Edge props and floating clouds
-	for _ = 1, 16 do
+	-- Generic edge props and floating clouds
+	for _ = 1, 8 do
 		local edge = rng:NextInteger(1, 4)
 		local along = rng:NextNumber(-half + 10, half - 10)
 		local inset = rng:NextNumber(4, 10)
@@ -485,6 +488,7 @@ local function buildHub()
 	prompt.RequiresLineOfSight = false
 	prompt.Parent = pad
 	CollectionService:AddTag(pad, "GroupPad")
+	ZoneScenery.decorateHub(hub, center)
 	hub.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
 end
 

@@ -203,6 +203,8 @@ Config.Spirits = {
 	spirit("TwisterImp", "Twister Imp", 40, "Legendary", rgb(190, 190, 200), "Cylinder", 4),
 	-- Live-event spirits
 	spirit("PetalWisp", "Petal Wisp", 20, "Epic", rgb(255, 170, 200), "Ball", 3.4),
+	spirit("GhostWisp", "Ghost Wisp", 22, "Epic", rgb(190, 140, 255), "Ball", 3.4),
+	spirit("SnowflakeSprite", "Snowflake Sprite", 22, "Epic", rgb(205, 240, 255), "Wedge", 3.2),
 }
 
 -- Direct pet drops from storm spirits ("rare catches"). Chance is per catch, multiplied by luck.
@@ -645,6 +647,14 @@ addPet("TempestQueen", "Tempest Queen", "Mythic", 80, rgb(200, 90, 255), rgb(255
 addPet("PetalPuff", "Petal Puff", "Rare", 3, rgb(255, 180, 210), rgb(255, 255, 255), "Ball")
 addPet("BlossomBear", "Blossom Bear", "Epic", 7, rgb(255, 150, 190), rgb(120, 200, 90), "Block")
 addPet("SpringSylph", "Spring Sylph", "Legendary", 22, rgb(170, 255, 170), rgb(255, 160, 220), "Wedge")
+-- Spooky Squall (Halloween) event pets
+addPet("PumpkinPup", "Pumpkin Pup", "Rare", 3, rgb(255, 140, 30), rgb(40, 30, 30), "Ball")
+addPet("HauntedHoot", "Haunted Hoot", "Epic", 7, rgb(120, 70, 170), rgb(150, 255, 120), "Block")
+addPet("SpectreSprite", "Spectre Sprite", "Legendary", 22, rgb(200, 170, 255), rgb(120, 255, 200), "Wedge")
+-- Winter Whiteout event pets
+addPet("GiftGremlin", "Gift Gremlin", "Rare", 3, rgb(220, 50, 60), rgb(80, 200, 90), "Block")
+addPet("SnowYeti", "Snow Yeti", "Epic", 7, rgb(240, 248, 255), rgb(120, 190, 255), "Ball")
+addPet("NorthStar", "North Star", "Legendary", 22, rgb(255, 230, 120), rgb(200, 240, 255), "Wedge")
 
 local extraEggs: { Types.EggDef } = {
 	-- Storm eggs: Charge-priced, hatchable only during their storm at the Storm Altar.
@@ -704,6 +714,32 @@ local extraEggs: { Types.EggDef } = {
 			{ pet = "PetalPuff", weight = 75 },
 			{ pet = "BlossomBear", weight = 23.5 },
 			{ pet = "SpringSylph", weight = 1.5 },
+		},
+	},
+	{
+		id = "PumpkinEgg",
+		name = "Pumpkin Egg",
+		currency = "Charge",
+		cost = 5000,
+		event = "SpookySquall",
+		zone = "DrizzleMeadows",
+		pets = {
+			{ pet = "PumpkinPup", weight = 75 },
+			{ pet = "HauntedHoot", weight = 23.5 },
+			{ pet = "SpectreSprite", weight = 1.5 },
+		},
+	},
+	{
+		id = "GiftEgg",
+		name = "Gift Egg",
+		currency = "Charge",
+		cost = 5000,
+		event = "WinterWhiteout",
+		zone = "DrizzleMeadows",
+		pets = {
+			{ pet = "GiftGremlin", weight = 75 },
+			{ pet = "SnowYeti", weight = 23.5 },
+			{ pet = "NorthStar", weight = 1.5 },
 		},
 	},
 }
@@ -834,6 +870,30 @@ Config.LiveEvents = {
 		spirits = { { spirit = "PetalWisp", weight = 2 } },
 		egg = "BlossomEgg",
 		color = rgb(255, 170, 210),
+	},
+	{
+		id = "SpookySquall",
+		name = "Spooky Squall",
+		description = "Ghost Wisps haunt every zone and the Pumpkin Egg is open!",
+		startUnix = 1792800000, -- 2026-10-24 00:00 UTC
+		endUnix = 1793664000, -- 2026-11-03 00:00 UTC
+		chargeMult = 1.2,
+		spawnMult = 1.1,
+		spirits = { { spirit = "GhostWisp", weight = 2 } },
+		egg = "PumpkinEgg",
+		color = rgb(255, 140, 30),
+	},
+	{
+		id = "WinterWhiteout",
+		name = "Winter Whiteout",
+		description = "Snowflake Sprites drift through every zone and the Gift Egg is open!",
+		startUnix = 1797552000, -- 2026-12-18 00:00 UTC
+		endUnix = 1799020800, -- 2027-01-04 00:00 UTC
+		chargeMult = 1.25,
+		spawnMult = 1.1,
+		spirits = { { spirit = "SnowflakeSprite", weight = 2 } },
+		egg = "GiftEgg",
+		color = rgb(170, 220, 255),
 	},
 } :: { Types.LiveEventDef }
 

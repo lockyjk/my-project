@@ -1,5 +1,7 @@
 # Storm Chaser Simulator
 
+> This repo also contains a second, self-contained game: **[Roll Brainrot: Monster Arena](RollBrainrot/README.md)** in `RollBrainrot/`.
+
 A Roblox simulator in which you catch living weather spirits with an upgradable Storm Jar. You sell them for Charge, hatch and fuse Stormlings, build your own sky island and Ascend. Server-wide storms roll in every 10 minutes.
 
 The design, economy formulas, zone table, odds and monetization are in [DESIGN.md](DESIGN.md). Every balance value is in [`src/shared/Config.luau`](src/shared/Config.luau).
@@ -15,6 +17,7 @@ The design, economy formulas, zone table, odds and monetization are in [DESIGN.m
 
 **Checks:** `./scripts/check.sh` runs strict `luau-lsp` type-checking with Roblox types, then `selene` when it can download the Roblox API dump, then the Lune test suite.
 - `lune run scripts/run-tests [filter]` runs only the tests.
+- `lune run scripts/smoke` runs the world builder, all service modules and every client window inside a fake DataModel. It validates every property write against Roblox's API reflection database and prints the world's part count.
 - `lune run scripts/simulate 7 -v` prints the pacing timeline for the current Config.
 - The same `tests/*.spec.luau` files run in Studio with TestEZ: `require(TestEZ).TestBootstrap:run({ game.ServerStorage.Tests })`.
 
