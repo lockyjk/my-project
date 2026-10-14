@@ -63,7 +63,12 @@ function RewardService.xp(player: Player, base: number, totals: Totals?): number
 	if ups > 0 then
 		local gems = ups * GameConfig.Player.LevelUpGems
 		DataService.add(player, "gems", gems)
-		Net.Server.fire("Notify", player, `⭐ LEVEL UP! You are now level {level} (+{gems} 💎)`, Color3.fromRGB(120, 220, 255))
+		Net.Server.fire(
+			"Notify",
+			player,
+			`⭐ LEVEL UP! You are now level {level} (+{gems} 💎)`,
+			Color3.fromRGB(120, 220, 255)
+		)
 		RewardService.LevelUp:Fire(player, level)
 	end
 	DataService.push(player, "level", "xp")
@@ -80,7 +85,14 @@ end
 
 -- Rewards for one monster kill. `tier` = arena order (1..6), `rewardMult` from the arena
 -- and any world event.
-function RewardService.kill(player: Player, def: Types.MonsterDef, rewardMult: number, tier: number, totals: Totals?, drops: { string }?)
+function RewardService.kill(
+	player: Player,
+	def: Types.MonsterDef,
+	rewardMult: number,
+	tier: number,
+	totals: Totals?,
+	drops: { string }?
+)
 	local data = DataService.get(player)
 	if not data then
 		return
@@ -120,8 +132,17 @@ function RewardService.kill(player: Player, def: Types.MonsterDef, rewardMult: n
 				if drops then
 					table.insert(drops, name)
 				end
-				Net.Server.fire("Notify", player, `👹 BOSS DROP: {name}{if uid then "" else " (auto-sold)"}!`, Registry.rarityOf(drop.brainrot).color)
-				Net.Server.fireAll("Announce", `{player.DisplayName} got {name} from {def.name}!`, Registry.rarityOf(drop.brainrot).color)
+				Net.Server.fire(
+					"Notify",
+					player,
+					`👹 BOSS DROP: {name}{if uid then "" else " (auto-sold)"}!`,
+					Registry.rarityOf(drop.brainrot).color
+				)
+				Net.Server.fireAll(
+					"Announce",
+					`{player.DisplayName} got {name} from {def.name}!`,
+					Registry.rarityOf(drop.brainrot).color
+				)
 			end
 		end
 	end

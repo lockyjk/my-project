@@ -377,13 +377,70 @@ export type DecorationDef = {
 }
 
 GameConfig.Decorations = {
-	{ id = "FlowerBed", name = "Flower Bed", cost = 500, currency = "coins", incomeBonus = 0.02, builder = "FlowerBed", order = 1 },
-	{ id = "Lamp", name = "Zoo Lamps", cost = 1500, currency = "coins", incomeBonus = 0.03, builder = "LampPair", order = 2 },
-	{ id = "Fountain", name = "Fountain", cost = 8000, currency = "coins", incomeBonus = 0.05, builder = "Fountain", order = 3 },
-	{ id = "Balloons", name = "Balloon Arch", cost = 25000, currency = "coins", incomeBonus = 0.06, builder = "BalloonArch", order = 4 },
-	{ id = "Statue", name = "Brainrot Statue", cost = 120000, currency = "coins", incomeBonus = 0.1, builder = "Statue", order = 5 },
-	{ id = "GoldTrophy", name = "Gold Trophy", cost = 150, currency = "gems", incomeBonus = 0.12, builder = "Trophy", order = 6 },
-	{ id = "VipCarpet", name = "VIP Red Carpet", cost = 0, currency = "coins", incomeBonus = 0.1, vip = true, builder = "VipCarpet", order = 7 },
+	{
+		id = "FlowerBed",
+		name = "Flower Bed",
+		cost = 500,
+		currency = "coins",
+		incomeBonus = 0.02,
+		builder = "FlowerBed",
+		order = 1,
+	},
+	{
+		id = "Lamp",
+		name = "Zoo Lamps",
+		cost = 1500,
+		currency = "coins",
+		incomeBonus = 0.03,
+		builder = "LampPair",
+		order = 2,
+	},
+	{
+		id = "Fountain",
+		name = "Fountain",
+		cost = 8000,
+		currency = "coins",
+		incomeBonus = 0.05,
+		builder = "Fountain",
+		order = 3,
+	},
+	{
+		id = "Balloons",
+		name = "Balloon Arch",
+		cost = 25000,
+		currency = "coins",
+		incomeBonus = 0.06,
+		builder = "BalloonArch",
+		order = 4,
+	},
+	{
+		id = "Statue",
+		name = "Brainrot Statue",
+		cost = 120000,
+		currency = "coins",
+		incomeBonus = 0.1,
+		builder = "Statue",
+		order = 5,
+	},
+	{
+		id = "GoldTrophy",
+		name = "Gold Trophy",
+		cost = 150,
+		currency = "gems",
+		incomeBonus = 0.12,
+		builder = "Trophy",
+		order = 6,
+	},
+	{
+		id = "VipCarpet",
+		name = "VIP Red Carpet",
+		cost = 0,
+		currency = "coins",
+		incomeBonus = 0.1,
+		vip = true,
+		builder = "VipCarpet",
+		order = 7,
+	},
 } :: { DecorationDef }
 
 -------------------------------------------------------------------------------
@@ -485,29 +542,80 @@ GameConfig.Events = {
 -------------------------------------------------------------------------------
 -- Monetization (optional; ids of 0 show "Coming soon" and cannot be bought)
 -------------------------------------------------------------------------------
-GameConfig.GamePasses = {
-	ExtraSlots = { id = 0, name = "+2 Equip Slots", icon = "🎒", description = "Take 2 more Brainrots into battle.", priceHint = 199 },
-	AutoRoll = { id = 0, name = "Auto Roll", icon = "🔁", description = "Roll automatically until you stop.", priceHint = 149 },
-	FastRoll = { id = 0, name = "Fast Roll", icon = "⚡", description = "Much faster roll animations.", priceHint = 99 },
-	ExtraStorage = { id = 0, name = "+300 Storage", icon = "📦", description = "Hold 300 more Brainrots.", priceHint = 99 },
-	VIP = { id = 0, name = "VIP", icon = "👑", description = "VIP zoo decorations, +10% coins, gold name.", priceHint = 399 },
-} :: { [string]: { id: number, name: string, icon: string, description: string, priceHint: number } }
+GameConfig.GamePasses =
+	{
+		ExtraSlots = {
+			id = 0,
+			name = "+2 Equip Slots",
+			icon = "🎒",
+			description = "Take 2 more Brainrots into battle.",
+			priceHint = 199,
+		},
+		AutoRoll = {
+			id = 0,
+			name = "Auto Roll",
+			icon = "🔁",
+			description = "Roll automatically until you stop.",
+			priceHint = 149,
+		},
+		FastRoll = {
+			id = 0,
+			name = "Fast Roll",
+			icon = "⚡",
+			description = "Much faster roll animations.",
+			priceHint = 99,
+		},
+		ExtraStorage = {
+			id = 0,
+			name = "+300 Storage",
+			icon = "📦",
+			description = "Hold 300 more Brainrots.",
+			priceHint = 99,
+		},
+		VIP = {
+			id = 0,
+			name = "VIP",
+			icon = "👑",
+			description = "VIP zoo decorations, +10% coins, gold name.",
+			priceHint = 399,
+		},
+	} :: { [string]: { id: number, name: string, icon: string, description: string, priceHint: number } }
 
-GameConfig.Products = {
-	LuckBoost = { id = 0, name = "2x Luck (15m)", icon = "🍀", grant = { boost = "Luck", minutes = 15 }, priceHint = 49 },
-	CoinBoost = { id = 0, name = "2x Coins (15m)", icon = "💰", grant = { boost = "Coins", minutes = 15 }, priceHint = 49 },
-	XPBoost = { id = 0, name = "2x XP (15m)", icon = "⭐", grant = { boost = "XP", minutes = 15 }, priceHint = 29 },
-	Tokens10 = { id = 0, name = "10 Roll Tokens", icon = "🎟️", grant = { tokens = 10 }, priceHint = 79 },
-	Tokens50 = { id = 0, name = "50 Roll Tokens", icon = "🎟️", grant = { tokens = 50 }, priceHint = 329 },
-	Gems100 = { id = 0, name = "100 Gems", icon = "💎", grant = { gems = 100 }, priceHint = 99 },
-} :: { [string]: { id: number, name: string, icon: string, grant: { [string]: any }, priceHint: number } }
+GameConfig.Products =
+	{
+		LuckBoost = {
+			id = 0,
+			name = "2x Luck (15m)",
+			icon = "🍀",
+			grant = { boost = "Luck", minutes = 15 },
+			priceHint = 49,
+		},
+		CoinBoost = {
+			id = 0,
+			name = "2x Coins (15m)",
+			icon = "💰",
+			grant = { boost = "Coins", minutes = 15 },
+			priceHint = 49,
+		},
+		XPBoost = { id = 0, name = "2x XP (15m)", icon = "⭐", grant = { boost = "XP", minutes = 15 }, priceHint = 29 },
+		Tokens10 = { id = 0, name = "10 Roll Tokens", icon = "🎟️", grant = { tokens = 10 }, priceHint = 79 },
+		Tokens50 = { id = 0, name = "50 Roll Tokens", icon = "🎟️", grant = { tokens = 50 }, priceHint = 329 },
+		Gems100 = { id = 0, name = "100 Gems", icon = "💎", grant = { gems = 100 }, priceHint = 99 },
+	} :: { [string]: { id: number, name: string, icon: string, grant: { [string]: any }, priceHint: number } }
 
 -- Things free players can buy with gems earned by levelling / daily rewards
 GameConfig.GemShop = {
 	{ id = "GemLuck", name = "2x Luck (10m)", icon = "🍀", cost = 30, grant = { boost = "Luck", minutes = 10 } },
 	{ id = "GemCoins", name = "2x Coins (10m)", icon = "💰", cost = 30, grant = { boost = "Coins", minutes = 10 } },
 	{ id = "GemTokens", name = "5 Roll Tokens", icon = "🎟️", cost = 25, grant = { tokens = 5 } },
-	{ id = "BossCrate", name = "Boss Crate (10 Boss Tokens)", icon = "👹", cost = 0, bossTokens = 10, grant = { crate = "Epic" } },
+	{
+		id = "BossCrate",
+		name = "Boss Crate (10 Boss Tokens)",
+		icon = "👹",
+		cost = 0,
+		bossTokens = 10,
+		grant = { crate = "Epic" },
+	},
 } :: { { [string]: any } }
 
 GameConfig.Vip = { CoinMult = 1.1 }
@@ -586,7 +694,7 @@ GameConfig.World = {
 		bossGateHalfWidth = 46, -- north boss entrance
 	},
 	ArenaGate = Vector3.new(0, 4, -585), -- forecourt outside the south gate (players return here)
-	ArenaEntry = Vector3.new(0, 4, -840), -- where fighters appear inside the battlefield
+	ArenaEntry = Vector3.new(0, 4, -1190), -- where fighters appear (south of the centre circle)
 	InvasionField = { center = Vector3.new(0, 0, 380), radius = 120 },
 	Stands = {
 		Shop = Vector3.new(-120, 0, 110),
@@ -597,11 +705,10 @@ GameConfig.World = {
 }
 
 GameConfig.Crowd = {
-	Rows = 12,
-	PerRowDensity = 0.11, -- spectators per stud of row circumference
-	MaxSpectators = 1600,
-	ActiveDistance = 1400, -- only animate when the camera is this close to the arena
-	UpdateHz = 20,
+	MaxSpectators = 3000, -- one row of fans per stand tier, spread evenly
+	FanScale = 1.8, -- fans are chunky so they read from the middle of the huge field
+	BuildDistance = 950, -- the crowd is built (client-side) when the camera gets this close
+	UpdateHz = 15,
 }
 
 GameConfig.Security = {

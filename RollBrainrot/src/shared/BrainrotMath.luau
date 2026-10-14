@@ -107,13 +107,19 @@ function BrainrotMath.habitatIncomeMult(def: GameConfig.HabitatDef, level: numbe
 end
 
 -- Income of one Brainrot placed in a habitat (coins/min, before global multipliers)
-function BrainrotMath.placedIncome(inst: Types.BrainrotInstance, habitat: GameConfig.HabitatDef, habitatLevel: number): number
+function BrainrotMath.placedIncome(
+	inst: Types.BrainrotInstance,
+	habitat: GameConfig.HabitatDef,
+	habitatLevel: number
+): number
 	local def = Registry.Brainrot[inst.id]
 	if not def then
 		return 0
 	end
 	local affinity = if def.habitat == habitat.id then 1 + GameConfig.Zoo.AffinityBonus else 1
-	return BrainrotMath.baseIncome(def, inst.mut, inst.lvl) * BrainrotMath.habitatIncomeMult(habitat, habitatLevel) * affinity
+	return BrainrotMath.baseIncome(def, inst.mut, inst.lvl)
+		* BrainrotMath.habitatIncomeMult(habitat, habitatLevel)
+		* affinity
 end
 
 -------------------------------------------------------------------------------

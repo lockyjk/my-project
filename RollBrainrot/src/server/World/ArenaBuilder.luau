@@ -58,7 +58,17 @@ local function gapAt(a: number, r: number): boolean
 end
 
 -- Ring of segments around the stadium centre skipping the two gate gaps
-local function ringSegments(parent: Instance, r: number, segments: number, height: number, y0: number, depth: number, colorFn: (number) -> Color3, material: Enum.Material, collide: boolean)
+local function ringSegments(
+	parent: Instance,
+	r: number,
+	segments: number,
+	height: number,
+	y0: number,
+	depth: number,
+	colorFn: (number) -> Color3,
+	material: Enum.Material,
+	collide: boolean
+)
 	local segLen = 2 * math.pi * r / segments + 0.6
 	for i = 0, segments - 1 do
 		local a = (i + 0.5) / segments * math.pi * 2
@@ -76,13 +86,25 @@ local function battlefield(parent: Instance)
 	-- chalk markings (thin, non-colliding)
 	local function chalkRing(r: number, w: number)
 		BuildKit.around(C, r, math.max(24, math.floor(r / 3)), function(ring)
-			local seg = BuildKit.block(f, v(2 * math.pi * r / math.max(24, math.floor(r / 3)) + 0.3, 0.12, w), ring * cf(0, 0.06, 0), rgb(245, 245, 245), Enum.Material.SmoothPlastic)
+			local seg = BuildKit.block(
+				f,
+				v(2 * math.pi * r / math.max(24, math.floor(r / 3)) + 0.3, 0.12, w),
+				ring * cf(0, 0.06, 0),
+				rgb(245, 245, 245),
+				Enum.Material.SmoothPlastic
+			)
 			seg.CastShadow = false
 		end)
 	end
 	chalkRing(90, 2)
 	chalkRing(A.fieldRadius - 30, 2.5)
-	local mid = BuildKit.block(f, v(2.5, 0.12, (A.fieldRadius - 30) * 2), cf(C + v(0, 0.06, 0)), rgb(245, 245, 245), Enum.Material.SmoothPlastic)
+	local mid = BuildKit.block(
+		f,
+		v(2.5, 0.12, (A.fieldRadius - 30) * 2),
+		cf(C + v(0, 0.06, 0)),
+		rgb(245, 245, 245),
+		Enum.Material.SmoothPlastic
+	)
 	mid.CastShadow = false
 	-- centre emblem
 	local emblem = BuildKit.disc(f, 40, 0.15, C + v(0, 0.08, 0), PINK, Enum.Material.SmoothPlastic)
@@ -125,7 +147,14 @@ local function innerWall(parent: Instance)
 			local color = SECTOR_COLORS[idx % #SECTOR_COLORS + 1]
 			local banner = BuildKit.block(f, v(12, 22, 0.4), look, color, Enum.Material.Fabric)
 			banner.Name = "Banner"
-			BuildKit.sign(f, look * cf(0, 0, -0.25), Vector2.new(11, 6), if idx % 2 == 0 then "BRAINROT\nARENA" else "⚔️", color, rgb(255, 255, 255))
+			BuildKit.sign(
+				f,
+				look * cf(0, 0, -0.25),
+				Vector2.new(11, 6),
+				if idx % 2 == 0 then "BRAINROT\nARENA" else "⚔️",
+				color,
+				rgb(255, 255, 255)
+			)
 			BuildKit.block(f, v(13, 1, 1), look * cf(0, 11.5, 0), YELLOW, Enum.Material.Foil)
 			Props.torch(f, cf(polar(r - 7, a + rad(7.5), 0)), A.wallHeight * 0.4, rgb(255, 150, 60))
 		end
@@ -157,7 +186,14 @@ local function stands(parent: Instance)
 				local r = A.standsInner + t * A.tierDepth + A.tierDepth / 2
 				local top = A.wallHeight + (t + 1) * A.tierRise
 				local pos = polar(r, a, top + 0.3)
-				BuildKit.block(f, v(5, 0.6, A.tierDepth), CFrame.lookAt(pos, v(C.X, pos.Y, C.Z)), CONCRETE_DARK, Enum.Material.Concrete, false)
+				BuildKit.block(
+					f,
+					v(5, 0.6, A.tierDepth),
+					CFrame.lookAt(pos, v(C.X, pos.Y, C.Z)),
+					CONCRETE_DARK,
+					Enum.Material.Concrete,
+					false
+				)
 			end
 		end
 	end
@@ -222,7 +258,13 @@ local function floodlights(parent: Instance)
 		BuildKit.block(f, v(30, 18, 3), look, rgb(50, 50, 60), Enum.Material.Metal)
 		for x = -1, 1 do
 			for y = -1, 1 do
-				local lamp = BuildKit.block(f, v(8, 4.6, 0.6), look * cf(x * 9.4, y * 5.4, -1.6), rgb(255, 250, 225), Enum.Material.Neon)
+				local lamp = BuildKit.block(
+					f,
+					v(8, 4.6, 0.6),
+					look * cf(x * 9.4, y * 5.4, -1.6),
+					rgb(255, 250, 225),
+					Enum.Material.Neon
+				)
 				lamp.CastShadow = false
 				if x == 0 and y == 0 then
 					local spot = Instance.new("SpotLight")
@@ -248,7 +290,14 @@ local function screens(parent: Instance)
 		BuildKit.block(f, v(120, 62, 4), look * cf(0, 0, 2.5), rgb(30, 30, 38), Enum.Material.Metal)
 		BuildKit.column(f, A.facadeHeight + 4, 5, polar(r + 4, a + rad(4), 0), rgb(90, 90, 100), Enum.Material.Metal)
 		BuildKit.column(f, A.facadeHeight + 4, 5, polar(r + 4, a - rad(4), 0), rgb(90, 90, 100), Enum.Material.Metal)
-		local screen, label = BuildKit.sign(f, look * cf(0, 0, 0.2), Vector2.new(112, 54), "MONSTER ARENA\nStep through the gate to fight!", rgb(10, 12, 30), rgb(255, 255, 255))
+		local screen, label = BuildKit.sign(
+			f,
+			look * cf(0, 0, 0.2),
+			Vector2.new(112, 54),
+			"MONSTER ARENA\nStep through the gate to fight!",
+			rgb(10, 12, 30),
+			rgb(255, 255, 255)
+		)
 		screen.Name = "GiantScreen"
 		screen.Material = Enum.Material.Neon
 		label.Name = "ScreenLabel"
@@ -270,13 +319,27 @@ local function southGate(parent: Instance)
 	local zOut = C.Z + outer + 8
 	-- tunnel walls + ceiling
 	for _, s in { -1, 1 } do
-		BuildKit.block(f, v(8, 60, zOut - zIn), cf(s * (hw + 4), 30, (zIn + zOut) / 2), WALL, Enum.Material.Concrete, true)
+		BuildKit.block(
+			f,
+			v(8, 60, zOut - zIn),
+			cf(s * (hw + 4), 30, (zIn + zOut) / 2),
+			WALL,
+			Enum.Material.Concrete,
+			true
+		)
 		for z = zIn + 10, zOut - 10, 24 do
 			Props.torch(f, cf(s * (hw - 2), 0, z), 14, rgb(255, 150, 60))
 		end
 	end
 	BuildKit.block(f, v(hw * 2 + 16, 8, zOut - zIn), cf(0, 64, (zIn + zOut) / 2), WALL, Enum.Material.Concrete, true)
-	BuildKit.block(f, v(hw * 2, 0.6, zOut - zIn + 20), cf(0, 0.2, (zIn + zOut) / 2 + 6), rgb(170, 60, 70), Enum.Material.Fabric, true) -- red carpet
+	BuildKit.block(
+		f,
+		v(hw * 2, 0.6, zOut - zIn + 20),
+		cf(0, 0.2, (zIn + zOut) / 2 + 6),
+		rgb(170, 60, 70),
+		Enum.Material.Fabric,
+		true
+	) -- red carpet
 	-- gate towers
 	for _, s in { -1, 1 } do
 		local tp = v(s * (hw + 26), 0, zOut - 6)
@@ -284,7 +347,14 @@ local function southGate(parent: Instance)
 		BuildKit.column(f, 6, 48, tp + v(0, A.facadeHeight + 40, 0), WALL, Enum.Material.Concrete, true)
 		for k = 0, 11 do
 			local a = k / 12 * math.pi * 2
-			BuildKit.block(f, v(6, 8, 4), cf(tp + v(math.sin(a) * 22, A.facadeHeight + 50, math.cos(a) * 22)) * ang(0, a, 0), WALL, Enum.Material.Concrete, true)
+			BuildKit.block(
+				f,
+				v(6, 8, 4),
+				cf(tp + v(math.sin(a) * 22, A.facadeHeight + 50, math.cos(a) * 22)) * ang(0, a, 0),
+				WALL,
+				Enum.Material.Concrete,
+				true
+			)
 		end
 		Props.flag(f, cf(tp + v(0, A.facadeHeight + 46, 0)), if s < 0 then PINK else CYAN, 44)
 		Props.torch(f, cf(tp + v(-s * 10, 0, 26)), 18, rgb(255, 150, 60))
@@ -333,17 +403,37 @@ local function bossGate(parent: Instance)
 	local zIn = C.Z - A.fieldRadius - 2
 	local zOut = C.Z - outer - 8
 	for _, s in { -1, 1 } do
-		BuildKit.block(f, v(10, 110, zIn - zOut), cf(s * (hw + 5), 55, (zIn + zOut) / 2), rgb(50, 44, 60), Enum.Material.Slate, true)
+		BuildKit.block(
+			f,
+			v(10, 110, zIn - zOut),
+			cf(s * (hw + 5), 55, (zIn + zOut) / 2),
+			rgb(50, 44, 60),
+			Enum.Material.Slate,
+			true
+		)
 		-- warning stripes
 		for i = 0, 7 do
-			BuildKit.block(f, v(0.6, 12, 6), cf(s * hw, 6 + i * 13, zIn - 2) * ang(rad(30), 0, 0), if i % 2 == 0 then YELLOW else rgb(30, 30, 30), Enum.Material.SmoothPlastic)
+			BuildKit.block(
+				f,
+				v(0.6, 12, 6),
+				cf(s * hw, 6 + i * 13, zIn - 2) * ang(rad(30), 0, 0),
+				if i % 2 == 0 then YELLOW else rgb(30, 30, 30),
+				Enum.Material.SmoothPlastic
+			)
 		end
 		-- red warning lamps
 		local lamp = BuildKit.ball(f, 5, v(s * (hw + 2), 104, zIn - 2), RED, Enum.Material.Neon)
 		lamp.Name = "WarningLamp"
 		BuildKit.light(lamp, RED, 60, 2)
 	end
-	BuildKit.block(f, v(hw * 2 + 20, 14, zIn - zOut), cf(0, 117, (zIn + zOut) / 2), rgb(50, 44, 60), Enum.Material.Slate, true)
+	BuildKit.block(
+		f,
+		v(hw * 2 + 20, 14, zIn - zOut),
+		cf(0, 117, (zIn + zOut) / 2),
+		rgb(50, 44, 60),
+		Enum.Material.Slate,
+		true
+	)
 	-- giant skull emblem above the gate
 	local skull = BuildKit.ball(f, 26, v(0, 140, zIn - 4), rgb(235, 230, 220), Enum.Material.Marble)
 	skull.Name = "Skull"

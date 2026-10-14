@@ -131,7 +131,10 @@ function Registry.validate(): { string }
 		if m.drops then
 			for _, d in m.drops do
 				check(BrainrotConfig.ById[d.brainrot], `monster {id}: unknown drop {d.brainrot}`)
-				check(d.mutation == nil or MutationConfig.ById[d.mutation], `monster {id}: unknown mutation {d.mutation}`)
+				check(
+					d.mutation == nil or MutationConfig.ById[d.mutation],
+					`monster {id}: unknown mutation {d.mutation}`
+				)
 			end
 		end
 	end

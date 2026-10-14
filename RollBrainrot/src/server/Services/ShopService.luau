@@ -43,7 +43,12 @@ local function onPassOwned(player: Player, key: string)
 	data.passes[key] = true
 	DataService.push(player, "passes")
 	InventoryService.publish(player)
-	Net.Server.fire("Notify", player, `Thanks! {GameConfig.GamePasses[key].name} unlocked`, Color3.fromRGB(255, 220, 80))
+	Net.Server.fire(
+		"Notify",
+		player,
+		`Thanks! {GameConfig.GamePasses[key].name} unlocked`,
+		Color3.fromRGB(255, 220, 80)
+	)
 end
 
 local function checkPasses(player: Player, data: Types.PlayerData)

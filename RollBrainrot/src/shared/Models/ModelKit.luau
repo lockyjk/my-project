@@ -63,7 +63,14 @@ function ModelKit.new(name: string): Builder
 	return (setmetatable({ model = model, root = root }, Builder) :: any) :: Builder
 end
 
-function Builder.part(self: Builder, shape: Enum.PartType, size: Vector3, cf: CFrame, color: Color3, material: Enum.Material?): Part
+function Builder.part(
+	self: Builder,
+	shape: Enum.PartType,
+	size: Vector3,
+	cf: CFrame,
+	color: Color3,
+	material: Enum.Material?
+): Part
 	local p = Instance.new("Part")
 	p.Shape = shape
 	p.Size = size
@@ -91,7 +98,14 @@ function Builder.ball(self: Builder, size: Vector3, cf: CFrame, color: Color3, m
 end
 
 -- Cylinder whose axis runs along the CFrame's Y axis (more intuitive than Roblox's X axis)
-function Builder.cyl(self: Builder, length: number, diameter: number, cf: CFrame, color: Color3, material: Enum.Material?): Part
+function Builder.cyl(
+	self: Builder,
+	length: number,
+	diameter: number,
+	cf: CFrame,
+	color: Color3,
+	material: Enum.Material?
+): Part
 	return self:part(
 		Enum.PartType.Cylinder,
 		Vector3.new(length, diameter, diameter),
@@ -111,7 +125,15 @@ function Builder.wedge(self: Builder, size: Vector3, cf: CFrame, color: Color3, 
 end
 
 -- Stacked cylinders approximating a cone (horns, volcano, hats). Axis along cf's Y.
-function Builder.cone(self: Builder, height: number, baseDiameter: number, cf: CFrame, color: Color3, steps: number?, material: Enum.Material?): { Part }
+function Builder.cone(
+	self: Builder,
+	height: number,
+	baseDiameter: number,
+	cf: CFrame,
+	color: Color3,
+	steps: number?,
+	material: Enum.Material?
+): { Part }
 	local n = steps or 5
 	local parts = {}
 	for i = 0, n - 1 do
@@ -130,12 +152,24 @@ function Builder.eye(self: Builder, pos: Vector3, size: number, look: Vector3?)
 	white.Name = "Eye"
 	local pupil = self:ball(Vector3.one * size * 0.55, CFrame.new(pos + dir * size * 0.3), Color3.fromRGB(15, 15, 20))
 	pupil.Name = "Pupil"
-	local shine = self:ball(Vector3.one * size * 0.18, CFrame.new(pos + dir * size * 0.5 + Vector3.new(size * 0.1, size * 0.12, 0)), Color3.new(1, 1, 1), Enum.Material.Neon)
+	local shine = self:ball(
+		Vector3.one * size * 0.18,
+		CFrame.new(pos + dir * size * 0.5 + Vector3.new(size * 0.1, size * 0.12, 0)),
+		Color3.new(1, 1, 1),
+		Enum.Material.Neon
+	)
 	shine.Name = "Shine"
 end
 
 -- A limb (cylinder) between two points
-function Builder.limb(self: Builder, a: Vector3, b: Vector3, diameter: number, color: Color3, material: Enum.Material?): Part
+function Builder.limb(
+	self: Builder,
+	a: Vector3,
+	b: Vector3,
+	diameter: number,
+	color: Color3,
+	material: Enum.Material?
+): Part
 	local mid = (a + b) / 2
 	local len = (b - a).Magnitude
 	local cf = CFrame.lookAt(mid, b) * CFrame.Angles(math.rad(90), 0, 0)
@@ -160,7 +194,8 @@ function Builder.finish(self: Builder, scale: number?): Model
 				w.Parent = p
 			end
 			top = math.max(top, p.Position.Y + p.Size.Y / 2)
-			radius = math.max(radius, Vector2.new(p.Position.X, p.Position.Z).Magnitude + math.min(p.Size.X, p.Size.Z) / 2)
+			radius =
+				math.max(radius, Vector2.new(p.Position.X, p.Position.Z).Magnitude + math.min(p.Size.X, p.Size.Z) / 2)
 		end
 	end
 	model:SetAttribute("Height", top)

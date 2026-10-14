@@ -39,7 +39,8 @@ function InventoryService.storageCap(player: Player): number
 	if not data then
 		return 0
 	end
-	local cap = GameConfig.Inventory.BaseStorage + BrainrotMath.upgradeValue(GameConfig.Upgrades.Storage, data.upgrades.Storage or 0)
+	local cap = GameConfig.Inventory.BaseStorage
+		+ BrainrotMath.upgradeValue(GameConfig.Upgrades.Storage, data.upgrades.Storage or 0)
 	if data.passes.ExtraStorage then
 		cap += 300
 	end
@@ -125,7 +126,12 @@ end
 -- Adding / removing
 -------------------------------------------------------------------------------
 -- Adds a Brainrot. If storage is full it is auto-sold instead (returns nil uid).
-function InventoryService.add(player: Player, id: string, mutationId: string, level: number?): (string?, Types.BrainrotInstance?)
+function InventoryService.add(
+	player: Player,
+	id: string,
+	mutationId: string,
+	level: number?
+): (string?, Types.BrainrotInstance?)
 	local data = DataService.get(player)
 	local def = Registry.Brainrot[id]
 	if not data or not def then
@@ -139,7 +145,11 @@ function InventoryService.add(player: Player, id: string, mutationId: string, le
 	if InventoryService.count(data) >= InventoryService.storageCap(player) then
 		local value = BrainrotMath.sellValue(def, mut, inst.lvl)
 		DataService.add(player, "coins", value)
-		notify(player, `Storage full! Auto-sold {Registry.displayName(id, mut)} for ${value}`, Color3.fromRGB(255, 190, 40))
+		notify(
+			player,
+			`Storage full! Auto-sold {Registry.displayName(id, mut)} for ${value}`,
+			Color3.fromRGB(255, 190, 40)
+		)
 		DataService.push(player, "index")
 		return nil, inst
 	end

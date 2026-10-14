@@ -51,7 +51,8 @@ local function onCharacter(player: Player, char: Model)
 end
 
 -- Quick travel (HUD buttons). Not allowed mid-battle: leave the arena first.
-local SETTINGS = { music = "boolean", sfx = "boolean", skipRoll = "boolean", autoRoll = "boolean", seenRollAnim = "boolean" }
+local SETTINGS =
+	{ music = "boolean", sfx = "boolean", skipRoll = "boolean", autoRoll = "boolean", seenRollAnim = "boolean" }
 
 function PlayerService.teleport(player: Player, where: string): (boolean, string?)
 	if CombatService.battleOf(player) then

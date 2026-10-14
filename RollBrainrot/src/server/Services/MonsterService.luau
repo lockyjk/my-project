@@ -35,16 +35,9 @@ function MonsterService.eventRewardMult(): number
 	return eventMult("EventRewardMult")
 end
 
--- Random point on the far (north) half of the field edge, where monsters pour in
-function MonsterService.edgePoint(b: Battle.BattleT, northBias: boolean?): Vector3
-	local a: number
-	if northBias then
-		a = math.pi + (math.random() - 0.5) * math.pi * 1.2 -- around the boss gate side
-	else
-		a = math.random() * math.pi * 2
-	end
-	local r = b.radius * (0.72 + math.random() * 0.2)
-	return b.center + Vector3.new(math.sin(a) * r, 0, math.cos(a) * r)
+-- Where the next monster appears (near the fighters; see Battle.spawnPoint)
+function MonsterService.spawnPoint(b: Battle.BattleT): Vector3
+	return b:spawnPoint()
 end
 
 function MonsterService.spawn(b: Battle.BattleT, monsterId: string, pos: Vector3, ctx: Context): Battle.Unit?
@@ -52,7 +45,10 @@ function MonsterService.spawn(b: Battle.BattleT, monsterId: string, pos: Vector3
 	if not def then
 		return nil
 	end
-	local scale = BrainrotMath.monsterScale(ctx.statMult, ctx.wave, ArenaConfig.WaveGrowth, MonsterService.eventMonsterMult())
+	-- giant bosses are tuned as-is per arena (no per-wave growth); everything else ramps
+	local wave = if def.kind == "Boss" then 1 else ctx.wave
+	local scale =
+		BrainrotMath.monsterScale(ctx.statMult, wave, ArenaConfig.WaveGrowth, MonsterService.eventMonsterMult())
 	-- damage against player characters grows gently with tier (players don't scale ×4000)
 	local playerMult = (1 + 0.5 * (ctx.tier - 1)) * (1 + 0.04 * (ctx.wave - 1))
 	return b:addMonster(monsterId, pos, scale, playerMult)

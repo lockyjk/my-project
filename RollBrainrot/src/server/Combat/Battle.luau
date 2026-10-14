@@ -64,6 +64,7 @@ export type Unit = {
 	monsterDef: Types.MonsterDef?,
 	scale: number,
 	lastHitBy: number?,
+	introTarget: Vector3?, -- bosses walk here (fast, invulnerable) during their entrance
 }
 
 export type Participant = {
@@ -205,6 +206,7 @@ local function baseUnit(self: BattleT): Unit
 		monsterDef = nil,
 		scale = 1,
 		lastHitBy = nil,
+		introTarget = nil,
 	}
 end
 
@@ -217,7 +219,30 @@ function Battle.clampToField(self: BattleT, p: Vector3, margin: number?): Vector
 	return Vector3.new(self.center.X + flat.X, self.floorY, self.center.Z + flat.Z)
 end
 
-function Battle.addBrainrot(self: BattleT, owner: Player, uid: string, inst: Types.BrainrotInstance, pos: Vector3): Unit?
+-- Where the next monster should appear: 70–120 studs from the fighters (their centroid),
+-- mostly on the far side from the entrance tunnel, inside the field. Spawning near the
+-- action keeps waves snappy on a 1,000-stud battlefield.
+function Battle.spawnPoint(self: BattleT): Vector3
+	local sum, n = Vector3.zero, 0
+	for _, u in self.units do
+		if u.alive and u.team == "ally" then
+			sum += u.pos
+			n += 1
+		end
+	end
+	local focus = if n > 0 then sum / n else self.center
+	local a = math.pi + (math.random() - 0.5) * math.pi * 1.5 -- angle 0 = south (tunnel side)
+	local r = 70 + math.random() * 50
+	return self:clampToField(focus + Vector3.new(math.sin(a) * r, 0, math.cos(a) * r), 8)
+end
+
+function Battle.addBrainrot(
+	self: BattleT,
+	owner: Player,
+	uid: string,
+	inst: Types.BrainrotInstance,
+	pos: Vector3
+): Unit?
 	local def = Registry.Brainrot[inst.id]
 	if not def then
 		return nil
@@ -348,7 +373,15 @@ Battle.flatDist = flatDist
 -------------------------------------------------------------------------------
 -- Statuses
 -------------------------------------------------------------------------------
-function Battle.addStatus(self: BattleT, u: Unit, name: string, duration: number, value: number?, value2: number?, source: number?)
+function Battle.addStatus(
+	self: BattleT,
+	u: Unit,
+	name: string,
+	duration: number,
+	value: number?,
+	value2: number?,
+	source: number?
+)
 	if u.passive and u.passive.params.immune and table.find(u.passive.params.immune, name) then
 		return
 	end
@@ -396,7 +429,7 @@ function Battle.damage(self: BattleT, source: Unit?, target: Unit, amount: numbe
 		-- players take damage from the monster's unscaled attack (see MonsterConfig notes)
 		local participant = target.owner and self.participants[target.owner]
 		if participant and self.now < participant.iframesUntil then
-			self:emit({ t = "dodge", id = target.id })
+			self:emit({ t = "dodge", id = target.id, o = if target.owner then target.owner.UserId else 0 })
 			return
 		end
 		local base = o.playerBase or (if source then source.playerDamageBase else 0)
@@ -416,10 +449,18 @@ function Battle.damage(self: BattleT, source: Unit?, target: Unit, amount: numbe
 		local p = self.participants[source.owner]
 		if p then
 			p.damage += dmg
-			p.charge = math.min(GameConfig.PlayerAbilities.Ultimate.chargeNeeded, p.charge + GameConfig.UltimateChargePerHit)
+			p.charge =
+				math.min(GameConfig.PlayerAbilities.Ultimate.chargeNeeded, p.charge + GameConfig.UltimateChargePerHit)
 		end
 	end
-	self:emit({ t = "hit", id = target.id, a = round(dmg), c = crit or nil, hp = math.max(0, round(target.hp)), s = if source then source.id else nil })
+	self:emit({
+		t = "hit",
+		id = target.id,
+		a = round(dmg),
+		c = crit or nil,
+		hp = math.max(0, round(target.hp)),
+		s = if source then source.id else nil,
+	})
 	if target.hp <= 0 then
 		self:kill(target, source)
 	end
@@ -453,7 +494,10 @@ function Battle.kill(self: BattleT, u: Unit, killer: Unit?)
 		if killer and killer.owner then
 			local p = self.participants[killer.owner]
 			if p then
-				p.charge = math.min(GameConfig.PlayerAbilities.Ultimate.chargeNeeded, p.charge + GameConfig.UltimateChargePerKill)
+				p.charge = math.min(
+					GameConfig.PlayerAbilities.Ultimate.chargeNeeded,
+					p.charge + GameConfig.UltimateChargePerKill
+				)
 			end
 		end
 		-- keep the corpse for the death animation, then remove
@@ -516,7 +560,12 @@ local function pickTarget(self: BattleT, u: Unit): Unit?
 	if u.team == "enemy" then
 		for _, other in self.units do
 			local taunt = other.statuses.Taunt
-			if taunt and other.alive and other.team == enemyTeam and flatDist(other.pos, u.pos) <= (taunt.value or 25) then
+			if
+				taunt
+				and other.alive
+				and other.team == enemyTeam
+				and flatDist(other.pos, u.pos) <= (taunt.value or 25)
+			then
 				return other
 			end
 		end
@@ -682,7 +731,9 @@ local function separate(self: BattleT)
 								local minD = u.radius + o.radius
 								local m = d.Magnitude
 								if m < minD then
-									local dir = if m > 1e-3 then d / m else Vector3.new(math.random() - 0.5, 0, math.random() - 0.5).Unit
+									local dir = if m > 1e-3
+										then d / m
+										else Vector3.new(math.random() - 0.5, 0, math.random() - 0.5).Unit
 									-- bosses shove everyone; equals share the push
 									local w = if o.isBoss then 1 else 0.5
 									push += dir * (minD - m) * w
@@ -758,6 +809,15 @@ function Battle.tick(self: BattleT, now: number, dt: number)
 		elseif u.kind == "monster" and u.alive then
 			if now >= u.invulnerableUntil and not u.statuses.Stun and not u.statuses.Pulled then
 				monsterAI(self, u, dt)
+			elseif u.introTarget then
+				-- boss entrance: stride in from the gate (time it to the intro length)
+				local remaining = math.max(0.1, u.invulnerableUntil - now)
+				local d = flatDist(u.introTarget, u.pos)
+				local speed = math.max(u.speed, d / remaining)
+				local saved = u.speed
+				u.speed = speed
+				moveToward(self, u, u.introTarget, 1, dt)
+				u.speed = saved
 			else
 				u.moving = false
 			end

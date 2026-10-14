@@ -7,6 +7,7 @@ local fs = require("@lune/fs")
 local luau = require("@lune/luau")
 local process = require("@lune/process")
 local roblox = require("@lune/roblox")
+local task = require("@lune/task")
 
 ---------------------------------------------------------------------------
 -- Virtual instance tree
@@ -77,6 +78,9 @@ local replicated = newNode("ReplicatedStorage", gameNode, nil)
 local serverStorage = newNode("ServerStorage", gameNode, nil)
 local shared = newNode("Modules", replicated, nil)
 mount("src/shared", shared)
+local sss = newNode("ServerScriptService", gameNode, nil)
+local serverNode = newNode("Server", sss, nil)
+mount("src/server", serverNode)
 local testsNode = newNode("Tests", serverStorage, nil)
 mount("tests", testsNode)
 
@@ -118,6 +122,7 @@ local globals = {
 	CFrame = roblox.CFrame,
 	UDim2 = roblox.UDim2,
 	Enum = roblox.Enum,
+	task = task,
 	Random = { new = stubRandom },
 	DateTime = {
 		now = function()
@@ -308,7 +313,7 @@ for _, node in testsNode:GetChildren() do
 end
 
 if loaderOnly then
-	return { require = requireNode, shared = shared, tests = testsNode }
+	return { require = requireNode, shared = shared, tests = testsNode, server = serverNode }
 end
 for _, f in results.failures do
 	print(`FAIL {f.name}\n     {f.err}`)

@@ -75,7 +75,12 @@ function DailyRewardService.start()
 		if ready then
 			task.delay(6, function()
 				if player.Parent then
-					Net.Server.fire("Notify", player, "📅 Your daily reward is ready! Visit the Daily Rewards stand.", Color3.fromRGB(90, 180, 255))
+					Net.Server.fire(
+						"Notify",
+						player,
+						"📅 Your daily reward is ready! Visit the Daily Rewards stand.",
+						Color3.fromRGB(90, 180, 255)
+					)
 				end
 			end)
 		end

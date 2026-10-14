@@ -96,7 +96,9 @@ local function setDoors(open: boolean)
 			local goal = CFrame.new(x, door.Position.Y, door.Position.Z)
 			-- move the door and its welded-looking trim together
 			local offset = goal.Position - door.Position
-			TweenService:Create(door, TweenInfo.new(2.5, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), { CFrame = goal }):Play()
+			TweenService
+				:Create(door, TweenInfo.new(2.5, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), { CFrame = goal })
+				:Play()
 			for _, trim in door:GetChildren() do
 				if trim:IsA("BasePart") then
 					TweenService:Create(trim, TweenInfo.new(2.5, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {
@@ -136,7 +138,12 @@ local function setState(r: Run, state: State, duration: number?)
 end
 
 local function ctxFor(r: Run): MonsterService.Context
-	return { statMult = r.arena.statMult, rewardMult = r.arena.rewardMult, tier = r.arena.order, wave = math.max(1, r.wave) }
+	return {
+		statMult = r.arena.statMult,
+		rewardMult = r.arena.rewardMult,
+		tier = r.arena.order,
+		wave = math.max(1, r.wave),
+	}
 end
 
 local function updateHud(r: Run)
@@ -174,7 +181,12 @@ local function teleport(player: Player, pos: Vector3, lookAt: Vector3?)
 	local char = player.Character
 	if char then
 		local target = pos + Vector3.new(math.random(-8, 8), 0, math.random(-4, 4))
-		char:PivotTo(CFrame.lookAt(target, if lookAt then Vector3.new(lookAt.X, target.Y, lookAt.Z) else target + Vector3.new(0, 0, -1)))
+		char:PivotTo(
+			CFrame.lookAt(
+				target,
+				if lookAt then Vector3.new(lookAt.X, target.Y, lookAt.Z) else target + Vector3.new(0, 0, -1)
+			)
+		)
 	end
 end
 
@@ -249,7 +261,11 @@ local function startRun(arena: Types.ArenaDef, starter: Player): (boolean, strin
 		publishStatus()
 		return false, err
 	end
-	Net.Server.fireAll("Announce", `{starter.DisplayName} started a battle in {arena.name}! Join through the arena gate.`, Color3.fromRGB(255, 120, 120))
+	Net.Server.fireAll(
+		"Announce",
+		`{starter.DisplayName} started a battle in {arena.name}! Join through the arena gate.`,
+		Color3.fromRGB(255, 120, 120)
+	)
 	return true
 end
 
@@ -273,15 +289,27 @@ local function startWave(r: Run, n: number)
 	if def.boss then
 		local bossId = table.remove(r.queue, 1) :: string
 		local gate = arenaModel() and (arenaModel() :: Model):FindFirstChild("BossGate")
-		local spawnAt = (gate and gate:GetAttribute("BossSpawn")) :: Vector3? or (A.center + Vector3.new(0, 0, -A.fieldRadius + 40))
+		local spawnAt = (gate and gate:GetAttribute("BossSpawn")) :: Vector3?
+			or (A.center + Vector3.new(0, 0, -A.fieldRadius + 40))
 		setDoors(true)
 		local boss = MonsterService.spawn(r.battle, bossId, spawnAt, ctxFor(r))
 		if boss then
 			boss.invulnerableUntil = r.battle.now + GameConfig.Combat.InvulnerableIntroSeconds
 			boss.yaw = 0 -- facing south, into the arena
+			-- stride in from the gate during the cinematic, stopping in front of the fighters
+			local target = MonsterService.spawnPoint(r.battle)
+			boss.introTarget =
+				r.battle:clampToField(Vector3.new(target.X, 0, math.min(target.Z, spawnAt.Z + 380)), boss.radius)
 			r.bossUnitId = boss.id
 			local def2 = boss.monsterDef :: Types.MonsterDef
-			r.battle:emit({ t = "bossintro", id = boss.id, d = bossId, name = def2.name, title = def2.title or "", dur = GameConfig.Combat.InvulnerableIntroSeconds })
+			r.battle:emit({
+				t = "bossintro",
+				id = boss.id,
+				d = bossId,
+				name = def2.name,
+				title = def2.title or "",
+				dur = GameConfig.Combat.InvulnerableIntroSeconds,
+			})
 		end
 		setState(r, "bossintro", GameConfig.Combat.InvulnerableIntroSeconds)
 	else
@@ -350,7 +378,7 @@ local function step(r: Run)
 		local alive = b:aliveCount("enemy")
 		if #r.queue > 0 and alive < ArenaConfig.MaxAliveMonsters and now >= r.nextSpawn then
 			local id = table.remove(r.queue, 1) :: string
-			MonsterService.spawn(b, id, MonsterService.edgePoint(b, true), ctxFor(r))
+			MonsterService.spawn(b, id, MonsterService.spawnPoint(b), ctxFor(r))
 			r.nextSpawn = now + ArenaConfig.SpawnInterval
 		elseif #r.queue == 0 and alive == 0 then
 			-- wave cleared
@@ -443,7 +471,12 @@ function ArenaService.start()
 			table.insert(lines, "Tip: level up your Brainrots and use Dodge (Q) on red warnings.")
 			Net.Server.fire("Reward", player, "💀 KNOCKED OUT", lines)
 		elseif reason == "left" then
-			Net.Server.fire("Reward", player, `LEFT {r.arena.name:upper()} (WAVE {r.wave})`, summaryLines(p.totals, p.drops))
+			Net.Server.fire(
+				"Reward",
+				player,
+				`LEFT {r.arena.name:upper()} (WAVE {r.wave})`,
+				summaryLines(p.totals, p.drops)
+			)
 		end
 		if reason ~= "died" and player.Parent then
 			teleport(player, W.ArenaGate, W.Machine)

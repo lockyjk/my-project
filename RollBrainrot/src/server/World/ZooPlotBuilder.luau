@@ -48,7 +48,12 @@ end
 -- Theme props inside a pen -----------------------------------------------------
 local function themeProps(parent: Instance, id: string, center: CFrame, size: Vector2, rng: Random)
 	local function spot(margin: number): CFrame
-		return center * cf(rng:NextNumber(-size.X / 2 + margin, size.X / 2 - margin), FLOOR_Y, rng:NextNumber(-size.Y / 2 + margin, size.Y / 2 - margin))
+		return center
+			* cf(
+				rng:NextNumber(-size.X / 2 + margin, size.X / 2 - margin),
+				FLOOR_Y,
+				rng:NextNumber(-size.Y / 2 + margin, size.Y / 2 - margin)
+			)
 	end
 	if id == "Grass" then
 		for _ = 1, 4 do
@@ -77,7 +82,13 @@ local function themeProps(parent: Instance, id: string, center: CFrame, size: Ve
 		for _ = 1, 5 do
 			local c = spot(4)
 			local h = rng:NextNumber(4, 9)
-			local spike = BuildKit.block(parent, v(2, h, 2), c * cf(0, h / 2, 0) * ang(rng:NextNumber(-0.2, 0.2), rng:NextNumber(0, 3), rng:NextNumber(-0.2, 0.2)), rgb(190, 235, 255), Enum.Material.Ice)
+			local spike = BuildKit.block(
+				parent,
+				v(2, h, 2),
+				c * cf(0, h / 2, 0) * ang(rng:NextNumber(-0.2, 0.2), rng:NextNumber(0, 3), rng:NextNumber(-0.2, 0.2)),
+				rgb(190, 235, 255),
+				Enum.Material.Ice
+			)
 			spike.Transparency = 0.2
 		end
 		for _ = 1, 3 do
@@ -86,7 +97,14 @@ local function themeProps(parent: Instance, id: string, center: CFrame, size: Ve
 	elseif id == "Volcano" then
 		local c = center * cf(size.X * 0.22, FLOOR_Y, size.Y * 0.2)
 		for i = 0, 4 do
-			BuildKit.column(parent, 2.4, 18 - i * 3.2, c.Position + v(0, i * 2.4, 0), rgb(70, 55, 55), Enum.Material.Basalt)
+			BuildKit.column(
+				parent,
+				2.4,
+				18 - i * 3.2,
+				c.Position + v(0, i * 2.4, 0),
+				rgb(70, 55, 55),
+				Enum.Material.Basalt
+			)
 		end
 		local lava = BuildKit.disc(parent, 5, 0.4, c.Position + v(0, 12.1, 0), rgb(255, 110, 20), Enum.Material.Neon)
 		BuildKit.light(lava, rgb(255, 120, 40), 30, 2)
@@ -97,13 +115,25 @@ local function themeProps(parent: Instance, id: string, center: CFrame, size: Ve
 		smoke.Parent = lava
 		for _ = 1, 4 do
 			local s = spot(4)
-			BuildKit.block(parent, v(rng:NextNumber(4, 8), 0.2, 1.2), s * cf(0, 0.12, 0), rgb(255, 100, 20), Enum.Material.Neon)
+			BuildKit.block(
+				parent,
+				v(rng:NextNumber(4, 8), 0.2, 1.2),
+				s * cf(0, 0.12, 0),
+				rgb(255, 100, 20),
+				Enum.Material.Neon
+			)
 		end
 	elseif id == "Alien" then
 		for _ = 1, 6 do
 			local c = spot(4)
 			local h = rng:NextNumber(3, 8)
-			local crystal = BuildKit.block(parent, v(1.6, h, 1.6), c * cf(0, h / 2, 0) * ang(rng:NextNumber(-0.3, 0.3), 0.7, rng:NextNumber(-0.3, 0.3)), if rng:NextNumber() < 0.5 then rgb(80, 255, 200) else rgb(200, 90, 255), Enum.Material.Neon)
+			local crystal = BuildKit.block(
+				parent,
+				v(1.6, h, 1.6),
+				c * cf(0, h / 2, 0) * ang(rng:NextNumber(-0.3, 0.3), 0.7, rng:NextNumber(-0.3, 0.3)),
+				if rng:NextNumber() < 0.5 then rgb(80, 255, 200) else rgb(200, 90, 255),
+				Enum.Material.Neon
+			)
 			crystal.Transparency = 0.15
 		end
 		local ufo = center * cf(-size.X * 0.25, FLOOR_Y + 12, size.Y * 0.2)
@@ -119,7 +149,13 @@ local function themeProps(parent: Instance, id: string, center: CFrame, size: Ve
 	end
 end
 
-local function buildHabitat(parent: Instance, plotIndex: number, habitatIndex: number, def: GameConfig.HabitatDef, rng: Random)
+local function buildHabitat(
+	parent: Instance,
+	plotIndex: number,
+	habitatIndex: number,
+	def: GameConfig.HabitatDef,
+	rng: Random
+)
 	local isGiant = def.id == "Giant"
 	local size = if isGiant then W.GiantHabitatSize else W.HabitatSize
 	local center = ZooPlotBuilder.habitatCFrame(plotIndex, habitatIndex)
@@ -128,7 +164,14 @@ local function buildHabitat(parent: Instance, plotIndex: number, habitatIndex: n
 	-- floor
 	BuildKit.block(m, v(size.X, 0.8, size.Y), center * cf(0, 0, 0), def.groundColor, def.ground, true).Name = "Floor"
 	-- border curb
-	BuildKit.block(m, v(size.X + 2, 0.6, size.Y + 2), center * cf(0, -0.05, 0), rgb(230, 225, 215), Enum.Material.Concrete, true)
+	BuildKit.block(
+		m,
+		v(size.X + 2, 0.6, size.Y + 2),
+		center * cf(0, -0.05, 0),
+		rgb(230, 225, 215),
+		Enum.Material.Concrete,
+		true
+	)
 	-- fence with a gap on the front side
 	local hx, hz = size.X / 2, size.Y / 2
 	local corners = {
@@ -148,7 +191,8 @@ local function buildHabitat(parent: Instance, plotIndex: number, habitatIndex: n
 	local plaqueCf = center * cf(-9, 4.2, -hz - 0.6)
 	BuildKit.column(m, 3.6, 0.5, (center * cf(-11.5, FLOOR_Y, -hz - 0.6)).Position, rgb(90, 70, 50), Enum.Material.Wood)
 	BuildKit.column(m, 3.6, 0.5, (center * cf(-6.5, FLOOR_Y, -hz - 0.6)).Position, rgb(90, 70, 50), Enum.Material.Wood)
-	local _, plaque = BuildKit.sign(m, plaqueCf, Vector2.new(6, 1.8), `{def.emoji} {def.name}`, def.fence:Lerp(rgb(40, 30, 60), 0.6))
+	local _, plaque =
+		BuildKit.sign(m, plaqueCf, Vector2.new(6, 1.8), `{def.emoji} {def.name}`, def.fence:Lerp(rgb(40, 30, 60), 0.6))
 	plaque.Name = "PlaqueLabel"
 	-- theme scenery
 	local scenery = BuildKit.folder("Scenery", m)
@@ -191,7 +235,8 @@ function ZooPlotBuilder.build(parent: Instance, index: number): Model
 	local hx, hz = size.X / 2, size.Y / 2
 
 	-- base lawn + walkway
-	BuildKit.block(m, v(size.X, 1, size.Y), plotCf * cf(0, -0.3, 0), rgb(120, 205, 95), Enum.Material.Grass, true).Name = "Lawn"
+	BuildKit.block(m, v(size.X, 1, size.Y), plotCf * cf(0, -0.3, 0), rgb(120, 205, 95), Enum.Material.Grass, true).Name =
+		"Lawn"
 	local path = rgb(225, 205, 170)
 	BuildKit.block(m, v(14, 1, 22), plotCf * cf(0, -0.2, -hz + 11), path, Enum.Material.Cobblestone, true) -- entrance
 	BuildKit.block(m, v(size.X - 10, 1, 8), plotCf * cf(0, -0.2, -64), path, Enum.Material.Cobblestone, true) -- promenade
@@ -204,7 +249,14 @@ function ZooPlotBuilder.build(parent: Instance, index: number): Model
 	local function hedge(a: Vector3, b: Vector3)
 		local mid = (a + b) / 2
 		local len = (b - a).Magnitude
-		local h = BuildKit.block(m, v(3, 4.5, len), CFrame.lookAt(mid + v(0, 2.25, 0), b + v(0, 2.25, 0)), rgb(60, 140, 60), Enum.Material.LeafyGrass, true)
+		local h = BuildKit.block(
+			m,
+			v(3, 4.5, len),
+			CFrame.lookAt(mid + v(0, 2.25, 0), b + v(0, 2.25, 0)),
+			rgb(60, 140, 60),
+			Enum.Material.LeafyGrass,
+			true
+		)
 		h.Name = "Hedge"
 	end
 	local function p(x: number, z: number): Vector3
@@ -231,8 +283,22 @@ function ZooPlotBuilder.build(parent: Instance, index: number): Model
 	local signCf = archCf * cf(0, 19.5, 0)
 	local signBoard = BuildKit.block(m, v(24, 6, 1), signCf, rgb(44, 40, 78))
 	signBoard.Name = "OwnerBoard"
-	local _, front = BuildKit.sign(m, signCf * cf(0, 0, -0.55), Vector2.new(23, 5.4), "EMPTY ZOO", rgb(44, 40, 78), rgb(255, 230, 120))
-	local _, back = BuildKit.sign(m, signCf * cf(0, 0, 0.55) * ang(0, math.pi, 0), Vector2.new(23, 5.4), "EMPTY ZOO", rgb(44, 40, 78), rgb(255, 230, 120))
+	local _, front = BuildKit.sign(
+		m,
+		signCf * cf(0, 0, -0.55),
+		Vector2.new(23, 5.4),
+		"EMPTY ZOO",
+		rgb(44, 40, 78),
+		rgb(255, 230, 120)
+	)
+	local _, back = BuildKit.sign(
+		m,
+		signCf * cf(0, 0, 0.55) * ang(0, math.pi, 0),
+		Vector2.new(23, 5.4),
+		"EMPTY ZOO",
+		rgb(44, 40, 78),
+		rgb(255, 230, 120)
+	)
 	front.Name = "OwnerLabel"
 	back.Name = "OwnerLabel"
 

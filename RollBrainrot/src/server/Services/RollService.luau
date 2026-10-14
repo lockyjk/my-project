@@ -55,7 +55,11 @@ export type RollPayload = {
 local function announce(player: Player, def: Types.BrainrotDef, mut: string)
 	local rarity = Registry.Rarity[def.rarity]
 	if rarity.order >= Registry.Rarity.Legendary.order or (Registry.Mutation[mut].order >= 4) then
-		Net.Server.fireAll("Announce", `{player.DisplayName} rolled {Registry.displayName(def.id, mut)} ({def.rarity})!`, rarity.color)
+		Net.Server.fireAll(
+			"Announce",
+			`{player.DisplayName} rolled {Registry.displayName(def.id, mut)} ({def.rarity})!`,
+			rarity.color
+		)
 	end
 end
 

@@ -42,7 +42,14 @@ function BuildKit.part(p: PartProps): Part
 end
 
 -- Short form: block(parent, size, cframe, color, material?, collide?)
-function BuildKit.block(parent: Instance, size: Vector3, cf: CFrame, color: Color3, material: Enum.Material?, collide: boolean?): Part
+function BuildKit.block(
+	parent: Instance,
+	size: Vector3,
+	cf: CFrame,
+	color: Color3,
+	material: Enum.Material?,
+	collide: boolean?
+): Part
 	return BuildKit.part({
 		Size = size,
 		CFrame = cf,
@@ -66,7 +73,15 @@ function BuildKit.ball(parent: Instance, diameter: number, pos: Vector3, color: 
 end
 
 -- Vertical cylinder standing on `base` (axis along world Y)
-function BuildKit.column(parent: Instance, height: number, diameter: number, base: Vector3, color: Color3, material: Enum.Material?, collide: boolean?): Part
+function BuildKit.column(
+	parent: Instance,
+	height: number,
+	diameter: number,
+	base: Vector3,
+	color: Color3,
+	material: Enum.Material?,
+	collide: boolean?
+): Part
 	return BuildKit.part({
 		Shape = Enum.PartType.Cylinder,
 		Size = Vector3.new(height, diameter, diameter),
@@ -79,7 +94,15 @@ function BuildKit.column(parent: Instance, height: number, diameter: number, bas
 end
 
 -- Flat disc lying on the ground (axis along Y)
-function BuildKit.disc(parent: Instance, diameter: number, thickness: number, center: Vector3, color: Color3, material: Enum.Material?, collide: boolean?): Part
+function BuildKit.disc(
+	parent: Instance,
+	diameter: number,
+	thickness: number,
+	center: Vector3,
+	color: Color3,
+	material: Enum.Material?,
+	collide: boolean?
+): Part
 	return BuildKit.part({
 		Shape = Enum.PartType.Cylinder,
 		Size = Vector3.new(thickness, diameter, diameter),
@@ -93,7 +116,13 @@ end
 
 -- Calls fn(cframe, index, angle) for `count` evenly spaced points on a circle; the CFrame
 -- sits on the circle and looks outward.
-function BuildKit.around(center: Vector3, radius: number, count: number, fn: (CFrame, number, number) -> (), startAngle: number?)
+function BuildKit.around(
+	center: Vector3,
+	radius: number,
+	count: number,
+	fn: (CFrame, number, number) -> (),
+	startAngle: number?
+)
 	for i = 0, count - 1 do
 		local a = (startAngle or 0) + i / count * math.pi * 2
 		local pos = center + Vector3.new(math.sin(a) * radius, 0, math.cos(a) * radius)
@@ -103,7 +132,18 @@ function BuildKit.around(center: Vector3, radius: number, count: number, fn: (CF
 end
 
 -- A wall/ring of blocks around a circle (segment length auto-fits the circumference)
-function BuildKit.ring(parent: Instance, center: Vector3, radius: number, segments: number, height: number, thickness: number, color: Color3, material: Enum.Material?, collide: boolean?, skip: ((number) -> boolean)?)
+function BuildKit.ring(
+	parent: Instance,
+	center: Vector3,
+	radius: number,
+	segments: number,
+	height: number,
+	thickness: number,
+	color: Color3,
+	material: Enum.Material?,
+	collide: boolean?,
+	skip: ((number) -> boolean)?
+)
 	local segLen = 2 * math.pi * radius / segments + 0.4
 	BuildKit.around(center + Vector3.new(0, height / 2, 0), radius, segments, function(cf, i)
 		if skip and skip(i) then
@@ -114,7 +154,14 @@ function BuildKit.ring(parent: Instance, center: Vector3, radius: number, segmen
 end
 
 -- Sign: a board with a SurfaceGui on its front (-Z face). Returns board + label.
-function BuildKit.sign(parent: Instance, cf: CFrame, size: Vector2, text: string, bg: Color3, fg: Color3?): (Part, TextLabel)
+function BuildKit.sign(
+	parent: Instance,
+	cf: CFrame,
+	size: Vector2,
+	text: string,
+	bg: Color3,
+	fg: Color3?
+): (Part, TextLabel)
 	local board = BuildKit.part({
 		Name = "Sign",
 		Size = Vector3.new(size.X, size.Y, 0.6),
@@ -153,7 +200,14 @@ function BuildKit.sign(parent: Instance, cf: CFrame, size: Vector2, text: string
 end
 
 -- Floating text above a part
-function BuildKit.billboard(adornee: BasePart, text: string, size: Vector2, offsetY: number, color: Color3?, maxDistance: number?): TextLabel
+function BuildKit.billboard(
+	adornee: BasePart,
+	text: string,
+	size: Vector2,
+	offsetY: number,
+	color: Color3?,
+	maxDistance: number?
+): TextLabel
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "Billboard"
 	gui.Size = UDim2.fromScale(size.X, size.Y)
@@ -180,7 +234,13 @@ end
 
 -- ProximityPrompt. `action` is stored as an attribute so the client can open the right UI
 -- without the server being involved (PromptController).
-function BuildKit.prompt(parent: BasePart, actionText: string, objectText: string, action: string, distance: number?): ProximityPrompt
+function BuildKit.prompt(
+	parent: BasePart,
+	actionText: string,
+	objectText: string,
+	action: string,
+	distance: number?
+): ProximityPrompt
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.ActionText = actionText
 	prompt.ObjectText = objectText
@@ -193,7 +253,13 @@ function BuildKit.prompt(parent: BasePart, actionText: string, objectText: strin
 	return prompt
 end
 
-function BuildKit.light(parent: Instance, color: Color3, range: number, brightness: number?, shadows: boolean?): PointLight
+function BuildKit.light(
+	parent: Instance,
+	color: Color3,
+	range: number,
+	brightness: number?,
+	shadows: boolean?
+): PointLight
 	local l = Instance.new("PointLight")
 	l.Color = color
 	l.Range = range

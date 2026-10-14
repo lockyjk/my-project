@@ -21,7 +21,10 @@ local function standardWaves(boss: string, mix: { normal: string, fast: string, 
 				{ monster = mix.ranged, count = 4 },
 			},
 		},
-		{ label = "MINI BOSS", spawns = { { monster = "KingGoober", count = 1 }, { monster = mix.normal, count = 10 } } },
+		{
+			label = "MINI BOSS",
+			spawns = { { monster = "KingGoober", count = 1 }, { monster = mix.normal, count = 10 } },
+		},
 		{ spawns = { { monster = mix.fast, count = 16 }, { monster = mix.ranged, count = 8 } } },
 		{
 			label = "ELITES",

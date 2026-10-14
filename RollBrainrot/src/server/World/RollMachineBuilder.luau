@@ -42,7 +42,14 @@ function RollMachineBuilder.build(parent: Instance): Model
 	BuildKit.disc(m, 46, 1.2, at(0, 3.0, 0), rgb(235, 225, 250), Enum.Material.Marble, true)
 	-- neon inlays on the step edges
 	for i, d in { 64.2, 56.2, 46.2 } do
-		local ring = BuildKit.disc(m, d, 0.25, at(0, 1.25 + (i - 1) * 1.2, 0), if i % 2 == 1 then PINK else CYAN, Enum.Material.Neon)
+		local ring = BuildKit.disc(
+			m,
+			d,
+			0.25,
+			at(0, 1.25 + (i - 1) * 1.2, 0),
+			if i % 2 == 1 then PINK else CYAN,
+			Enum.Material.Neon
+		)
 		ring.CastShadow = false
 	end
 
@@ -51,7 +58,13 @@ function RollMachineBuilder.build(parent: Instance): Model
 	BuildKit.column(m, 1.2, 20, at(0, 12.6, 0), YELLOW, Enum.Material.Metal, true)
 	for k = 0, 11 do
 		local a = k / 12 * math.pi * 2
-		BuildKit.block(m, v(2.2, 1.2, 1.6), cf(at(math.sin(a) * 10.4, 13.2, math.cos(a) * 10.4)) * ang(0, a, 0), YELLOW, Enum.Material.Metal)
+		BuildKit.block(
+			m,
+			v(2.2, 1.2, 1.6),
+			cf(at(math.sin(a) * 10.4, 13.2, math.cos(a) * 10.4)) * ang(0, a, 0),
+			YELLOW,
+			Enum.Material.Metal
+		)
 	end
 	-- side gears
 	for _, s in { -1, 1 } do
@@ -68,7 +81,13 @@ function RollMachineBuilder.build(parent: Instance): Model
 		gear:SetAttribute("Spin", s)
 		for k = 0, 7 do
 			local a = k / 8 * math.pi * 2
-			BuildKit.block(gear, v(1.5, 1.6, 1.6), cf(at(9.6 * s, 8.5 + math.cos(a) * 4.8, math.sin(a) * 4.8)) * ang(a, 0, 0), METAL, Enum.Material.Metal)
+			BuildKit.block(
+				gear,
+				v(1.5, 1.6, 1.6),
+				cf(at(9.6 * s, 8.5 + math.cos(a) * 4.8, math.sin(a) * 4.8)) * ang(a, 0, 0),
+				METAL,
+				Enum.Material.Metal
+			)
 		end
 	end
 
@@ -171,14 +190,27 @@ function RollMachineBuilder.build(parent: Instance): Model
 	local board = BuildKit.block(m, v(40, 9, 1.6), signCf, DARK, Enum.Material.SmoothPlastic)
 	board.Name = "SignBoard"
 	-- SurfaceGuis draw on the board's -Z face: rotate the south one to face the spawn
-	BuildKit.sign(m, signCf * cf(0, 0, 0.85) * ang(0, math.pi, 0), Vector2.new(38, 8), "🎰 ROLL BRAINROT 🎰", DARK, YELLOW)
+	BuildKit.sign(
+		m,
+		signCf * cf(0, 0, 0.85) * ang(0, math.pi, 0),
+		Vector2.new(38, 8),
+		"🎰 ROLL BRAINROT 🎰",
+		DARK,
+		YELLOW
+	)
 	BuildKit.sign(m, signCf * cf(0, 0, -0.85), Vector2.new(38, 8), "🎰 ROLL BRAINROT 🎰", DARK, YELLOW)
 	local marquee = BuildKit.folder("Marquee", m)
 	local idx = 0
 	for x = -19, 19, 2.5 do
 		for _, y in { -4.6, 4.6 } do
 			idx += 1
-			local bulb = BuildKit.ball(marquee, 0.9, (signCf * cf(x, y, 0)).Position, if idx % 2 == 0 then YELLOW else PINK, Enum.Material.Neon)
+			local bulb = BuildKit.ball(
+				marquee,
+				0.9,
+				(signCf * cf(x, y, 0)).Position,
+				if idx % 2 == 0 then YELLOW else PINK,
+				Enum.Material.Neon
+			)
 			bulb.Name = `Bulb{idx}`
 			bulb.CastShadow = false
 		end

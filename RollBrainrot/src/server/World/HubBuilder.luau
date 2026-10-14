@@ -38,13 +38,16 @@ local function terrain()
 	t.WaterColor = rgb(60, 160, 210)
 	t.WaterTransparency = 0.6
 	t.WaterWaveSize = 0.08
-	t.Decoration = true -- animated grass blades
 	-- one huge flat lawn covering hub + stadium
 	t:FillBlock(cf(0, -12, -800), v(2000, 24, 3200), Enum.Material.Grass)
 	-- rolling hills enclosing the hub (not in front of the stadium)
 	local rng = Random.new(9)
 	local function hill(x: number, z: number, r: number)
-		t:FillBall(v(x, -r * 0.55, z), r, if rng:NextNumber() < 0.4 then Enum.Material.LeafyGrass else Enum.Material.Grass)
+		t:FillBall(
+			v(x, -r * 0.55, z),
+			r,
+			if rng:NextNumber() < 0.4 then Enum.Material.LeafyGrass else Enum.Material.Grass
+		)
 	end
 	for x = -760, 760, 90 do
 		hill(x + rng:NextNumber(-20, 20), 700 + rng:NextNumber(-30, 30), rng:NextNumber(90, 150))
@@ -74,7 +77,14 @@ local function road(parent: Instance, a: Vector3, b: Vector3, width: number)
 	local mid = (a + b) / 2
 	local len = (b - a).Magnitude
 	local look = CFrame.lookAt(v(mid.X, 0, mid.Z), v(b.X, 0, b.Z))
-	BuildKit.block(parent, v(width + 3, 0.5, len + 3), look * cf(0, 0.05, 0), PATH_EDGE, Enum.Material.Cobblestone, true)
+	BuildKit.block(
+		parent,
+		v(width + 3, 0.5, len + 3),
+		look * cf(0, 0.05, 0),
+		PATH_EDGE,
+		Enum.Material.Cobblestone,
+		true
+	)
 	BuildKit.block(parent, v(width, 0.5, len), look * cf(0, 0.12, 0), PATH, Enum.Material.Cobblestone, true)
 end
 
@@ -86,7 +96,15 @@ local function roads(parent: Instance)
 	BuildKit.disc(f, plazaR * 2, 0.5, v(0, 0.12, 0), PATH, Enum.Material.Cobblestone, true)
 	-- decorative rings in the plaza floor
 	for i, r in { 70, 58 } do
-		local ring = BuildKit.disc(f, r * 2, 0.5, v(0, 0.14 + i * 0.01, 0), if i == 1 then rgb(255, 180, 210) else rgb(170, 230, 255), Enum.Material.Marble, true)
+		local ring = BuildKit.disc(
+			f,
+			r * 2,
+			0.5,
+			v(0, 0.14 + i * 0.01, 0),
+			if i == 1 then rgb(255, 180, 210) else rgb(170, 230, 255),
+			Enum.Material.Marble,
+			true
+		)
 		ring.Name = "PlazaRing"
 		BuildKit.disc(f, r * 2 - 4, 0.5, v(0, 0.15 + i * 0.01, 0), PATH, Enum.Material.Cobblestone, true)
 	end
@@ -142,11 +160,24 @@ local function spawnArea(parent: Instance)
 		BuildKit.column(f, 30, 6, v(s * 18, 0, archZ), rgb(255, 255, 255), Enum.Material.Marble, true)
 		BuildKit.ball(f, 8, v(s * 18, 32, archZ), if s < 0 then PINK else CYAN, Enum.Material.SmoothPlastic)
 		for i = 0, 5 do
-			BuildKit.ball(f, 2.6, v(s * 18, 4 + i * 4.6, archZ - 3.2), if i % 2 == 0 then YELLOW else PINK, Enum.Material.SmoothPlastic)
+			BuildKit.ball(
+				f,
+				2.6,
+				v(s * 18, 4 + i * 4.6, archZ - 3.2),
+				if i % 2 == 0 then YELLOW else PINK,
+				Enum.Material.SmoothPlastic
+			)
 		end
 	end
 	BuildKit.block(f, v(44, 5, 4), cf(0, 28, archZ), DARK)
-	BuildKit.sign(f, cf(0, 28, archZ + 2.1) * ang(0, math.pi, 0), Vector2.new(42, 4.6), "WELCOME TO THE BRAINROT ZOO", DARK, YELLOW)
+	BuildKit.sign(
+		f,
+		cf(0, 28, archZ + 2.1) * ang(0, math.pi, 0),
+		Vector2.new(42, 4.6),
+		"WELCOME TO THE BRAINROT ZOO",
+		DARK,
+		YELLOW
+	)
 	BuildKit.sign(f, cf(0, 28, archZ - 2.1), Vector2.new(42, 4.6), "HAVE FUN!", DARK, YELLOW)
 	-- welcome flower beds
 	for _, s in { -1, 1 } do
@@ -157,7 +188,15 @@ end
 -------------------------------------------------------------------------------
 -- Stands (Shop / Upgrades / Daily / Events): striped awning booths with a prompt
 -------------------------------------------------------------------------------
-local function stand(parent: Instance, name: string, pos: Vector3, color: Color3, title: string, action: string, prompt: string)
+local function stand(
+	parent: Instance,
+	name: string,
+	pos: Vector3,
+	color: Color3,
+	title: string,
+	action: string,
+	prompt: string
+)
 	local m = BuildKit.model(name, parent)
 	local face = CFrame.lookAt(v(pos.X, 0, pos.Z), v(0, 0, 0)) -- counter faces the plaza
 	BuildKit.block(m, v(26, 1, 18), face * cf(0, 0.5, 2), rgb(240, 235, 225), Enum.Material.WoodPlanks, true)
@@ -165,27 +204,67 @@ local function stand(parent: Instance, name: string, pos: Vector3, color: Color3
 	local counter = BuildKit.block(m, v(20, 4, 3), face * cf(0, 3, -4), color, Enum.Material.SmoothPlastic, true)
 	BuildKit.block(m, v(21, 0.6, 3.6), face * cf(0, 5.3, -4), rgb(255, 255, 255), Enum.Material.Marble, true)
 	-- back wall + posts
-	BuildKit.block(m, v(22, 14, 1.4), face * cf(0, 8, 8), color:Lerp(rgb(255, 255, 255), 0.35), Enum.Material.SmoothPlastic, true)
+	BuildKit.block(
+		m,
+		v(22, 14, 1.4),
+		face * cf(0, 8, 8),
+		color:Lerp(rgb(255, 255, 255), 0.35),
+		Enum.Material.SmoothPlastic,
+		true
+	)
 	for _, x in { -10.5, 10.5 } do
 		BuildKit.column(m, 14, 1.2, (face * cf(x, 1, -5.5)).Position, rgb(255, 255, 255), Enum.Material.Wood, true)
 	end
 	-- striped awning
 	for i = 0, 7 do
 		local stripe = if i % 2 == 0 then color else rgb(255, 255, 255)
-		BuildKit.block(m, v(2.8, 0.5, 16), face * cf(-9.8 + i * 2.8, 15.5, 1) * ang(rad(12), 0, 0), stripe, Enum.Material.Fabric)
+		BuildKit.block(
+			m,
+			v(2.8, 0.5, 16),
+			face * cf(-9.8 + i * 2.8, 15.5, 1) * ang(rad(12), 0, 0),
+			stripe,
+			Enum.Material.Fabric
+		)
 	end
 	for i = 0, 7 do
-		BuildKit.ball(m, 2.8, (face * cf(-9.8 + i * 2.8, 13.8, -7)).Position, if i % 2 == 0 then color else rgb(255, 255, 255), Enum.Material.Fabric)
+		BuildKit.ball(
+			m,
+			2.8,
+			(face * cf(-9.8 + i * 2.8, 13.8, -7)).Position,
+			if i % 2 == 0 then color else rgb(255, 255, 255),
+			Enum.Material.Fabric
+		)
 	end
 	-- title sign on the roof (both sides)
 	local signCf = face * cf(0, 21, 1)
 	BuildKit.block(m, v(20, 5, 1), signCf, DARK)
 	BuildKit.sign(m, signCf * cf(0, 0, -0.55), Vector2.new(19, 4.4), title, DARK, rgb(255, 255, 255))
-	BuildKit.sign(m, signCf * cf(0, 0, 0.55) * ang(0, math.pi, 0), Vector2.new(19, 4.4), title, DARK, rgb(255, 255, 255))
+	BuildKit.sign(
+		m,
+		signCf * cf(0, 0, 0.55) * ang(0, math.pi, 0),
+		Vector2.new(19, 4.4),
+		title,
+		DARK,
+		rgb(255, 255, 255)
+	)
 	BuildKit.prompt(counter, prompt, title, action, 16)
 	-- a couple of crates and a lamp
-	BuildKit.block(m, v(3, 3, 3), face * cf(11, 2.5, 5) * ang(0, 0.3, 0), rgb(170, 120, 70), Enum.Material.WoodPlanks, true)
-	BuildKit.block(m, v(2.4, 2.4, 2.4), face * cf(11.5, 5.2, 5) * ang(0, 0.8, 0), rgb(170, 120, 70), Enum.Material.WoodPlanks, true)
+	BuildKit.block(
+		m,
+		v(3, 3, 3),
+		face * cf(11, 2.5, 5) * ang(0, 0.3, 0),
+		rgb(170, 120, 70),
+		Enum.Material.WoodPlanks,
+		true
+	)
+	BuildKit.block(
+		m,
+		v(2.4, 2.4, 2.4),
+		face * cf(11.5, 5.2, 5) * ang(0, 0.8, 0),
+		rgb(170, 120, 70),
+		Enum.Material.WoodPlanks,
+		true
+	)
 	Props.lamp(m, face * cf(-14, 0, -6), color)
 	return m
 end
@@ -199,7 +278,14 @@ local function stands(parent: Instance)
 	local events = stand(f, "Events", S.Events, PURPLE, "🌩️ EVENTS", "OpenEvents", "World Events")
 	-- live event board (text updated by EventService)
 	local boardCf = CFrame.lookAt(v(S.Events.X, 0, S.Events.Z), v(0, 0, 0)) * cf(0, 9.5, 7.2)
-	local board, label = BuildKit.sign(events, boardCf * ang(0, 0, 0), Vector2.new(18, 7), "Next event soon…", rgb(20, 18, 40), rgb(255, 230, 120))
+	local board, label = BuildKit.sign(
+		events,
+		boardCf * ang(0, 0, 0),
+		Vector2.new(18, 7),
+		"Next event soon…",
+		rgb(20, 18, 40),
+		rgb(255, 230, 120)
+	)
 	board.Name = "EventBoard"
 	label.Name = "EventBoardLabel"
 end
@@ -217,7 +303,11 @@ local function signposts(parent: Instance)
 	local function post(at: Vector3)
 		Props.signpost(f, cf(at), {
 			{ text = "🎰 ROLL BRAINROTS", angle = angleTo(at, W.Machine), color = PINK },
-			{ text = "🏡 YOUR ZOO", angle = angleTo(at, v(if at.X >= 0 then 330 else -330, 0, at.Z)), color = rgb(90, 200, 90) },
+			{
+				text = "🏡 YOUR ZOO",
+				angle = angleTo(at, v(if at.X >= 0 then 330 else -330, 0, at.Z)),
+				color = rgb(90, 200, 90),
+			},
 			{ text = "🏟️ MONSTER ARENA", angle = angleTo(at, W.Arena.center), color = rgb(230, 60, 60) },
 			{ text = "🛒 SHOP", angle = angleTo(at, W.Stands.Shop), color = rgb(255, 170, 40) },
 			{ text = "⬆️ UPGRADES", angle = angleTo(at, W.Stands.Upgrades), color = rgb(90, 180, 90) },
@@ -276,7 +366,14 @@ local function pondDecor(parent: Instance)
 	local pond = v(185, 0, -330)
 	-- wooden dock
 	for i = 0, 6 do
-		BuildKit.block(f, v(8, 0.6, 3), cf(pond + v(-46 + i * 3.2, 0.6, 0)) * ang(0, rad(90), 0), rgb(150, 105, 65), Enum.Material.WoodPlanks, true)
+		BuildKit.block(
+			f,
+			v(8, 0.6, 3),
+			cf(pond + v(-46 + i * 3.2, 0.6, 0)) * ang(0, rad(90), 0),
+			rgb(150, 105, 65),
+			Enum.Material.WoodPlanks,
+			true
+		)
 	end
 	for _, x in { -46, -28 } do
 		for _, z in { -3.5, 3.5 } do
@@ -396,8 +493,22 @@ local function meadow(parent: Instance)
 	BuildKit.around(c, W.InvasionField.radius, 20, function(ring)
 		BuildKit.column(f, 1.4, 1.6, ring.Position, rgb(240, 240, 240), Enum.Material.Marble)
 	end)
-	local stone = BuildKit.block(f, v(14, 6, 2), cf(c + v(0, 3, -W.InvasionField.radius - 6)), rgb(160, 160, 170), Enum.Material.Slate, true)
-	BuildKit.sign(f, stone.CFrame * cf(0, 0, 1.05) * ang(0, math.pi, 0), Vector2.new(13, 5), "⚠️ MONSTER LANDING ZONE", rgb(160, 160, 170), rgb(255, 230, 120))
+	local stone = BuildKit.block(
+		f,
+		v(14, 6, 2),
+		cf(c + v(0, 3, -W.InvasionField.radius - 6)),
+		rgb(160, 160, 170),
+		Enum.Material.Slate,
+		true
+	)
+	BuildKit.sign(
+		f,
+		stone.CFrame * cf(0, 0, 1.05) * ang(0, math.pi, 0),
+		Vector2.new(13, 5),
+		"⚠️ MONSTER LANDING ZONE",
+		rgb(160, 160, 170),
+		rgb(255, 230, 120)
+	)
 end
 
 function HubBuilder.build(parent: Instance)

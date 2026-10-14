@@ -127,7 +127,9 @@ local function publish(player: Player)
 						gui.Enabled = not unlocked
 						local label = gui:FindFirstChild("LockLabel") :: TextLabel?
 						if label and not unlocked then
-							local need = if def.requiresArena then `\nBeat {Registry.Arena[def.requiresArena].name}` else ""
+							local need = if def.requiresArena
+								then `\nBeat {Registry.Arena[def.requiresArena].name}`
+								else ""
 							label.Text = `🔒 {def.name}\n${Format.short(def.cost)}{need}`
 						end
 					end

@@ -102,7 +102,12 @@ function RollMath.pityMinOrder(): number
 	return Registry.Rarity[GameConfig.Roll.Pity.minRarity].order
 end
 
-export type RollResult = { brainrot: Types.BrainrotDef, rarity: Types.RarityDef, mutation: Types.MutationDef, pityHit: boolean }
+export type RollResult = {
+	brainrot: Types.BrainrotDef,
+	rarity: Types.RarityDef,
+	mutation: Types.MutationDef,
+	pityHit: boolean,
+}
 
 -- One complete roll. Returns the result and the new pity count.
 function RollMath.roll(rng: Rng, luck: number, pityCount: number, forcedMinOrder: number?): (RollResult, number)

@@ -334,7 +334,8 @@ builders.Elephant = function(b: Builder, look: Look)
 	b:ball(v(5.6, 4.8, 7.2), cf(0, 4.4, 0.6), rock, mat)
 	b:ball(Vector3.one * 4.2, cf(0, 5.6, -3.0), rock, mat)
 	-- trunk (curls forward at the end)
-	local trunk = { v(0, 4.9, -4.7), v(0, 3.6, -5.4), v(0, 2.4, -5.6), v(0, 1.5, -5.9), v(0, 1.4, -6.6), v(0, 1.9, -7.0) }
+	local trunk =
+		{ v(0, 4.9, -4.7), v(0, 3.6, -5.4), v(0, 2.4, -5.6), v(0, 1.5, -5.9), v(0, 1.4, -6.6), v(0, 1.9, -7.0) }
 	for i = 1, #trunk - 1 do
 		local d = 1.4 - i * 0.16
 		b:limb(trunk[i], trunk[i + 1], d, rock, mat)
@@ -369,7 +370,12 @@ builders.Elephant = function(b: Builder, look: Look)
 		local e = rng:NextNumber(-0.6, 0.9)
 		local n = v(math.cos(a) * math.cos(e), math.sin(e), math.sin(a) * math.cos(e))
 		local p = v(n.X * 2.8, 4.4 + n.Y * 2.4, 0.6 + n.Z * 3.6)
-		b:block(v(0.18, rng:NextNumber(0.6, 1.6), 0.18), CFrame.lookAt(p, p + n) * ang(0, 0, rng:NextNumber(0, 3)), lava, Enum.Material.Neon)
+		b:block(
+			v(0.18, rng:NextNumber(0.6, 1.6), 0.18),
+			CFrame.lookAt(p, p + n) * ang(0, 0, rng:NextNumber(0, 3)),
+			lava,
+			Enum.Material.Neon
+		)
 	end
 	-- volcano on the back
 	local vcf = cf(0, 6.4, 1.2)
@@ -440,7 +446,8 @@ builders.Unicorn = function(b: Builder, look: Look)
 		b:ball(Vector3.one * 0.18, cf(n.X * 1.6, 3.6 + hover + n.Y * 1.45, 0.4 + n.Z * 2.6), WHITE, Enum.Material.Neon)
 	end
 	-- orbiting planets (animated by the client Animator)
-	local planets = { { size = 0.9, color = mane }, { size = 0.6, color = glow }, { size = 1.2, color = rgb(255, 190, 80) } }
+	local planets =
+		{ { size = 0.9, color = mane }, { size = 0.6, color = glow }, { size = 1.2, color = rgb(255, 190, 80) } }
 	for i, pl in planets do
 		local p = b:ball(Vector3.one * pl.size, cf(4 + i * 0.6, 4.4 + hover, 0), pl.color, Enum.Material.Neon)
 		p.Name = "Planet"
@@ -449,7 +456,13 @@ builders.Unicorn = function(b: Builder, look: Look)
 		p:SetAttribute("OrbitPhase", i * 2.1)
 		p:SetAttribute("OrbitHeight", 4.2 + hover + i * 0.4)
 	end
-	local ring = b:part(Enum.PartType.Cylinder, v(0.1, 2.2, 2.2), cf(7.6, 5.6 + hover, 0) * ang(0, 0, rad(70)), rgb(255, 220, 160), Enum.Material.Neon)
+	local ring = b:part(
+		Enum.PartType.Cylinder,
+		v(0.1, 2.2, 2.2),
+		cf(7.6, 5.6 + hover, 0) * ang(0, 0, rad(70)),
+		rgb(255, 220, 160),
+		Enum.Material.Neon
+	)
 	ring.Transparency = 0.4
 	ring.Name = "PlanetRing"
 	ring:SetAttribute("Orbit", 6.3)
@@ -504,7 +517,9 @@ function BrainrotModels.build(id: string, mutationId: string?): Model
 	local model = override(id)
 	if not model then
 		local b = ModelKit.new(id)
-		local look: Look = if def then def.look else { builder = "?", primary = WHITE, secondary = BLACK, accent = WHITE }
+		local look: Look = if def
+			then def.look
+			else { builder = "?", primary = WHITE, secondary = BLACK, accent = WHITE }
 		local fn = builders[look.builder]
 		if fn then
 			fn(b, look)

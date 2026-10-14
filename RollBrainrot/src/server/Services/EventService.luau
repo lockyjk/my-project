@@ -111,7 +111,15 @@ local function startInvasion()
 		boss.hp = boss.maxHp
 		boss.invulnerableUntil = b.now + 4
 		b.meta.bossUnitId = boss.id
-		b:emit({ t = "bossintro", id = boss.id, d = boss.defId, name = boss.monsterDef and boss.monsterDef.name or "", title = boss.monsterDef and boss.monsterDef.title or "", dur = 4, landing = true })
+		b:emit({
+			t = "bossintro",
+			id = boss.id,
+			d = boss.defId,
+			name = boss.monsterDef and boss.monsterDef.name or "",
+			title = boss.monsterDef and boss.monsterDef.title or "",
+			dur = 4,
+			landing = true,
+		})
 		b.UnitDied:Connect(function(u)
 			if u == boss then
 				for player, p in b.participants do
@@ -142,11 +150,18 @@ local function invasionStep()
 		local char = player.Character
 		local root = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
 		if root then
-			local d = (Vector3.new(root.Position.X, 0, root.Position.Z) - Vector3.new(field.center.X, 0, field.center.Z)).Magnitude
+			local d = (
+				Vector3.new(root.Position.X, 0, root.Position.Z) - Vector3.new(field.center.X, 0, field.center.Z)
+			).Magnitude
 			local inThis = b.participants[player] ~= nil
 			if not inThis and d < field.radius and not CombatService.battleOf(player) and DataService.get(player) then
 				CombatService.addParticipant(b, player)
-				Net.Server.fire("Notify", player, "⚔️ You joined the fight against the giant!", Color3.fromRGB(255, 120, 120))
+				Net.Server.fire(
+					"Notify",
+					player,
+					"⚔️ You joined the fight against the giant!",
+					Color3.fromRGB(255, 120, 120)
+				)
 			elseif inThis and d > field.radius + 40 then
 				CombatService.removeParticipant(b, player, "left")
 			end
@@ -168,7 +183,13 @@ local function strike(kind: string)
 		if #enemies > 0 then
 			local target = enemies[math.random(1, #enemies)]
 			local point = target.pos + Vector3.new(math.random(-5, 5), 0, math.random(-5, 5))
-			b:emit({ t = "fx", n = if kind == "Storm" then "Lightning" else "MeteorStrike", x = point.X, z = point.Z, r = 12 })
+			b:emit({
+				t = "fx",
+				n = if kind == "Storm" then "Lightning" else "MeteorStrike",
+				x = point.X,
+				z = point.Z,
+				r = 12,
+			})
 			b:schedule(if kind == "Storm" then 0.15 else 0.8, function()
 				for _, e in b:within("enemy", point, 12) do
 					b:damage(nil, e, e.maxHp * E.StrikeDamageMult, { fixed = true, crit = false })

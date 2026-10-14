@@ -81,12 +81,19 @@ end
 handlers.AoEProjectile = function(battle, caster, ability)
 	local p = ability.params
 	local range = math.max(caster.range * 1.6, 30)
-	local target = if p.target == "strongest" then strongestInRange(battle, caster, range) else targetInRange(battle, caster, range)
+	local target = if p.target == "strongest"
+		then strongestInRange(battle, caster, range)
+		else targetInRange(battle, caster, range)
 	if not target then
 		return false
 	end
 	local point = target.pos
-	emit(battle, caster, ability, { x = point.X, z = point.Z, r = p.radius, ft = p.flightTime, tg = target.id, sh = p.shake })
+	emit(
+		battle,
+		caster,
+		ability,
+		{ x = point.X, z = point.Z, r = p.radius, ft = p.flightTime, tg = target.id, sh = p.shake }
+	)
 	local amount = power(battle, caster, p.damageMult)
 	battle:schedule(p.flightTime, function()
 		for _, e in battle:within(battle:enemiesOf(caster), point, p.radius) do

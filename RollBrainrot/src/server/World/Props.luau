@@ -21,7 +21,14 @@ local column = BuildKit.column
 
 local LEAF = { rgb(84, 170, 70), rgb(70, 150, 60), rgb(110, 190, 80), rgb(60, 135, 75) }
 local BLOSSOM = { rgb(255, 170, 210), rgb(255, 200, 230), rgb(250, 140, 190) }
-local FLOWERS = { rgb(255, 90, 120), rgb(255, 210, 60), rgb(160, 110, 255), rgb(255, 255, 255), rgb(255, 140, 50), rgb(90, 180, 255) }
+local FLOWERS = {
+	rgb(255, 90, 120),
+	rgb(255, 210, 60),
+	rgb(160, 110, 255),
+	rgb(255, 255, 255),
+	rgb(255, 140, 50),
+	rgb(90, 180, 255),
+}
 local WOOD = rgb(120, 82, 52)
 local STONE = rgb(150, 150, 158)
 
@@ -88,7 +95,13 @@ function Props.tree(parent: Instance, ground: CFrame, scale: number?, kind: stri
 	-- roots
 	for i = 0, 2 do
 		local a = i * 2.1 + rng:NextNumber(0, 1)
-		block(m, v(1, 0.8, 3) * s, cf(ground.Position + v(math.cos(a) * 1.4, 0.3, math.sin(a) * 1.4) * s) * ang(0, -a, rad(-12)), WOOD, Enum.Material.Wood)
+		block(
+			m,
+			v(1, 0.8, 3) * s,
+			cf(ground.Position + v(math.cos(a) * 1.4, 0.3, math.sin(a) * 1.4) * s) * ang(0, -a, rad(-12)),
+			WOOD,
+			Enum.Material.Wood
+		)
 	end
 	return m
 end
@@ -99,12 +112,24 @@ function Props.palm(parent: Instance, ground: CFrame, scale: number?): Model
 	local p = ground.Position
 	local lean = rng:NextNumber(-0.25, 0.25)
 	for i = 0, 6 do
-		ball(m, (2.4 - i * 0.12) * s, p + v(lean * i * i * 0.4, 1 + i * 2.2, 0) * s, rgb(140, 100, 60), Enum.Material.Wood)
+		ball(
+			m,
+			(2.4 - i * 0.12) * s,
+			p + v(lean * i * i * 0.4, 1 + i * 2.2, 0) * s,
+			rgb(140, 100, 60),
+			Enum.Material.Wood
+		)
 	end
 	local top = p + v(lean * 36 * 0.4, 15, 0) * s
 	for i = 0, 6 do
 		local a = i / 7 * math.pi * 2
-		block(m, v(1.6, 0.3, 9) * s, CFrame.lookAt(top, top + v(math.cos(a), 0, math.sin(a))) * cf(0, -1, -4 * s) * ang(rad(-20), 0, 0), rgb(70, 170, 70), Enum.Material.LeafyGrass)
+		block(
+			m,
+			v(1.6, 0.3, 9) * s,
+			CFrame.lookAt(top, top + v(math.cos(a), 0, math.sin(a))) * cf(0, -1, -4 * s) * ang(rad(-20), 0, 0),
+			rgb(70, 170, 70),
+			Enum.Material.LeafyGrass
+		)
 	end
 	ball(m, 1.2 * s, top + v(0.8, -1, 0) * s, rgb(120, 80, 40))
 	return m
@@ -117,7 +142,14 @@ function Props.rock(parent: Instance, ground: CFrame, scale: number?, color: Col
 	for i = 1, rng:NextInteger(2, 4) do
 		local size = v(rng:NextNumber(2, 4), rng:NextNumber(1.5, 3), rng:NextNumber(2, 4)) * s
 		local pos = ground.Position + v(rng:NextNumber(-1.5, 1.5) * s, size.Y * 0.35, rng:NextNumber(-1.5, 1.5) * s)
-		block(m, size, cf(pos) * ang(rng:NextNumber(-0.4, 0.4), rng:NextNumber(0, 6), rng:NextNumber(-0.4, 0.4)), (color or STONE):Lerp(rgb(110, 110, 120), i * 0.08), Enum.Material.Slate, i == 1)
+		block(
+			m,
+			size,
+			cf(pos) * ang(rng:NextNumber(-0.4, 0.4), rng:NextNumber(0, 6), rng:NextNumber(-0.4, 0.4)),
+			(color or STONE):Lerp(rgb(110, 110, 120), i * 0.08),
+			Enum.Material.Slate,
+			i == 1
+		)
 	end
 	return m
 end
@@ -126,20 +158,33 @@ function Props.bush(parent: Instance, ground: CFrame, scale: number?): Model
 	local s = scale or rng:NextNumber(0.8, 1.4)
 	local m = BuildKit.model("Bush", parent)
 	for _ = 1, 3 do
-		ball(m, rng:NextNumber(3, 4.5) * s, ground.Position + v(rng:NextNumber(-1.5, 1.5), 1.4, rng:NextNumber(-1.5, 1.5)) * s, pick(LEAF), Enum.Material.LeafyGrass)
+		ball(
+			m,
+			rng:NextNumber(3, 4.5) * s,
+			ground.Position + v(rng:NextNumber(-1.5, 1.5), 1.4, rng:NextNumber(-1.5, 1.5)) * s,
+			pick(LEAF),
+			Enum.Material.LeafyGrass
+		)
 	end
 	if rng:NextNumber() < 0.4 then
 		for _ = 1, 4 do
-			ball(m, 0.6 * s, ground.Position + v(rng:NextNumber(-2, 2), rng:NextNumber(1.5, 3), rng:NextNumber(-2, 2)) * s, pick(FLOWERS), Enum.Material.SmoothPlastic)
+			ball(
+				m,
+				0.6 * s,
+				ground.Position + v(rng:NextNumber(-2, 2), rng:NextNumber(1.5, 3), rng:NextNumber(-2, 2)) * s,
+				pick(FLOWERS),
+				Enum.Material.SmoothPlastic
+			)
 		end
 	end
 	return m
 end
 
 function Props.flowers(parent: Instance, ground: CFrame, count: number?): Model
+	-- each flower is a stem + a bloom (2 parts) so big meadows stay cheap
 	local m = BuildKit.model("Flowers", parent)
 	local color = pick(FLOWERS)
-	for _ = 1, count or 6 do
+	for _ = 1, count or 5 do
 		local p = ground.Position + v(rng:NextNumber(-2.5, 2.5), 0, rng:NextNumber(-2.5, 2.5))
 		local h = rng:NextNumber(0.8, 1.6)
 		BuildKit.part({
@@ -150,12 +195,18 @@ function Props.flowers(parent: Instance, ground: CFrame, count: number?): Model
 			CastShadow = false,
 			Parent = m,
 		})
-		for k = 0, 4 do
-			local a = k / 5 * math.pi * 2
-			local petal = ball(m, 0.4, p + v(math.cos(a) * 0.25, h, math.sin(a) * 0.25), color)
-			petal.CastShadow = false
-		end
-		ball(m, 0.3, p + v(0, h + 0.05, 0), rgb(255, 230, 80)).CastShadow = false
+		local bloom = BuildKit.part({
+			Size = v(0.9, 0.35, 0.9),
+			CFrame = cf(p + v(0, h, 0)) * ang(0, rng:NextNumber(0, 3), 0),
+			Color = color,
+			Material = Enum.Material.SmoothPlastic,
+			CanCollide = false,
+			CastShadow = false,
+			Parent = m,
+		})
+		local mesh = Instance.new("SpecialMesh")
+		mesh.MeshType = Enum.MeshType.Sphere
+		mesh.Parent = bloom
 	end
 	return m
 end
@@ -171,7 +222,14 @@ function Props.bench(parent: Instance, ground: CFrame): Model
 		block(m, v(6.4, 0.25, 0.6), base * cf(0, 1.7, -0.7 + i * 0.7), WOOD, Enum.Material.Wood, true)
 	end
 	for i = 0, 1 do
-		block(m, v(6.4, 0.5, 0.25), base * cf(0, 2.5 + i * 0.7, 1.1) * ang(rad(-10), 0, 0), WOOD, Enum.Material.Wood, true)
+		block(
+			m,
+			v(6.4, 0.5, 0.25),
+			base * cf(0, 2.5 + i * 0.7, 1.1) * ang(rad(-10), 0, 0),
+			WOOD,
+			Enum.Material.Wood,
+			true
+		)
 	end
 	return m
 end
@@ -192,11 +250,13 @@ function Props.fence(parent: Instance, a: Vector3, b: Vector3, color: Color3?, h
 	local h = height or 3.2
 	local c = color or rgb(250, 250, 250)
 	local len = (b - a).Magnitude
-	local n = math.max(1, math.floor(len / 6))
+	local n = math.max(1, math.floor(len / 9))
 	for i = 0, n do
 		local p = a:Lerp(b, i / n)
-		block(m, v(0.6, h + 0.4, 0.6), cf(p + v(0, (h + 0.4) / 2, 0)), c, Enum.Material.Wood, true)
-		ball(m, 0.7, p + v(0, h + 0.5, 0), c, Enum.Material.Wood)
+		block(m, v(0.7, h + 0.4, 0.7), cf(p + v(0, (h + 0.4) / 2, 0)), c, Enum.Material.Wood, true)
+		if i == 0 or i == n then
+			ball(m, 0.8, p + v(0, h + 0.55, 0), c, Enum.Material.Wood)
+		end
 	end
 	local mid = (a + b) / 2
 	local look = CFrame.lookAt(mid, b)
@@ -207,7 +267,11 @@ function Props.fence(parent: Instance, a: Vector3, b: Vector3, color: Color3?, h
 end
 
 -- Signpost with arrow boards: list of { text, angle (radians, 0 = -Z / north) , color }
-function Props.signpost(parent: Instance, ground: CFrame, arrows: { { text: string, angle: number, color: Color3 } }): Model
+function Props.signpost(
+	parent: Instance,
+	ground: CFrame,
+	arrows: { { text: string, angle: number, color: Color3 } }
+): Model
 	local m = BuildKit.model("Signpost", parent)
 	local p = ground.Position
 	column(m, 4 + #arrows * 2.6, 0.8, p, WOOD, Enum.Material.Wood, true)
@@ -391,7 +455,13 @@ function Props.decoration(builder: string, parent: Instance, ground: CFrame): Mo
 end
 
 -- Scatter `count` props of a kind inside an annulus/box while avoiding `blocked(pos)`
-function Props.scatter(parent: Instance, count: number, sample: () -> Vector3, blocked: (Vector3) -> boolean, place: (Instance, CFrame) -> ())
+function Props.scatter(
+	parent: Instance,
+	count: number,
+	sample: () -> Vector3,
+	blocked: (Vector3) -> boolean,
+	place: (Instance, CFrame) -> ()
+)
 	local placed, tries = 0, 0
 	while placed < count and tries < count * 12 do
 		tries += 1

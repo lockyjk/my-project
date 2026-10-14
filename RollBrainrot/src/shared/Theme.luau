@@ -31,6 +31,7 @@ Theme.Colors = {
 	HpEnemy = rgb(255, 70, 70),
 	Boss = rgb(230, 40, 60),
 	Locked = rgb(110, 110, 130),
+	Backdrop = rgb(10, 8, 24),
 }
 
 Theme.Icons = {
@@ -50,6 +51,8 @@ Theme.Icons = {
 	daily = "📅",
 	events = "🌩️",
 	collection = "📖",
+	Close = "✖",
+	settings = "⚙️",
 }
 
 function Theme.lighten(c: Color3, a: number): Color3
@@ -62,9 +65,16 @@ end
 
 Theme.UI = {
 	Corner = 14,
+	ButtonCorner = 14,
 	Stroke = 3,
 	TextStroke = 2,
 	DesignSize = Vector2.new(1280, 720),
+	MinScale = 0.55,
+	MaxScale = 1.5,
+	PressScale = 0.9,
+	BounceTime = 0.25,
+	PanelWidth = 900,
+	PanelHeight = 560,
 }
 
 return Theme

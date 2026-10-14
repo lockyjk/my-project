@@ -112,8 +112,7 @@ function Animator.update(rig: Rig, baseCF: CFrame, now: number, moving: boolean,
 		local hop = math.abs(math.sin(t * f))
 		off = CFrame.new(0, hop * h * 0.08, 0) * CFrame.Angles(-0.06, 0, math.sin(t * f) * 0.09)
 	else
-		off = CFrame.new(0, math.sin(t * 2.2) * h * 0.015, 0)
-			* CFrame.Angles(0, 0, math.sin(t * 1.3) * 0.03)
+		off = CFrame.new(0, math.sin(t * 2.2) * h * 0.015, 0) * CFrame.Angles(0, 0, math.sin(t * 1.3) * 0.03)
 	end
 	if rig.floatHeight > 0 then
 		off = CFrame.new(0, rig.floatHeight + math.sin(t * 1.6) * 0.35, 0) * off
@@ -146,7 +145,8 @@ function Animator.update(rig: Rig, baseCF: CFrame, now: number, moving: boolean,
 	if #rig.orbits > 0 then
 		for _, p in rig.orbits do
 			local r = (p:GetAttribute("Orbit") :: number) * rig.scale
-			local a = now * ((p:GetAttribute("OrbitSpeed") :: number?) or 1) + ((p:GetAttribute("OrbitPhase") :: number?) or 0)
+			local a = now * ((p:GetAttribute("OrbitSpeed") :: number?) or 1)
+				+ ((p:GetAttribute("OrbitPhase") :: number?) or 0)
 			local y = ((p:GetAttribute("OrbitHeight") :: number?) or h * 0.6) * rig.scale
 			p.CFrame = cf * CFrame.new(math.cos(a) * r, y, math.sin(a) * r) * CFrame.Angles(0, -a, 0.4)
 		end

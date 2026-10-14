@@ -31,7 +31,11 @@ local function angryEyes(b: Builder, center: Vector3, spacing: number, size: num
 		else
 			b:eye(p, size)
 		end
-		b:block(v(size * 1.3, size * 0.28, size * 0.3), cf(p + v(0, size * 0.55, -size * 0.2)) * ang(0, 0, rad(22 * s)), BLACK)
+		b:block(
+			v(size * 1.3, size * 0.28, size * 0.3),
+			cf(p + v(0, size * 0.55, -size * 0.2)) * ang(0, 0, rad(22 * s)),
+			BLACK
+		)
 	end
 end
 
@@ -43,7 +47,12 @@ local function surfaceCracks(b: Builder, center: Vector3, radii: Vector3, n: num
 		local dir = v(math.cos(a) * math.cos(e), math.sin(e), math.sin(a) * math.cos(e))
 		local p = center + v(dir.X * radii.X, dir.Y * radii.Y, dir.Z * radii.Z)
 		local len = rng:NextNumber(0.2, 0.45) * radii.Y
-		b:block(v(radii.X * 0.05, len, radii.X * 0.05), CFrame.lookAt(p, p + dir) * ang(0, 0, rng:NextNumber(0, 3)), color, Enum.Material.Neon)
+		b:block(
+			v(radii.X * 0.05, len, radii.X * 0.05),
+			CFrame.lookAt(p, p + dir) * ang(0, 0, rng:NextNumber(0, 3)),
+			color,
+			Enum.Material.Neon
+		)
 	end
 end
 
@@ -62,7 +71,12 @@ builders.Slime = function(b: Builder, look: Look)
 		-- royal crown for the King
 		for k = 0, 5 do
 			local a = rad(k * 60)
-			b:wedge(v(0.3, 0.9, 0.5), cf(math.cos(a) * 0.9, 3.25, math.sin(a) * 0.9) * ang(0, -a + rad(90), 0), look.accent, Enum.Material.Foil)
+			b:wedge(
+				v(0.3, 0.9, 0.5),
+				cf(math.cos(a) * 0.9, 3.25, math.sin(a) * 0.9) * ang(0, -a + rad(90), 0),
+				look.accent,
+				Enum.Material.Foil
+			)
 		end
 		b:cyl(0.4, 2.1, cf(0, 2.95, 0), look.accent, Enum.Material.Foil)
 		b:ball(Vector3.one * 0.35, cf(0, 3.0, -1.05), rgb(255, 50, 80), Enum.Material.Neon)
@@ -183,11 +197,21 @@ builders.Titan = function(b: Builder, look: Look)
 	for _ = 1, 9 do
 		local a = rng:NextNumber(0, math.pi * 2)
 		local r = rng:NextNumber(1, 3.5)
-		b:ball(Vector3.one * rng:NextNumber(2.5, 4.2), cf(math.cos(a) * r, 37 + rng:NextNumber(0, 2.5), math.sin(a) * r + 0.5), moss, mossMat)
+		b:ball(
+			Vector3.one * rng:NextNumber(2.5, 4.2),
+			cf(math.cos(a) * r, 37 + rng:NextNumber(0, 2.5), math.sin(a) * r + 0.5),
+			moss,
+			mossMat
+		)
 	end
 	for k = 0, 4 do
 		local a = rad(-60 + k * 30)
-		b:wedge(v(0.8, 4.5, 2.0), cf(math.sin(a) * 4.5, 26 + k % 2 * 3, 4.6) * ang(rad(-25), a, 0), glow, Enum.Material.Neon)
+		b:wedge(
+			v(0.8, 4.5, 2.0),
+			cf(math.sin(a) * 4.5, 26 + k % 2 * 3, 4.6) * ang(rad(-25), a, 0),
+			glow,
+			Enum.Material.Neon
+		)
 	end
 end
 
@@ -216,7 +240,14 @@ builders.Beast = function(b: Builder, look: Look)
 	end
 	-- glowing spikes along the back
 	for i = 0, 6 do
-		b:cone(3.5 - i * 0.25, 2.4 - i * 0.18, cf(0, 20.2 - i * 0.25, -6 + i * 3.4) * ang(rad(-15), 0, 0), lava, 4, Enum.Material.Neon)
+		b:cone(
+			3.5 - i * 0.25,
+			2.4 - i * 0.18,
+			cf(0, 20.2 - i * 0.25, -6 + i * 3.4) * ang(rad(-15), 0, 0),
+			lava,
+			4,
+			Enum.Material.Neon
+		)
 	end
 	surfaceCracks(b, v(0, 15, 1), v(7, 5.5, 11), 26, lava, 9)
 	-- tail
@@ -233,7 +264,8 @@ builders.VoidEye = function(b: Builder, look: Look)
 	local cy = 24
 	b:ball(Vector3.one * 16, cf(0, cy, 0), shell, Enum.Material.Slate)
 	b:ball(Vector3.one * 13.5, cf(0, cy, -1.6), WHITE:Lerp(glow, 0.15))
-	local irisPart = b:part(Enum.PartType.Cylinder, v(0.6, 8, 8), cf(0, cy, -8.0) * ang(0, rad(90), 0), iris, Enum.Material.Neon)
+	local irisPart =
+		b:part(Enum.PartType.Cylinder, v(0.6, 8, 8), cf(0, cy, -8.0) * ang(0, rad(90), 0), iris, Enum.Material.Neon)
 	irisPart.Name = "Iris"
 	b:part(Enum.PartType.Cylinder, v(0.7, 3.6, 3.6), cf(0, cy, -8.15) * ang(0, rad(90), 0), BLACK)
 	-- eyelids
@@ -348,7 +380,9 @@ function MonsterModels.build(id: string): Model
 		model:SetAttribute("Radius", math.max(size.X, size.Z) / 2)
 	else
 		local b = ModelKit.new(id)
-		local look: Look = if def then def.look else { builder = "Slime", primary = WHITE, secondary = BLACK, accent = WHITE }
+		local look: Look = if def
+			then def.look
+			else { builder = "Slime", primary = WHITE, secondary = BLACK, accent = WHITE }
 		local fn = builders[look.builder] or builders.Slime
 		fn(b, look)
 		model = b:finish()

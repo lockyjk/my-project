@@ -114,7 +114,11 @@ local defs: { [string]: RemoteDef } = {
 	-- Arena
 	ArenaEnter = { kind = "Function", args = { t.optional(t.id) }, rate = 2 },
 	ArenaLeave = { kind = "Function", args = {}, rate = 2 },
-	PlayerAction = { kind = "Event", args = { t.oneOf({ "Attack", "Dodge", "Heal", "Rally", "Ultimate" }), t.optional(t.vector) }, rate = 12 },
+	PlayerAction = {
+		kind = "Event",
+		args = { t.oneOf({ "Attack", "Dodge", "Heal", "Rally", "Ultimate" }), t.optional(t.vector) },
+		rate = 12,
+	},
 	-- Server -> client
 	State = { kind = "Push" }, -- (patch: { [key]: value })
 	Inventory = { kind = "Push" }, -- ("full", inv) | ("set", uid, item?)

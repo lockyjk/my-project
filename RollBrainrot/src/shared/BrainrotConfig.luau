@@ -29,7 +29,12 @@ local list: { Types.BrainrotDef } = {
 		habitat = "Grass",
 		rollable = true,
 		idleQuirk = "Slip",
-		look = { builder = "Banana", primary = rgb(255, 222, 60), secondary = rgb(120, 80, 30), accent = rgb(230, 40, 40) },
+		look = {
+			builder = "Banana",
+			primary = rgb(255, 222, 60),
+			secondary = rgb(120, 80, 30),
+			accent = rgb(230, 40, 40),
+		},
 	},
 	{
 		id = "PizzarinoMozzarino",
@@ -51,7 +56,12 @@ local list: { Types.BrainrotDef } = {
 		habitat = "Grass",
 		rollable = true,
 		idleQuirk = "Wobble",
-		look = { builder = "Pizza", primary = rgb(255, 204, 80), secondary = rgb(214, 130, 50), accent = rgb(200, 40, 40) },
+		look = {
+			builder = "Pizza",
+			primary = rgb(255, 204, 80),
+			secondary = rgb(214, 130, 50),
+			accent = rgb(200, 40, 40),
+		},
 	},
 	{
 		id = "Cactoboom",
@@ -73,7 +83,12 @@ local list: { Types.BrainrotDef } = {
 		habitat = "Desert",
 		rollable = true,
 		idleQuirk = "HatTip",
-		look = { builder = "Cactus", primary = rgb(70, 170, 70), secondary = rgb(140, 90, 50), accent = rgb(255, 120, 190) },
+		look = {
+			builder = "Cactus",
+			primary = rgb(70, 170, 70),
+			secondary = rgb(140, 90, 50),
+			accent = rgb(255, 120, 190),
+		},
 	},
 	{
 		id = "FroggolinoGelatino",
@@ -95,7 +110,12 @@ local list: { Types.BrainrotDef } = {
 		habitat = "Forest",
 		rollable = true,
 		idleQuirk = "Hop",
-		look = { builder = "Frog", primary = rgb(90, 240, 150), secondary = rgb(255, 110, 200), accent = rgb(255, 255, 255) },
+		look = {
+			builder = "Frog",
+			primary = rgb(90, 240, 150),
+			secondary = rgb(255, 110, 200),
+			accent = rgb(255, 255, 255),
+		},
 	},
 	{
 		id = "BombardiroGatoro",
@@ -117,7 +137,12 @@ local list: { Types.BrainrotDef } = {
 		habitat = "Forest",
 		rollable = true,
 		idleQuirk = "Aim",
-		look = { builder = "Gator", primary = rgb(60, 140, 60), secondary = rgb(40, 40, 48), accent = rgb(255, 170, 40) },
+		look = {
+			builder = "Gator",
+			primary = rgb(60, 140, 60),
+			secondary = rgb(40, 40, 48),
+			accent = rgb(255, 170, 40),
+		},
 	},
 	{
 		id = "SharkaleroJetto",
@@ -139,7 +164,12 @@ local list: { Types.BrainrotDef } = {
 		habitat = "Ice",
 		rollable = true,
 		idleQuirk = "Zoom",
-		look = { builder = "Shark", primary = rgb(90, 130, 170), secondary = rgb(240, 240, 245), accent = rgb(255, 130, 30) },
+		look = {
+			builder = "Shark",
+			primary = rgb(90, 130, 170),
+			secondary = rgb(240, 240, 245),
+			accent = rgb(255, 130, 30),
+		},
 	},
 	{
 		id = "VolcanicoElefanto",
@@ -162,7 +192,12 @@ local list: { Types.BrainrotDef } = {
 		habitat = "Volcano",
 		rollable = true,
 		idleQuirk = "Stomp",
-		look = { builder = "Elephant", primary = rgb(60, 55, 58), secondary = rgb(255, 110, 20), accent = rgb(245, 240, 225) },
+		look = {
+			builder = "Elephant",
+			primary = rgb(60, 55, 58),
+			secondary = rgb(255, 110, 20),
+			accent = rgb(245, 240, 225),
+		},
 	},
 	{
 		id = "CosmocornoBrainrot",
@@ -185,7 +220,12 @@ local list: { Types.BrainrotDef } = {
 		habitat = "Alien",
 		rollable = true,
 		idleQuirk = "Float",
-		look = { builder = "Unicorn", primary = rgb(50, 30, 110), secondary = rgb(255, 120, 230), accent = rgb(120, 230, 255) },
+		look = {
+			builder = "Unicorn",
+			primary = rgb(50, 30, 110),
+			secondary = rgb(255, 120, 230),
+			accent = rgb(120, 230, 255),
+		},
 	},
 }
 
