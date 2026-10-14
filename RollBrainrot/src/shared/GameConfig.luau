@@ -363,6 +363,13 @@ GameConfig.Zoo = {
 	OfflineCapHours = 12,
 	OfflineMinSeconds = 120,
 	TickSeconds = 5, -- how often the zoo bank accrues
+	-- Zoo star rating (1-5). Points: each resident = its rarity order (Common 1 .. Secret 7)
+	-- + mutation order - 1; each unlocked habitat 3, each habitat level above 1 +1, each
+	-- decoration 2. Every star above the first adds IncomePerStar and brings more visitors.
+	Rating = { thresholds = { 0, 12, 30, 60, 110 }, incomePerStar = 0.06, maxVisitors = 6 },
+	-- Petting a Brainrot in your zoo pays PetSeconds of its income into the bank
+	PetSeconds = 30,
+	PetCooldown = 45,
 }
 
 export type DecorationDef = {
@@ -715,6 +722,38 @@ GameConfig.Security = {
 	AdminUserIds = {} :: { number }, -- plus the place owner / Studio
 	MaxStorageHard = 2000,
 }
+
+-------------------------------------------------------------------------------
+-- UI art (generated with Higgsfield, see assets/UI_ART.md). Upload each PNG in Studio
+-- (Asset Manager → Bulk Import) and paste its "rbxassetid://…" here. Empty = the UI
+-- falls back to the emoji / colour version, so the game works before upload.
+-------------------------------------------------------------------------------
+GameConfig.UIImages = {
+	logo = "",
+	coins = "",
+	gems = "",
+	tokens = "",
+	essence = "",
+	bossTokens = "",
+	roll = "",
+	star = "",
+	heart = "",
+	menu_Collection = "",
+	menu_Zoo = "",
+	menu_Upgrades = "",
+	menu_Shop = "",
+	menu_Daily = "",
+	menu_Events = "",
+	menu_Arena = "",
+	menu_Settings = "",
+	habitat_Grass = "",
+	habitat_Forest = "",
+	habitat_Desert = "",
+	habitat_Ice = "",
+	habitat_Volcano = "",
+	habitat_Alien = "",
+	habitat_Giant = "",
+} :: { [string]: string }
 
 GameConfig.SaveVersion = 1
 GameConfig.DataStoreName = "RollBrainrot_v1"

@@ -238,10 +238,12 @@ function UIKit.button(props: Props): TextButton
 	if props.Icon then
 		local icon = Theme.Icons[props.Icon] or props.Icon
 		if props.Vertical then
-			UIKit.label({
-				Text = icon,
-				Size = UDim2.new(1, 0, 0.62, 0),
-				Position = UDim2.fromScale(0, 0.02),
+			-- picture icon (GameConfig.UIImages[ImageKey]) when uploaded, emoji otherwise
+			UIKit.icon({
+				Key = props.ImageKey or "",
+				Fallback = icon,
+				Size = UDim2.new(0.86, 0, 0.62, 0),
+				Position = UDim2.fromScale(0.07, 0.02),
 				Parent = button,
 				Name = "Icon",
 				ZIndex = button.ZIndex + 1,
@@ -281,6 +283,41 @@ function UIKit.button(props: Props): TextButton
 		end)
 	end
 	return button
+end
+
+-- Picture icon from GameConfig.UIImages[key] when uploaded, otherwise the emoji fallback.
+function UIKit.hasImage(key: string): boolean
+	local id = Config.UIImages[key]
+	return id ~= nil and id ~= ""
+end
+
+function UIKit.icon(props: Props): GuiObject
+	local key: string = props.Key
+	if UIKit.hasImage(key) then
+		return UIKit.new("ImageLabel", {
+			Name = props.Name or "Icon",
+			BackgroundTransparency = 1,
+			Image = Config.UIImages[key],
+			ScaleType = props.ScaleType or Enum.ScaleType.Fit,
+			Size = props.Size or UDim2.fromOffset(40, 40),
+			Position = props.Position or UDim2.new(),
+			AnchorPoint = props.AnchorPoint or Vector2.zero,
+			ZIndex = props.ZIndex or 2,
+			LayoutOrder = props.LayoutOrder or 0,
+			Parent = props.Parent,
+		})
+	end
+	return UIKit.label({
+		Name = props.Name or "Icon",
+		Text = props.Fallback or "",
+		Size = props.Size or UDim2.fromOffset(40, 40),
+		Position = props.Position,
+		AnchorPoint = props.AnchorPoint,
+		MaxTextSize = props.MaxTextSize or 40,
+		ZIndex = props.ZIndex or 2,
+		LayoutOrder = props.LayoutOrder,
+		Parent = props.Parent,
+	})
 end
 
 function UIKit.setButtonText(button: GuiButton, text: string)

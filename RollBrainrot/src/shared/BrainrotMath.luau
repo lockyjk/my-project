@@ -122,6 +122,37 @@ function BrainrotMath.placedIncome(
 		* affinity
 end
 
+-- Zoo star rating from save data: returns stars (1-5), points, points needed for next star
+function BrainrotMath.zooRating(data: Types.PlayerData): (number, number, number?)
+	local R = GameConfig.Zoo.Rating
+	local points = 0
+	for id, h in data.zoo.habitats do
+		if h.unlocked and Registry.Habitat[id] then
+			points += 3 + (math.max(1, h.level) - 1)
+			for _, uid in h.slots do
+				local inst = data.inventory[uid]
+				local def = inst and Registry.Brainrot[inst.id]
+				if inst and def then
+					local mut = Registry.Mutation[inst.mut] or Registry.Mutation.Normal
+					points += Registry.Rarity[def.rarity].order + (mut.order - 1)
+				end
+			end
+		end
+	end
+	points += #data.zoo.decorations * 2
+	local stars = 1
+	for i, t in R.thresholds do
+		if points >= t then
+			stars = i
+		end
+	end
+	return stars, points, R.thresholds[stars + 1]
+end
+
+function BrainrotMath.zooRatingMult(stars: number): number
+	return 1 + GameConfig.Zoo.Rating.incomePerStar * (stars - 1)
+end
+
 -------------------------------------------------------------------------------
 -- Player
 -------------------------------------------------------------------------------

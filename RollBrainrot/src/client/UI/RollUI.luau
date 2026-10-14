@@ -225,7 +225,7 @@ function RollUI.start()
 		Parent = panel,
 	})
 	rollButton = UIKit.button({
-		Text = "🎰 ROLL BRAINROT",
+		Text = if UIKit.hasImage("roll") then "      ROLL BRAINROT" else "🎰 ROLL BRAINROT",
 		Color = C.Primary,
 		Size = UDim2.fromOffset(400, 96),
 		Position = UDim2.fromOffset(60, 80),
@@ -237,6 +237,17 @@ function RollUI.start()
 			end
 		end,
 	})
+	if UIKit.hasImage("roll") then
+		UIKit.icon({
+			Key = "roll",
+			Fallback = "",
+			Size = UDim2.fromOffset(84, 84),
+			Position = UDim2.fromOffset(10, 4),
+			ZIndex = rollButton.ZIndex + 2,
+			Name = "RollArt",
+			Parent = rollButton,
+		})
+	end
 	costLabel = UIKit.label({
 		Text = "",
 		Size = UDim2.new(1, 0, 0, 22),
@@ -256,15 +267,12 @@ function RollUI.start()
 			task.wait(0.65)
 		end
 	end)
-	local row = UIKit.new(
-		"Frame",
-		{
-			BackgroundTransparency = 1,
-			Size = UDim2.fromOffset(520, 46),
-			Position = UDim2.fromOffset(0, 186),
-			Parent = panel,
-		}
-	)
+	local row = UIKit.new("Frame", {
+		BackgroundTransparency = 1,
+		Size = UDim2.fromOffset(520, 46),
+		Position = UDim2.fromOffset(0, 186),
+		Parent = panel,
+	})
 	UIKit.list(row, 10, true, Enum.HorizontalAlignment.Center)
 	autoButton = UIKit.button({
 		Text = "🔁 Auto: OFF",
@@ -326,15 +334,12 @@ function RollUI.start()
 		MaxTextSize = 20,
 		Parent = oddsPanel,
 	})
-	oddsList = UIKit.new(
-		"Frame",
-		{
-			BackgroundTransparency = 1,
-			Size = UDim2.new(1, -16, 1, -44),
-			Position = UDim2.fromOffset(8, 38),
-			Parent = oddsPanel,
-		}
-	)
+	oddsList = UIKit.new("Frame", {
+		BackgroundTransparency = 1,
+		Size = UDim2.new(1, -16, 1, -44),
+		Position = UDim2.fromOffset(8, 38),
+		Parent = oddsPanel,
+	})
 	UIKit.list(oddsList, 2, false, Enum.HorizontalAlignment.Center).VerticalAlignment = Enum.VerticalAlignment.Top
 
 	-- name cycler ------------------------------------------------------------------
@@ -398,15 +403,12 @@ function RollUI.start()
 		MaxTextSize = 20,
 		Parent = reveal,
 	})
-	local buttons = UIKit.new(
-		"Frame",
-		{
-			BackgroundTransparency = 1,
-			Size = UDim2.new(1, -40, 0, 80),
-			Position = UDim2.new(0, 20, 1, -90),
-			Parent = reveal,
-		}
-	)
+	local buttons = UIKit.new("Frame", {
+		BackgroundTransparency = 1,
+		Size = UDim2.new(1, -40, 0, 80),
+		Position = UDim2.new(0, 20, 1, -90),
+		Parent = reveal,
+	})
 	UIKit.list(buttons, 12, true, Enum.HorizontalAlignment.Center)
 	local function act(name: string, text: string, color: Color3, order: number, fn: () -> ())
 		revealButtons[name] = UIKit.button({

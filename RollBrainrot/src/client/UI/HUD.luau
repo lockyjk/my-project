@@ -154,11 +154,13 @@ local function currency(parent: Instance, key: string, icon: string, color: Colo
 		Parent = parent,
 		Corner = 12,
 	})
-	UIKit.label({
-		Text = icon,
-		Size = UDim2.fromOffset(40, 40),
-		Position = UDim2.fromOffset(4, 3),
+	UIKit.icon({
+		Key = key,
+		Fallback = icon,
+		Size = UDim2.fromOffset(46, 46),
+		Position = UDim2.fromOffset(-6, 0),
 		MaxTextSize = 30,
+		ZIndex = 3,
 		Parent = box,
 	})
 	currencyLabels[key] = UIKit.label({
@@ -177,6 +179,18 @@ function HUD.start()
 	local gui, scale = UIKit.screen("HUD", 2, player:WaitForChild("PlayerGui"))
 	root = UIKit.root(gui, scale)
 
+	-- game logo (top centre, only once the Higgsfield logo is uploaded) ------------
+	local logo: GuiObject? = nil
+	if UIKit.hasImage("logo") then
+		logo = UIKit.icon({
+			Key = "logo",
+			Size = UDim2.fromOffset(230, 128),
+			Position = UDim2.new(0.5, 0, 0, 4),
+			AnchorPoint = Vector2.new(0.5, 0),
+			Parent = root,
+		})
+	end
+
 	-- profile (top-left) -----------------------------------------------------------
 	local profile = UIKit.panel({
 		Size = UDim2.fromOffset(330, 104),
@@ -184,15 +198,12 @@ function HUD.start()
 		Color = C.PanelDark,
 		Parent = root,
 	})
-	local avatar = UIKit.new(
-		"ImageLabel",
-		{
-			BackgroundColor3 = C.PanelLight,
-			Size = UDim2.fromOffset(84, 84),
-			Position = UDim2.fromOffset(10, 10),
-			Parent = profile,
-		}
-	)
+	local avatar = UIKit.new("ImageLabel", {
+		BackgroundColor3 = C.PanelLight,
+		Size = UDim2.fromOffset(84, 84),
+		Position = UDim2.fromOffset(10, 10),
+		Parent = profile,
+	})
 	UIKit.corner(avatar, 42)
 	task.spawn(function()
 		local ok, img = pcall(
@@ -240,16 +251,13 @@ function HUD.start()
 	})
 
 	-- currencies (top-right) ----------------------------------------------------------
-	local wallet = UIKit.new(
-		"Frame",
-		{
-			BackgroundTransparency = 1,
-			Size = UDim2.fromOffset(560, 100),
-			Position = UDim2.new(1, -14, 0, 14),
-			AnchorPoint = Vector2.new(1, 0),
-			Parent = root,
-		}
-	)
+	local wallet = UIKit.new("Frame", {
+		BackgroundTransparency = 1,
+		Size = UDim2.fromOffset(560, 100),
+		Position = UDim2.new(1, -14, 0, 14),
+		AnchorPoint = Vector2.new(1, 0),
+		Parent = root,
+	})
 	local grid = UIKit.grid(wallet, Vector2.new(172, 46), 8)
 	grid.HorizontalAlignment = Enum.HorizontalAlignment.Right
 	currency(wallet, "coins", "💰", C.Coins, 1)
@@ -290,16 +298,13 @@ function HUD.start()
 	end)
 
 	-- menu (left) ---------------------------------------------------------------
-	menu = UIKit.new(
-		"Frame",
-		{
-			BackgroundTransparency = 1,
-			Size = UDim2.fromOffset(176, 420),
-			Position = UDim2.new(0, 14, 0.5, 30),
-			AnchorPoint = Vector2.new(0, 0.5),
-			Parent = root,
-		}
-	)
+	menu = UIKit.new("Frame", {
+		BackgroundTransparency = 1,
+		Size = UDim2.fromOffset(176, 420),
+		Position = UDim2.new(0, 14, 0.5, 30),
+		AnchorPoint = Vector2.new(0, 0.5),
+		Parent = root,
+	})
 	UIKit.grid(menu, Vector2.new(82, 82), 8).HorizontalAlignment = Enum.HorizontalAlignment.Left
 	local items = {
 		{ name = "Collection", icon = "📖", text = "Brainrots", color = C.Primary },
@@ -314,6 +319,7 @@ function HUD.start()
 	for i, it in items do
 		UIKit.button({
 			Icon = it.icon,
+			ImageKey = "menu_" .. it.name,
 			Text = it.text,
 			Vertical = true,
 			Color = it.color,
@@ -327,16 +333,13 @@ function HUD.start()
 	end
 
 	-- quick travel (above the slots) --------------------------------------------
-	travel = UIKit.new(
-		"Frame",
-		{
-			BackgroundTransparency = 1,
-			Size = UDim2.fromOffset(470, 44),
-			Position = UDim2.new(0.5, 0, 1, -110),
-			AnchorPoint = Vector2.new(0.5, 1),
-			Parent = root,
-		}
-	)
+	travel = UIKit.new("Frame", {
+		BackgroundTransparency = 1,
+		Size = UDim2.fromOffset(470, 44),
+		Position = UDim2.new(0.5, 0, 1, -110),
+		AnchorPoint = Vector2.new(0.5, 1),
+		Parent = root,
+	})
 	UIKit.list(travel, 8, true, Enum.HorizontalAlignment.Center)
 	for i, t in
 		{
@@ -359,16 +362,13 @@ function HUD.start()
 	end
 
 	-- equipped slots (bottom) ----------------------------------------------------
-	slotsRow = UIKit.new(
-		"Frame",
-		{
-			BackgroundTransparency = 1,
-			Size = UDim2.fromOffset(900, 80),
-			Position = UDim2.new(0.5, 0, 1, -16),
-			AnchorPoint = Vector2.new(0.5, 1),
-			Parent = root,
-		}
-	)
+	slotsRow = UIKit.new("Frame", {
+		BackgroundTransparency = 1,
+		Size = UDim2.fromOffset(900, 80),
+		Position = UDim2.new(0.5, 0, 1, -16),
+		AnchorPoint = Vector2.new(0.5, 1),
+		Parent = root,
+	})
 	UIKit.list(slotsRow, 8, true, Enum.HorizontalAlignment.Center)
 
 	-- wiring ---------------------------------------------------------------------
@@ -396,6 +396,9 @@ function HUD.start()
 	local function battleVisibility()
 		local inBattle = player:GetAttribute("BattleId") ~= nil
 		slotsRow.Visible = not inBattle
+		if logo then
+			logo.Visible = not inBattle
+		end
 		travel.Visible = not inBattle
 		menu.Visible = not inBattle
 	end

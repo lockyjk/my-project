@@ -14,7 +14,7 @@ local AmbientController = {}
 
 local W = GameConfig.World
 local HUB_NPCS = 16
-local VISITORS_PER_ZOO = 3
+local VISITORS_PER_ZOO = GameConfig.Zoo.Rating.maxVisitors -- shown: 1 + zoo star rating
 local VIEW = 420
 
 local SHIRTS = {
@@ -48,6 +48,7 @@ type Npc = {
 	phase: number,
 	speed: number,
 	plot: number?,
+	slot: number,
 	visible: boolean,
 }
 
@@ -75,7 +76,7 @@ local function pick<T>(list: { T }): T
 	return list[math.random(1, #list)]
 end
 
-local function makeNpc(route: () -> Vector3, plot: number?): Npc
+local function makeNpc(route: () -> Vector3, plot: number?, slot: number?): Npc
 	local shirt, skin, pants = pick(SHIRTS), pick(SKIN), pick(PANTS)
 	local parts, offsets, limbs = {}, {}, {}
 	local function add(name: string, p: BasePart, off: CFrame)
@@ -114,6 +115,7 @@ local function makeNpc(route: () -> Vector3, plot: number?): Npc
 		phase = math.random() * 10,
 		speed = 6 + math.random() * 3,
 		plot = plot,
+		slot = slot or 0,
 		visible = true,
 	}
 end
@@ -192,7 +194,8 @@ local function update(n: Npc, now: number, dt: number)
 		n.goal = n.route()
 		n.waitUntil = now + 1.5 + math.random() * 5
 		-- people near the machine cheer while they wait
-		n.cheer = n.pos.Magnitude < 70 and math.random() < 0.6
+		-- people near the machine cheer while they wait; zoo visitors cheer at the pens
+		n.cheer = (n.pos.Magnitude < 70 and math.random() < 0.6) or (n.plot ~= nil and math.random() < 0.35)
 		return
 	end
 	n.pos += delta.Unit * math.min(d, n.speed * dt)
@@ -228,8 +231,8 @@ function AmbientController.start()
 		table.insert(npcs, makeNpc(hubPoint))
 	end
 	for i in W.Plots do
-		for _ = 1, VISITORS_PER_ZOO do
-			table.insert(npcs, makeNpc(visitorRoute(i), i))
+		for k = 1, VISITORS_PER_ZOO do
+			table.insert(npcs, makeNpc(visitorRoute(i), i, k))
 		end
 	end
 	local state = ReplicatedStorage:WaitForChild("ZooState")
@@ -264,7 +267,9 @@ function AmbientController.start()
 			local occupied = true
 			if n.plot then
 				local cfg = state:FindFirstChild(`Plot{n.plot}`)
-				occupied = cfg ~= nil and (cfg:GetAttribute("OwnerId") or 0) ~= 0
+				local rating = cfg and (cfg:GetAttribute("Rating") :: number?) or 0
+				-- an owned zoo draws 1 visitor per star (+1)
+				occupied = cfg ~= nil and (cfg:GetAttribute("OwnerId") or 0) ~= 0 and n.slot <= rating + 1
 			end
 			local near = occupied and (n.pos - camPos).Magnitude < VIEW
 			setVisible(n, near)

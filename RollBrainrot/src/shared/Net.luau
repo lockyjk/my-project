@@ -102,6 +102,7 @@ local defs: { [string]: RemoteDef } = {
 	UnlockHabitat = { kind = "Function", args = { t.id }, rate = 3 },
 	UpgradeHabitat = { kind = "Function", args = { t.id }, rate = 4 },
 	CollectZoo = { kind = "Function", args = {}, rate = 3 },
+	PetBrainrot = { kind = "Function", args = { t.id }, rate = 6 },
 	BuyDecoration = { kind = "Function", args = { t.id }, rate = 3 },
 	TeleportTo = { kind = "Function", args = { t.oneOf({ "Zoo", "Arena", "Machine", "Spawn" }) }, rate = 1 },
 	-- Progression / economy

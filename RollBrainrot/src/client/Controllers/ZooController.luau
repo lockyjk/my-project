@@ -12,8 +12,15 @@ local Workspace = game:GetService("Workspace")
 local Modules = ReplicatedStorage:WaitForChild("Modules")
 local Animator = require(Modules:WaitForChild("Models"):WaitForChild("Animator"))
 local BrainrotModels = require(Modules.Models:WaitForChild("BrainrotModels"))
+local BrainrotMath = require(Modules:WaitForChild("BrainrotMath"))
+local Format = require(Modules:WaitForChild("Format"))
 local GameConfig = require(Modules:WaitForChild("GameConfig"))
+local Net = require(Modules:WaitForChild("Net"))
 local Registry = require(Modules:WaitForChild("Registry"))
+
+local ClientState = require(script.Parent.ClientState)
+local Effects = require(script.Parent.Effects)
+local Notifications = require(script.Parent.Parent.UI.Notifications)
 
 local ZooController = {}
 
@@ -36,11 +43,14 @@ type Creature = {
 	waitUntil: number,
 	nextQuirk: number,
 	bounds: { center: CFrame, half: Vector2 },
+	nextCoin: number,
+	mine: boolean,
 }
 
 type Plot = { index: number, creatures: { [string]: Creature }, rendered: boolean, contents: { any } }
 
 local plots: { [number]: Plot } = {}
+local coinPop: (Creature, number) -> ()
 local folder: Folder
 local player = Players.LocalPlayer
 
@@ -86,6 +96,39 @@ local function nameTag(model: Model, id: string, mut: string)
 	stroke.Parent = label
 end
 
+local function isMine(plotIndex: number): boolean
+	return player:GetAttribute("Plot") == plotIndex
+end
+
+-- Petting (own zoo only): hearts, a happy hop and a little burst of income into the bank
+local function petPrompt(c: Creature)
+	local root = c.model.PrimaryPart
+	local def = Registry.Brainrot[c.id]
+	if not root or not def then
+		return
+	end
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.ActionText = "Pet ❤"
+	prompt.ObjectText = def.name
+	prompt.HoldDuration = 0
+	prompt.MaxActivationDistance = 14
+	prompt.RequiresLineOfSight = false
+	prompt.UIOffset = Vector2.new(0, 20)
+	prompt.Parent = root
+	prompt.Triggered:Connect(function()
+		local ok, result = Net.Client.invoke("PetBrainrot", c.uid)
+		local head = c.pos + Vector3.new(0, c.rig.height + 1.5, 0)
+		if ok then
+			Animator.quirk(c.rig, "Hop")
+			Effects.burst(head, Color3.fromRGB(255, 110, 170), 18, "sparkle", 10, 1.2)
+			Effects.floatText(head, `❤ +${Format.short(result)}`, Color3.fromRGB(255, 140, 190), 7, 5)
+			Effects.sound("Coins", 0.4, c.pos, 1.3)
+		elseif type(result) == "number" then
+			Notifications.toast(`{def.name} is happy already — pet again in {result}s`, Color3.fromRGB(255, 170, 210))
+		end
+	end)
+end
+
 local function spawnCreature(plot: Plot, entry: any): Creature?
 	local def = Registry.Brainrot[entry.id]
 	if not def then
@@ -110,7 +153,12 @@ local function spawnCreature(plot: Plot, entry: any): Creature?
 		waitUntil = os.clock() + math.random() * 3,
 		nextQuirk = os.clock() + 4 + math.random() * 10,
 		bounds = bounds,
+		nextCoin = os.clock() + 4 + math.random() * 8,
+		mine = isMine(plot.index),
 	}
+	if c.mine then
+		petPrompt(c)
+	end
 	return c
 end
 
@@ -181,6 +229,70 @@ local function step(c: Creature, now: number, dt: number)
 	Animator.update(c.rig, CFrame.new(c.pos) * CFrame.Angles(0, c.yaw, 0), now, true, c.speed / 10)
 end
 
+-- Your own Brainrots visibly "earn": a little +$ pops above them every ~12 s
+coinPop = function(c: Creature, distance: number)
+	if distance > 160 then
+		return
+	end
+	local inst = ClientState.inventory[c.uid]
+	local habitat = Registry.Habitat[c.habitat]
+	local zoo = ClientState.data.zoo
+	local h = zoo and zoo.habitats[c.habitat]
+	if not inst or not habitat or not h then
+		return
+	end
+	local perMin = BrainrotMath.placedIncome(inst, habitat, h.level)
+	local amount = perMin * 12 / 60
+	if amount < 0.5 then
+		return
+	end
+	local head = c.pos + Vector3.new(0, c.rig.height + 1, 0)
+	Effects.floatText(head, `+${Format.short(math.floor(amount + 0.5))}`, Color3.fromRGB(255, 220, 80), 5, 4)
+end
+
+-- A pile of gold on your collector pad that grows with the uncollected bank
+local pile: Model? = nil
+local pileCount = 0
+
+local function updatePile()
+	local index = player:GetAttribute("Plot")
+	local zoo = ClientState.data.zoo
+	if type(index) ~= "number" or not zoo then
+		return
+	end
+	local bank = zoo.bank or 0
+	local want = if bank < 1 then 0 else math.clamp(math.floor(math.log10(bank + 1) * 3), 1, 14)
+	if want == pileCount and pile then
+		return
+	end
+	pileCount = want
+	if pile then
+		pile:Destroy()
+	end
+	local m = Instance.new("Model")
+	m.Name = "CoinPile"
+	local base = (plotCFrame(index) * CFrame.new(0, 0.6, -66)).Position
+	local rng = Random.new(index)
+	for i = 1, want do
+		local coin = Instance.new("Part")
+		coin.Shape = Enum.PartType.Cylinder
+		coin.Size = Vector3.new(0.5, 2.2, 2.2)
+		coin.Color = Color3.fromRGB(255, 205, 50)
+		coin.Material = Enum.Material.Foil
+		coin.Anchored = true
+		coin.CanCollide = false
+		coin.CanQuery = false
+		coin.CanTouch = false
+		local layer = math.floor((i - 1) / 4)
+		local a = (i % 4) * math.pi / 2 + layer
+		coin.CFrame = CFrame.new(base + Vector3.new(math.cos(a) * 1.3, 0.3 + layer * 0.5, math.sin(a) * 1.3))
+			* CFrame.Angles(rng:NextNumber(-0.3, 0.3), 0, math.rad(90) + rng:NextNumber(-0.3, 0.3))
+		coin.Parent = m
+	end
+	m.Parent = folder
+	pile = m
+end
+
 -- Only the owner of a plot sees its unlock / collect prompts
 local function filterPrompts()
 	local myPlot = player:GetAttribute("Plot")
@@ -210,6 +322,17 @@ function ZooController.start()
 	folder.Name = "ZooCreatures"
 	folder.Parent = live
 	local state = ReplicatedStorage:WaitForChild("ZooState")
+	ClientState.Changed:Connect(function(key)
+		if key == "zoo" then
+			updatePile()
+		end
+	end)
+	player:GetAttributeChangedSignal("Plot"):Connect(function()
+		for _, plot in plots do
+			clearPlot(plot) -- rebuild so pet prompts land on the right zoo
+		end
+		updatePile()
+	end)
 	for i in W.Plots do
 		local plot: Plot = { index = i, creatures = {}, rendered = false, contents = {} }
 		plots[i] = plot
@@ -253,6 +376,10 @@ function ZooController.start()
 					local stepDt = if d < ANIM_DIST then dt else dt * 4
 					for _, c in plot.creatures do
 						step(c, now, stepDt)
+						if c.mine and now >= c.nextCoin then
+							c.nextCoin = now + 9 + math.random() * 6
+							coinPop(c, d)
+						end
 					end
 				end
 			end

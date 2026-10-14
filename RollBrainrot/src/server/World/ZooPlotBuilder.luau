@@ -149,6 +149,62 @@ local function themeProps(parent: Instance, id: string, center: CFrame, size: Ve
 	end
 end
 
+-- Things every pen gets: a little shelter hut, a feeding trough, a water bowl and a toy ball
+local function enrichment(parent: Instance, def: GameConfig.HabitatDef, center: CFrame, size: Vector2)
+	if def.id == "Giant" then
+		return
+	end
+	local hx, hz = size.X / 2, size.Y / 2
+	local wood = rgb(150, 105, 65)
+	local roof = def.fence:Lerp(rgb(200, 60, 60), 0.5)
+	-- shelter hut in the back-left corner
+	local hut = center * cf(-hx + 7, FLOOR_Y, hz - 7)
+	BuildKit.block(parent, v(8, 5, 7), hut * cf(0, 2.5, 0), wood, Enum.Material.WoodPlanks, true)
+	BuildKit.block(parent, v(3, 3.6, 0.3), hut * cf(0, 1.8, -3.6), rgb(40, 30, 25), Enum.Material.SmoothPlastic)
+	BuildKit.part({
+		Size = v(9.5, 1, 4.6),
+		CFrame = hut * cf(0, 6.2, -1.7) * CFrame.Angles(math.rad(28), 0, 0),
+		Color = roof,
+		Material = Enum.Material.SmoothPlastic,
+		CanCollide = false,
+		Parent = parent,
+	})
+	BuildKit.part({
+		Size = v(9.5, 1, 4.6),
+		CFrame = hut * cf(0, 6.2, 1.7) * CFrame.Angles(math.rad(-28), 0, 0),
+		Color = roof,
+		Material = Enum.Material.SmoothPlastic,
+		CanCollide = false,
+		Parent = parent,
+	})
+	-- feeding trough with food
+	local trough = center * cf(hx - 8, FLOOR_Y, hz - 5)
+	BuildKit.block(parent, v(8, 1.6, 2.6), trough * cf(0, 0.8, 0), wood, Enum.Material.WoodPlanks, true)
+	BuildKit.block(parent, v(7.2, 0.4, 1.8), trough * cf(0, 1.55, 0), rgb(255, 200, 70), Enum.Material.Grass)
+	for i = -1, 1 do
+		BuildKit.ball(
+			parent,
+			0.9,
+			(trough * cf(i * 2.2, 2, 0)).Position,
+			if i == 0 then rgb(230, 60, 60) else rgb(255, 225, 60)
+		)
+	end
+	-- water bowl
+	local bowl = center * cf(hx - 8, FLOOR_Y, hz - 12)
+	BuildKit.disc(parent, 4.4, 1, (bowl * cf(0, 0.5, 0)).Position, rgb(90, 140, 210), Enum.Material.SmoothPlastic, true)
+	local water =
+		BuildKit.disc(parent, 3.6, 0.2, (bowl * cf(0, 1.05, 0)).Position, rgb(110, 200, 255), Enum.Material.Glass)
+	water.Transparency = 0.2
+	-- toy ball
+	local ball = BuildKit.ball(
+		parent,
+		2.6,
+		(center * cf(-hx * 0.3, FLOOR_Y + 1.3, -hz * 0.2)).Position,
+		def.fence:Lerp(rgb(255, 80, 160), 0.6)
+	)
+	ball.Material = Enum.Material.SmoothPlastic
+end
+
 local function buildHabitat(
 	parent: Instance,
 	plotIndex: number,
@@ -197,6 +253,7 @@ local function buildHabitat(
 	-- theme scenery
 	local scenery = BuildKit.folder("Scenery", m)
 	themeProps(scenery, def.id, center, size, rng)
+	enrichment(scenery, def, center, size)
 	-- lock: a translucent force field + floating price sign (hidden once unlocked)
 	local field = BuildKit.part({
 		Name = "LockField",

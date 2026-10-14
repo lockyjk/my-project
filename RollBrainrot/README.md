@@ -22,7 +22,7 @@ Test commands (in Studio, or for `GameConfig.Security.AdminUserIds`):
 
 | Command | What it does |
 |---|---|
-| `lune run scripts/run-tests [filter]` | 19 tests: config cross-references, roll odds and pity, stat maths, and headless combat simulations (a starter team clears a wave, a strong team beats a boss, respawns, snapshot packet sizes) |
+| `lune run scripts/run-tests [filter]` | 21 tests: config cross-references, roll odds and pity, stat maths, and headless combat simulations (a starter team clears a wave, a strong team beats a boss, respawns, snapshot packet sizes) |
 | `lune run scripts/smoke` | Runs the real world builders, every creature model in every mutation, and every UI window. It uses a fake DataModel that checks each property write against Roblox's API reflection database: the property must exist, be writable, and get the right type or enum. It also prints part counts per area |
 | `lune run scripts/simulate-arena GreenFields 3 BananiniBongo Cactoboom …` | Balance check. Plays a whole arena with the team you give it, and prints each wave's time, the team's DPS and how many Brainrots died |
 
@@ -68,6 +68,10 @@ All models are built from parts, so the project needs no assets. To swap in real
 - **Monsters:** add a `Model` named after the monster id to `ReplicatedStorage.Art.Monsters`.
 
 The Model needs a `PrimaryPart` at its feet, facing −Z. Monsters are scaled automatically to the `height` set in their config.
+
+### UI art (Higgsfield)
+
+The HUD currency icons, menu buttons, roll button, logo and the Zoo window's habitat banners can use 24 images generated with Higgsfield. Until an image is uploaded, each spot falls back to an emoji or a gradient, so the game works either way. To use the art, follow [assets/UI_ART.md](assets/UI_ART.md): download one zip, then run one command that uploads the images to Roblox and fills in `GameConfig.UIImages`.
 
 Sounds use built-in `rbxasset://` sounds. Music ids are empty until you upload your own. Set both in `GameConfig.Sounds`.
 

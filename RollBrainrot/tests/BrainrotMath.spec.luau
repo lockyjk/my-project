@@ -43,6 +43,38 @@ return function()
 		end)
 	end)
 
+	describe("zoo rating", function()
+		local function data(slots: { any }, decorations: number): any
+			local inventory, uids = {}, {}
+			for i, inst in slots do
+				inventory[tostring(i)] = inst
+				table.insert(uids, tostring(i))
+			end
+			local decor = {}
+			for i = 1, decorations do
+				decor[i] = "D" .. i
+			end
+			return {
+				inventory = inventory,
+				zoo = { habitats = { Grass = { unlocked = true, level = 1, slots = uids } }, decorations = decor, bank = 0 },
+			}
+		end
+
+		it("starts at one star and climbs with rarer residents", function()
+			local empty = BrainrotMath.zooRating(data({}, 0))
+			expect(empty).to.equal(1)
+			local secret = { id = "CosmocornoBrainrot", mut = "Cosmic", lvl = 1, t = 0 }
+			local stars, points = BrainrotMath.zooRating(data({ secret, secret, secret }, 3))
+			expect(points > 20).to.equal(true)
+			expect(stars >= 2).to.equal(true)
+		end)
+
+		it("rating multiplies income", function()
+			expect(BrainrotMath.zooRatingMult(1)).to.equal(1)
+			expect(BrainrotMath.zooRatingMult(5) > 1.2).to.equal(true)
+		end)
+	end)
+
 	describe("player xp", function()
 		it("levels up and carries leftover xp", function()
 			local need = BrainrotMath.xpToNext(1)

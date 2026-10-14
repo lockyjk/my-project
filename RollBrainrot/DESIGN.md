@@ -85,10 +85,26 @@ The battlefield (Ø1,080) plus the stands (Ø1,400) is bigger than the hub (1,12
   - Each habitat has 3 slots, plus 1 per upgrade level (levels 1–6).
   - Each upgrade level adds 10% income.
 - **Favourite habitat**: a Brainrot placed in its favourite habitat earns +25%.
-- **Income**: Σ placed income × Zoo Income upgrade × (1 + decorations) × VIP × Coin Boost.
+- **Income**: Σ placed income × Zoo Income upgrade × (1 + decorations) × VIP × zoo rating × Coin Boost.
   - Income goes into a bank. You collect it at your plot's pad or from the Zoo window.
 - **Equipped vs in the zoo**: a Brainrot copy is either equipped or in the zoo, not both, so duplicates are useful.
-- **What players see**: each client draws every zoo's Brainrots wandering their pens, with idle quirks (Bananini slips over, Froggolino hops, …). NPC visitors stroll the plots of players who are in the server.
+- **Zoo rating (1–5 ⭐)**: points come from residents (rarity + mutation tier), unlocked and upgraded habitats (3 + level − 1 each) and decorations (2 each). The star thresholds are 0 / 12 / 30 / 60 / 110 points, set in `GameConfig.Zoo.Rating`.
+  - Each star above the first adds +6% income.
+  - The stars appear on the owner sign and in the Zoo window, along with progress to the next star.
+- **Petting**: your own Brainrots have a "Pet ❤" prompt. Petting one plays a happy hop and hearts, and pays 30 s of its income into the bank. Each Brainrot then has a 45 s cooldown. This is server-checked: the `PetBrainrot` remote is rate-limited.
+- **What players see**:
+  - Each client draws every zoo's Brainrots wandering their pens, with idle quirks (Bananini slips over, Froggolino hops, …).
+  - Pens have a shelter hut, a feeding trough, a water bowl and a toy ball.
+  - Your own Brainrots pop "+$" coins now and then.
+  - A coin pile on your collector grows with the bank.
+  - Each zoo draws 1 NPC visitor, plus 1 per star (up to 6), and visitors cheer at the pens.
+- **Zoo window**: one card per habitat, with these parts:
+  - a Higgsfield banner, or a gradient when no art is uploaded
+  - level pips
+  - resident portraits showing income and a 💚 for the favourite bonus; tap a portrait to remove it
+  - empty slots; tap one to auto-fill the zoo
+  - an upgrade or unlock button
+  - for locked habitats, the requirement and which Brainrots favour them
 
 ## 6. Arena & combat
 

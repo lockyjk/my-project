@@ -71,9 +71,15 @@ function ZooService.incomePerMinute(data: Types.PlayerData): number
 			end
 		end
 	end
+	return total * ZooService.globalMult(data)
+end
+
+-- Everything that multiplies zoo income besides the per-Brainrot habitat maths
+function ZooService.globalMult(data: Types.PlayerData): number
 	local upgrade = BrainrotMath.upgradeValue(GameConfig.Upgrades.ZooIncome, data.upgrades.ZooIncome or 0)
 	local vip = if data.passes.VIP then GameConfig.Vip.CoinMult else 1
-	return total * upgrade * (1 + ZooService.decorBonus(data)) * vip
+	local stars = BrainrotMath.zooRating(data)
+	return upgrade * (1 + ZooService.decorBonus(data)) * vip * BrainrotMath.zooRatingMult(stars)
 end
 
 -------------------------------------------------------------------------------
@@ -103,6 +109,17 @@ local function publish(player: Player)
 	incomeCache[player] = income
 	cfg:SetAttribute("IncomePerMin", income)
 	player:SetAttribute("ZooIncome", income)
+	local stars = BrainrotMath.zooRating(data)
+	cfg:SetAttribute("Rating", stars)
+	player:SetAttribute("ZooRating", stars)
+	local model0 = plotModel(index)
+	if model0 then
+		for _, d in model0:GetDescendants() do
+			if d.Name == "OwnerLabel" and d:IsA("TextLabel") then
+				d.Text = `{player.DisplayName}'s Zoo\n{string.rep("⭐", stars)}`
+			end
+		end
+	end
 	-- locked / unlocked pens
 	local model = plotModel(index)
 	local folder = model and model:FindFirstChild("Habitats")
@@ -180,6 +197,7 @@ local function resetPlot(index: number)
 	cfg:SetAttribute("Contents", "[]")
 	cfg:SetAttribute("Habitats", "{}")
 	cfg:SetAttribute("IncomePerMin", 0)
+	cfg:SetAttribute("Rating", 0)
 	setOwnerSign(index, nil)
 	rebuildDecorations(index, nil)
 	local model = plotModel(index)
@@ -367,6 +385,39 @@ function ZooService.collect(player: Player): (boolean, number)
 	return true, amount
 end
 
+-- Petting: a Brainrot in your own zoo gives a little burst of its income (per-Brainrot cooldown)
+local petCooldown: { [Player]: { [string]: number } } = {}
+
+function ZooService.pet(player: Player, uid: string): (boolean, any)
+	local data = DataService.get(player)
+	local inst = data and data.inventory[uid]
+	if not data or not inst then
+		return false, nil
+	end
+	local habitatId = InventoryService.zooHabitatOf(data, uid)
+	local habitat = habitatId and Registry.Habitat[habitatId]
+	if not habitatId or not habitat then
+		return false, nil
+	end
+	local cds = petCooldown[player]
+	if not cds then
+		cds = {}
+		petCooldown[player] = cds
+	end
+	local now = os.clock()
+	if now < (cds[uid] or 0) then
+		return false, math.ceil(cds[uid] - now)
+	end
+	cds[uid] = now + GameConfig.Zoo.PetCooldown
+	local perMin = BrainrotMath.placedIncome(inst, habitat, data.zoo.habitats[habitatId].level)
+		* ZooService.globalMult(data)
+	local amount = math.max(1, math.floor(perMin * GameConfig.Zoo.PetSeconds / 60))
+	data.zoo.bank += amount
+	updateBankLabel(player, data)
+	DataService.push(player, "zoo")
+	return true, amount
+end
+
 function ZooService.buyDecoration(player: Player, id: string): (boolean, string?)
 	local data = DataService.get(player)
 	local def = Registry.Decoration[id]
@@ -455,6 +506,7 @@ function ZooService.start()
 		end
 		playerPlot[player] = nil
 		incomeCache[player] = nil
+		petCooldown[player] = nil
 	end)
 
 	-- collector prompts (server side, owner only)
@@ -516,6 +568,9 @@ function ZooService.start()
 	end)
 	Net.Server.handle("CollectZoo", function(player: Player)
 		return ZooService.collect(player)
+	end)
+	Net.Server.handle("PetBrainrot", function(player: Player, uid: string)
+		return ZooService.pet(player, uid)
 	end)
 	Net.Server.handle("BuyDecoration", function(player: Player, id: string)
 		return ZooService.buyDecoration(player, id)
