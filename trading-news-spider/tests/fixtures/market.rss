@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel><title>Markets</title>
+<item><title>Nvidia beats estimates, raises full-year guidance as AI demand surges</title>
+<link>https://example.com/nvda-earnings?utm_source=rss&amp;utm_medium=feed</link>
+<pubDate>{MIN5}</pubDate><description>&lt;p&gt;Shares of Nvidia (NASDAQ: NVDA) jumped after hours.&lt;/p&gt;</description></item>
+<item><title>Acme Bio (NASDAQ: ACMB) announces FDA approval of lead drug</title>
+<link>https://example.com/acmb-fda</link>
+<pubDate>{MIN20}</pubDate><description>Breakthrough therapy cleared.</description></item>
+<item><title>Tiny Corp prices $20 million registered direct offering</title>
+<link>https://example.com/tiny-offering</link>
+<pubDate>{MIN30}</pubDate><description>Tiny Corp $TINY said proceeds fund working capital.</description></item>
+<item><title>Stocks drift as traders wait for CPI report</title>
+<link>https://example.com/cpi-wait</link>
+<pubDate>{MIN40}</pubDate><description>The Fed is expected to hold.</description></item>
+<item><title>Old story about Tesla deliveries</title>
+<link>https://example.com/old-tesla</link>
+<pubDate>{DAYS3}</pubDate><description>Stale.</description></item>
+</channel></rss>

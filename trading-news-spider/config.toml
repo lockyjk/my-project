@@ -1,0 +1,119 @@
+# Trading news spider configuration.
+
+# SEC and Reddit block generic agents: put a real contact email here.
+user_agent = "trading-news-spider/1.0 (personal research; contact: you@example.com)"
+database = "news.db"
+poll_seconds = 60          # how often `watch` re-crawls every source
+min_host_interval = 2.0    # seconds between hits to the same host
+max_age_hours = 24         # ignore items older than this
+half_life_minutes = 60     # score halves every hour: fresh news ranks first
+
+# Tickers you trade. Per-ticker feeds below run once for each of these.
+watchlist = ["AAPL", "NVDA", "TSLA", "AMD", "MSFT", "META", "AMZN", "SPY", "QQQ"]
+
+# Company names that should map to a ticker when no symbol is printed.
+[aliases]
+"Apple" = "AAPL"
+"Nvidia" = "NVDA"
+"Tesla" = "TSLA"
+"Advanced Micro Devices" = "AMD"
+"Microsoft" = "MSFT"
+"Meta Platforms" = "META"
+"Amazon" = "AMZN"
+
+[alerts]
+min_score = 6.0            # print/send an alert when a new story scores this high
+webhook_url = ""           # optional Discord or Slack incoming-webhook URL
+
+# kind = "rss" (RSS/Atom), "sec" (EDGAR Atom; tickers resolved from CIK) or "reddit" (JSON listing)
+# per_ticker = true runs the URL once per watchlist ticker, filling in {ticker}.
+
+[[sources]]
+name = "Yahoo Finance"
+kind = "rss"
+url = "https://feeds.finance.yahoo.com/rss/2.0/headline?s={ticker}&region=US&lang=en-US"
+per_ticker = true
+
+[[sources]]
+name = "Google News"
+kind = "rss"
+url = "https://news.google.com/rss/search?q=%24{ticker}+OR+%22{ticker}+stock%22+when:1d&hl=en-US&gl=US&ceid=US:en"
+per_ticker = true
+
+[[sources]]
+name = "Nasdaq"
+kind = "rss"
+url = "https://www.nasdaq.com/feed/rssoutbound?symbol={ticker}"
+per_ticker = true
+
+[[sources]]
+name = "CNBC Top News"
+kind = "rss"
+url = "https://www.cnbc.com/id/100003114/device/rss/rss.html"
+
+[[sources]]
+name = "CNBC Markets"
+kind = "rss"
+url = "https://www.cnbc.com/id/20910258/device/rss/rss.html"
+
+[[sources]]
+name = "CNBC Earnings"
+kind = "rss"
+url = "https://www.cnbc.com/id/15839135/device/rss/rss.html"
+
+[[sources]]
+name = "MarketWatch Top Stories"
+kind = "rss"
+url = "https://feeds.content.dowjones.io/public/rss/mw_topstories"
+
+[[sources]]
+name = "MarketWatch Market Pulse"
+kind = "rss"
+url = "https://feeds.content.dowjones.io/public/rss/mw_marketpulse"
+
+[[sources]]
+name = "Seeking Alpha Market Currents"
+kind = "rss"
+url = "https://seekingalpha.com/market_currents.xml"
+
+[[sources]]
+name = "Nasdaq Markets"
+kind = "rss"
+url = "https://www.nasdaq.com/feed/rssoutbound?category=Markets"
+
+[[sources]]
+name = "PR Newswire"
+kind = "rss"
+url = "https://www.prnewswire.com/rss/news-releases-list.rss"
+
+[[sources]]
+name = "GlobeNewswire"
+kind = "rss"
+url = "https://www.globenewswire.com/RssFeed/orgclass/1/feedTitle/GlobeNewswire%20-%20News%20about%20Public%20Companies"
+
+[[sources]]
+name = "Federal Reserve"
+kind = "rss"
+url = "https://www.federalreserve.gov/feeds/press_all.xml"
+
+[[sources]]
+name = "SEC 8-K filings"
+kind = "sec"
+url = "https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=8-K&count=100&output=atom"
+
+[[sources]]
+name = "SEC offerings (424B)"
+kind = "sec"
+url = "https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=424B&count=100&output=atom"
+
+[[sources]]
+name = "r/wallstreetbets"
+kind = "reddit"
+url = "https://www.reddit.com/r/wallstreetbets/new.json?limit=50"
+enabled = false            # noisy; turn on if you want retail chatter
+
+[[sources]]
+name = "r/stocks"
+kind = "reddit"
+url = "https://www.reddit.com/r/stocks/new.json?limit=50"
+enabled = false
