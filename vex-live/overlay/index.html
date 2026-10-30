@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Vex's Lab overlay</title>
+<style>
+  /* Transparent page for an OBS browser source (1080x1920 portrait). Put your lab background behind it in OBS. */
+  html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; font-family: "Trebuchet MS", system-ui, sans-serif; }
+  .stage { position: absolute; inset: 0; }
+  .char { position: absolute; bottom: 22%; width: 46%; aspect-ratio: 3 / 4; transform-origin: 50% 100%;
+          transition: filter .2s, opacity .2s; filter: brightness(.75); }
+  .char.speaking { filter: none; }
+  .char img { width: 100%; height: 100%; object-fit: contain; }
+  .char .ph { width: 100%; height: 100%; border-radius: 40% 40% 12% 12%; display: grid; place-items: center;
+              color: #fff; font-size: 64px; font-weight: 800; text-shadow: 0 4px 0 #0006; }
+  #vex { left: 2%; } #vex .ph { background: linear-gradient(#8b5cf6, #4c1d95); }
+  #pip { right: 2%; } #pip .ph { background: linear-gradient(#facc15, #b45309); }
+  .reply { position: absolute; top: 8%; left: 6%; right: 6%; padding: 18px 26px; border-radius: 22px;
+           background: #000a; color: #fde68a; font-size: 38px; opacity: 0; transition: opacity .3s; }
+  .reply.show { opacity: 1; }
+  .sub { position: absolute; bottom: 6%; left: 5%; right: 5%; padding: 22px 30px; border-radius: 26px;
+         background: #fffffff0; color: #111; font-size: 50px; font-weight: 700; line-height: 1.2;
+         box-shadow: 0 8px 0 #0004; opacity: 0; transform: translateY(20px); transition: all .25s; }
+  .sub.show { opacity: 1; transform: none; }
+  .sub b { display: block; font-size: 34px; letter-spacing: 2px; }
+  .sub.vex b { color: #6d28d9; } .sub.pip b { color: #b45309; }
+  #start { position: absolute; inset: 0; display: grid; place-items: center; background: #000c; color: #fff;
+           font-size: 40px; cursor: pointer; }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="char" id="vex"><img src="/avatars/vex.png" alt="" onerror="this.outerHTML='<div class=ph>VEX</div>'"></div>
+  <div class="char" id="pip"><img src="/avatars/pip.png" alt="" onerror="this.outerHTML='<div class=ph>PIP</div>'"></div>
+  <div class="reply" id="reply"></div>
+  <div class="sub" id="sub"><b></b><span></span></div>
+</div>
+<div id="start" hidden>Click once to allow sound (not needed in OBS)</div>
+<script>
+  const sub = document.getElementById("sub");
+  const reply = document.getElementById("reply");
+  const chars = { vex: document.getElementById("vex"), pip: document.getElementById("pip") };
+  const audioCtx = new AudioContext();
+  let raf = 0;
+
+  // Normal browsers block sound until a click; OBS doesn't.
+  if (audioCtx.state === "suspended") {
+    const start = document.getElementById("start");
+    start.hidden = false;
+    start.onclick = () => { audioCtx.resume(); start.hidden = true; };
+  }
+
+  function bounce(el, level) {
+    el.style.transform = `scaleY(${1 + level * 0.06}) translateY(${-level * 14}px)`;
+  }
+
+  function show(line) {
+    for (const [k, el] of Object.entries(chars)) el.classList.toggle("speaking", k === line.speaker);
+    sub.className = `sub show ${line.speaker}`;
+    sub.querySelector("b").textContent = line.speaker === "vex" ? "PROFESSOR VEX" : "PIP";
+    sub.querySelector("span").textContent = line.text;
+    if (line.replyTo) { reply.textContent = line.replyTo; reply.classList.add("show"); }
+  }
+
+  function finish(line) {
+    cancelAnimationFrame(raf);
+    bounce(chars[line.speaker], 0);
+    fetch(`/done/${line.id}`, { method: "POST" });
+    setTimeout(() => { sub.classList.remove("show"); reply.classList.remove("show"); }, 1200);
+  }
+
+  // Plays the clip and bounces the speaking character with the loudness of the voice.
+  function play(line) {
+    const audio = new Audio(line.audio);
+    const src = audioCtx.createMediaElementSource(audio);
+    const analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 512;
+    src.connect(analyser).connect(audioCtx.destination);
+    const buf = new Uint8Array(analyser.fftSize);
+    const tick = () => {
+      analyser.getByteTimeDomainData(buf);
+      let peak = 0;
+      for (const v of buf) peak = Math.max(peak, Math.abs(v - 128));
+      bounce(chars[line.speaker], Math.min(1, peak / 50));
+      raf = requestAnimationFrame(tick);
+    };
+    audio.onplay = tick;
+    audio.onended = audio.onerror = () => finish(line);
+    audio.play().catch(() => finish(line));
+  }
+
+  // Without audio, a gentle talking wobble for roughly the time it takes to read the line.
+  function wobble(line) {
+    const ms = 1500 + line.text.split(/\s+/).length * 380;
+    const t0 = performance.now();
+    const tick = (t) => {
+      bounce(chars[line.speaker], Math.abs(Math.sin((t - t0) / 90)) * 0.6);
+      raf = t - t0 < ms ? requestAnimationFrame(tick) : (finish(line), 0);
+    };
+    raf = requestAnimationFrame(tick);
+  }
+
+  new EventSource("/events").onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.type !== "say") return;
+    show(msg);
+    msg.audio ? play(msg) : wobble(msg);
+  };
+</script>
+</body>
+</html>
