@@ -171,28 +171,57 @@ def cmd_bot_run(spider: Spider, args) -> None:
     from .trader import Trader
 
     plan, rules = _bot_parts(spider)
+    if args.plan == "24h":
+        from .broker import PaperBroker
+        from .strategy24 import Plan24
+        from .trader24 import Trader24
+
+        if args.broker != "paper" or args.live:
+            sys.exit("the 24/5 plan paper-trades only for now (extended-hours orders need limit-order handling)")
+        files = _paper_files(spider, "24h")
+        broker = PaperBroker(files[0], spider.config.bot.get("paper_cash", 100_000))
+        trader = Trader24(
+            Plan24.from_config(spider.config.bot24), rules, broker,
+            bars=lambda ticker: fetch_bars(spider.fetcher, ticker, extended=True),
+            news=lambda: spider.store.recent(timedelta(days=4), limit=1_000_000),
+            journal=files[1],
+        )
+        trader.run(crawl=(lambda: None) if args.no_crawl else spider.crawl, poll_seconds=args.interval or spider.config.poll_seconds)
+        return
     broker = _make_broker(spider, args)
     trader = Trader(
         plan, rules, broker,
         bars=lambda ticker: fetch_bars(spider.fetcher, ticker),
         news=lambda: spider.store.recent(timedelta(days=4), limit=1_000_000),
-        journal=spider.config.bot.get("journal", "bot_journal.jsonl"),
+        journal=_paper_files(spider, "regular")[1],
     )
     market_open = (lambda: broker.clock()["is_open"]) if isinstance(broker, AlpacaBroker) else None
-    trader.run(crawl=spider.crawl, poll_seconds=args.interval or spider.config.poll_seconds, market_open=market_open)
+    trader.run(crawl=(lambda: None) if args.no_crawl else spider.crawl,
+               poll_seconds=args.interval or spider.config.poll_seconds, market_open=market_open)
+
+
+def _paper_files(spider: Spider, plan: str) -> tuple[str, str]:
+    """Each plan gets its own paper account and journal so their results can be compared."""
+    account = spider.config.bot.get("paper_account", "paper_account.json")
+    journal = spider.config.bot.get("journal", "bot_journal.jsonl")
+    if plan == "24h":
+        account, journal = account.replace(".json", "_24h.json"), journal.replace(".jsonl", "_24h.jsonl")
+    return account, journal
 
 
 def cmd_bot_status(spider: Spider, args) -> None:
     from .broker import PaperBroker
 
-    account = PaperBroker(spider.config.bot.get("paper_account", "paper_account.json"), spider.config.bot.get("paper_cash", 100_000))
+    account_file, journal_file = _paper_files(spider, args.plan)
+    print(f"{'24/5 News Reaction' if args.plan == '24h' else 'Catalyst Momentum'} paper account")
+    account = PaperBroker(account_file, spider.config.bot.get("paper_cash", 100_000))
     sells = [f for f in account.fills if f["side"] == "sell"]
     wins = sum(1 for f in sells if f["pnl"] > 0)
     print(f"paper equity ${account.equity():,.2f}  cash ${account.cash:,.2f}")
     print(f"closed trades {len(sells)}  wins {wins}  total P&L ${sum(f['pnl'] for f in sells):+,.2f}")
     for p in account.positions.values():
         print(f"  open {p.ticker} {p.qty} @ {p.entry:.2f} stop {p.stop:.2f} target {p.target:.2f}")
-    journal = Path(spider.config.bot.get("journal", "bot_journal.jsonl"))
+    journal = Path(journal_file)
     if journal.exists():
         print("recent bot activity:")
         for line in journal.read_text().splitlines()[-15:]:
@@ -238,8 +267,11 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--live", action="store_true", help="real money (Alpaca only, needs a passing backtest)")
     p.add_argument("--interval", type=int)
     p.add_argument("--report", default="bot_report.json")
+    p.add_argument("--plan", choices=["regular", "24h"], default="regular")
+    p.add_argument("--no-crawl", action="store_true", help="read news another running bot collects instead of crawling too")
     p.set_defaults(func=cmd_bot_run)
     p = bot_sub.add_parser("status", help="paper account, P&L and recent bot activity")
+    p.add_argument("--plan", choices=["regular", "24h"], default="regular")
     p.set_defaults(func=cmd_bot_status)
 
     for name, func, help_text in [

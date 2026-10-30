@@ -35,7 +35,7 @@ CORROBORATION_BOOST = 0.25
 class Store:
     def __init__(self, path: str, half_life_min: float = 60):
         self.half_life_min = half_life_min
-        self.db = sqlite3.connect(path)
+        self.db = sqlite3.connect(path, timeout=30)  # the paper bots share this file
         self.db.row_factory = sqlite3.Row
         self.db.executescript(SCHEMA)
 

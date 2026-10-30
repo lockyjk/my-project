@@ -44,6 +44,7 @@ class Plan24:
     breakeven_r: float = 1.0
     max_hold_minutes: int = 240
     weekend_exit: str = "19:55"
+    overnight_data: bool = False  # True only with a price feed that covers 20:00-4:00
     veto_hours: float = 12
     slippage_pct: float = 0.15
     bullish: set[str] = field(default_factory=lambda: set(BULLISH))
@@ -172,17 +173,21 @@ def check_entry_24(plan: Plan24, ticker: str, bars: list[Bar], news_at: datetime
     return Signal(ticker, now, round(entry, 4), round(stop, 4), round(entry + plan.target_r * (entry - stop), 4), reason), reason
 
 
+def must_exit_24(plan: Plan24, entered: datetime, t: datetime) -> bool:
+    t = t.astimezone(ET)
+    if t - entered >= timedelta(minutes=plan.max_hold_minutes):
+        return True
+    if t.weekday() >= 5:
+        return True  # data resumed after a weekend we should not have held through
+    close = _t(plan.weekend_exit)
+    if t.weekday() == 4 and t.time() >= close:
+        return True
+    # Without overnight prices nothing can manage the trade from 20:00 to 4:00, so be flat by then.
+    return not plan.overnight_data and (t.time() >= close or t.time() < time(4, 0) or t.date() > entered.astimezone(ET).date())
+
+
 def time_exit_24(plan: Plan24, entered: datetime) -> Callable[[Bar], bool]:
-    friday_close = _t(plan.weekend_exit)
-
-    def should_exit(bar: Bar) -> bool:
-        if bar.t - entered >= timedelta(minutes=plan.max_hold_minutes):
-            return True
-        if bar.t.weekday() == 4 and bar.t.time() >= friday_close:
-            return True
-        return bar.t.weekday() >= 5  # data resumed after a weekend we should not have held through
-
-    return should_exit
+    return lambda bar: must_exit_24(plan, entered, bar.t)
 
 
 def find_trade_24(plan: Plan24, ticker: str, bars: list[Bar], news_at: datetime, news: str = "") -> tuple[Trade | None, str]:

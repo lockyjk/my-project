@@ -130,7 +130,9 @@ def test_target_stop_and_max_hold():
     lose, _ = find_trade_24(PLAN, "ACME", base + reaction_day(ramp(103.3, -0.03, 60)), NEWS)
     assert lose.exit_reason == "stop" and lose.r < -1
     flat, _ = find_trade_24(PLAN, "ACME", base + reaction_day([103.35] * 400), NEWS)
-    assert flat.exit_reason == "time exit" and (flat.exit_time - flat.entry_time) == timedelta(minutes=240)
+    assert flat.exit_reason == "time exit" and flat.exit_time == at(WED, 19, 55)  # no overnight prices: flat by 20:00
+    held, _ = find_trade_24(Plan24(overnight_data=True), "ACME", base + reaction_day([103.35] * 400), NEWS)
+    assert (held.exit_time - held.entry_time) == timedelta(minutes=240)  # with overnight data: 4-hour max hold
 
 
 def test_flat_before_the_weekend():
@@ -159,3 +161,47 @@ def test_backtest_24_end_to_end():
     sessions = by_session_stats(report.trades)
     assert sessions["after-hours"]["trades"] == 2
     assert not passes_live_gate(stats)[0]  # two trades prove nothing
+
+
+# --- live paper trading ---------------------------------------------------------------
+
+
+def test_paper_trader_24_after_hours_day(tmp_path):
+    from newsspider.broker import PaperBroker
+    from newsspider.trader24 import Trader24
+    import json
+
+    bars = quiet_after_hours() + reaction_day(ramp(103.3, 0.03, 120))
+    broker = PaperBroker(tmp_path / "acct.json", 100_000)
+    trader = Trader24(PLAN, RiskRules(), broker, bars=lambda t: bars, news=lambda: [story()], journal=tmp_path / "j.jsonl")
+    t = at(WED, 15, 0)
+    while t < at(WED, 21, 0):
+        trader.tick(t)
+        t += timedelta(minutes=1)
+    events = [json.loads(line) for line in (tmp_path / "j.jsonl").read_text().splitlines()]
+    trades = [e for e in events if e["event"] != "skip"]
+    assert [e["event"] for e in trades] == ["entry", "breakeven", "exit"]
+    assert trades[0]["at"].startswith("2026-10-28T16:26") and trades[-1]["reason"] == "target"
+    assert broker.equity() > 100_000 and not broker.positions
+
+
+def test_paper_trader_24_flat_by_8pm_and_skips_without_prices(tmp_path):
+    from newsspider.broker import PaperBroker
+    from newsspider.trader24 import Trader24
+    import json
+
+    bars = quiet_after_hours() + reaction_day([103.35] * 400)
+    broker = PaperBroker(tmp_path / "acct.json", 100_000)
+    trader = Trader24(PLAN, RiskRules(), broker, bars=lambda t: bars, news=lambda: [story()], journal=tmp_path / "j.jsonl")
+    t = at(WED, 16, 0)
+    while t < at(WED, 20, 30):
+        trader.tick(t)
+        t += timedelta(minutes=1)
+    exits = [json.loads(line) for line in (tmp_path / "j.jsonl").read_text().splitlines() if '"exit"' in line]
+    assert exits and exits[0]["reason"] == "time exit" and exits[0]["at"].startswith("2026-10-28T19:55")
+    assert not broker.positions
+    # Overnight news with no price feed: logged as a skip, never traded.
+    night = story(when=at(WED, 23, 0), tickers=("NITE",))
+    trader.news = lambda: [night]
+    trader.tick(at(WED, 23, 30))
+    assert "no live prices" in (tmp_path / "j.jsonl").read_text()

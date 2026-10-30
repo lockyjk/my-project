@@ -5,3 +5,6 @@ __pycache__/
 paper_account.json
 bot_journal.jsonl
 bot_report.json
+paper_account_24h.json
+bot_journal_24h.jsonl
+bot_report_24h.json

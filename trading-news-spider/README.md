@@ -129,6 +129,12 @@ newsspider bot backtest --plan 24h --since 30d
 - **News rules:** the same buy and veto catalysts as the regular plan. A veto story within 12 hours cancels the trade, each stock trades at most once per 24 hours, and weekend news waits for the Sunday 20:00 open.
 - **Report:** trades and P&L split by session (overnight, pre-market, regular, after-hours), so you can see where the edge is, if there is one.
 
+Paper-trade it live with `newsspider bot run --plan 24h`, and check it with `newsspider bot status --plan 24h`. It has its own simulated account (`paper_account_24h.json`) and log (`bot_journal_24h.jsonl`), so its results stay separate from the regular plan's. With the free price feed it sells everything by 19:55 each evening, because nothing can watch a position from 20:00 to 4:00. Set `overnight_data = true` in `[bot24]` only if you switch to a feed that covers those hours.
+
+**On Windows:**
+- Double-click `paper-trade.bat`. It opens two windows: the 24/5 plan, which also collects the news, and the regular-hours plan, which reads that news. Each has its own $100k paper account. Leave both running.
+- Double-click `paper-report.bat` to see both accounts and backtests of both plans.
+
 **Data limit:** Yahoo's free minute bars cover pre-market (4:00–9:30) and after-hours (16:00–20:00), but **not the overnight session (20:00–4:00)**. Stories that break overnight are judged on the next pre-market bars, so a backtest can't show overnight entries. Testing true overnight trading needs a data feed that includes the overnight session. Live trading in those hours also needs a broker that supports it, and extended-hours orders usually have to be limit orders.
 
 ## Adding sources

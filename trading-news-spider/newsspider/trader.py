@@ -88,25 +88,28 @@ class Trader:
                 self.log("exit", now, ticker=ticker, price=last.c, reason="time exit", pnl=round(pnl, 2))
                 self.book.pop(ticker, None)
                 continue
-            if not lvl:
-                continue  # a position the bot did not open: leave it alone
-            local = isinstance(self.broker, PaperBroker)  # Alpaca brackets fill stops and targets themselves
-            if local and last.l <= lvl["stop"]:
-                price = min(lvl["stop"], last.o)
-                why = "breakeven stop" if lvl.get("at_breakeven") else "stop"
-            elif local and last.h >= lvl["target"]:
-                price, why = max(lvl["target"], last.o), "target"
-            else:
-                risk = lvl["entry"] - lvl["initial_stop"]
-                if not lvl.get("at_breakeven") and last.h >= lvl["entry"] + self.plan.breakeven_r * risk:
-                    self.broker.move_stop(ticker, lvl["entry"])
-                    lvl["stop"], lvl["at_breakeven"] = lvl["entry"], True
-                    self.log("breakeven", now, ticker=ticker, stop=lvl["entry"])
-                continue
-            pnl = self.broker.sell(ticker, price, why, at=now)
-            self.log("exit", now, ticker=ticker, price=round(price, 4), reason=why, pnl=round(pnl, 2))
-            self.book.pop(ticker, None)
+            if lvl:  # positions the bot did not open are left alone
+                self._check_levels(ticker, last, lvl, now)
         return prices
+
+    def _check_levels(self, ticker: str, last: Bar, lvl: dict, now: datetime) -> None:
+        """Stop, target and breakeven for one open trade, judged on the latest bar."""
+        local = isinstance(self.broker, PaperBroker)  # Alpaca brackets fill stops and targets themselves
+        if local and last.l <= lvl["stop"]:
+            price = min(lvl["stop"], last.o)
+            why = "breakeven stop" if lvl.get("at_breakeven") else "stop"
+        elif local and last.h >= lvl["target"]:
+            price, why = max(lvl["target"], last.o), "target"
+        else:
+            risk = lvl["entry"] - lvl["initial_stop"]
+            if not lvl.get("at_breakeven") and last.h >= lvl["entry"] + self.plan.breakeven_r * risk:
+                self.broker.move_stop(ticker, lvl["entry"])
+                lvl["stop"], lvl["at_breakeven"] = lvl["entry"], True
+                self.log("breakeven", now, ticker=ticker, stop=lvl["entry"])
+            return
+        pnl = self.broker.sell(ticker, price, why, at=now)
+        self.log("exit", now, ticker=ticker, price=round(price, 4), reason=why, pnl=round(pnl, 2))
+        self.book.pop(ticker, None)
 
     def _look_for_entries(self, now: datetime, day: str, prices: dict[str, float]) -> None:
         candidates = {t: art for (t, session), art in qualifying_news(self.news(), self.plan).items() if session == now.date()}
