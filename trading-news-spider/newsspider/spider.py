@@ -36,6 +36,7 @@ class Config:
     alerts: dict = field(default_factory=dict)
     sources: list[dict] = field(default_factory=list)
     bot: dict = field(default_factory=dict)
+    filter: dict = field(default_factory=dict)
     risk: dict = field(default_factory=dict)
 
     @classmethod
@@ -91,6 +92,21 @@ class Spider:
                     art.summary = f"${sym} {art.summary}"
         return articles
 
+    def relevant(self, art: Article) -> bool:
+        """Day-trading filter: a named stock plus a catalyst the trading plan acts on (or vetoes on)."""
+        rules = self.config.filter
+        if not rules.get("enabled", True):
+            return True
+        if rules.get("require_ticker", True) and not art.tickers:
+            return False
+        from .strategy import Plan
+
+        plan = Plan.from_config(self.config.bot)
+        wanted = plan.bullish | plan.avoid | set(rules.get("extra_catalysts", []))
+        if rules.get("keep_macro", False):
+            wanted.add("macro")
+        return bool(wanted.intersection(art.catalysts))
+
     def crawl(self, now: datetime | None = None) -> list[Article]:
         """Fetches all sources and returns only stories not seen before, best first."""
         now = now or datetime.now(timezone.utc)
@@ -99,14 +115,17 @@ class Spider:
         # Fetcher throttles per host, so threads only overlap requests to different sites.
         with ThreadPoolExecutor(max_workers=8) as pool:
             batches = pool.map(lambda t: self._crawl_one(*t), self.config.targets())
-        fresh = []
+        fresh, dropped = [], 0
         for batch in batches:
             for art in batch:
                 if art.published < cutoff:
                     continue
                 enrich(art, watch, self.config.aliases, now, self.config.half_life_minutes)
+                if not self.relevant(art):
+                    dropped += 1
+                    continue
                 if self.store.add(art):
                     fresh.append(art)
         fresh.sort(key=lambda a: a.score, reverse=True)
-        log.info("crawl done: %d new stories", len(fresh))
+        log.info("crawl done: %d new stories, %d ignored as not tradeable news", len(fresh), dropped)
         return fresh

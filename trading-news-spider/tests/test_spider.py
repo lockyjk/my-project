@@ -162,3 +162,45 @@ def test_duration_rejects_bad_input(bad):
 
     with pytest.raises(argparse.ArgumentTypeError):
         duration(bad)
+
+
+# --- day-trading relevance filter ---------------------------------------------
+
+
+def test_filter_keeps_only_tradeable_news(tmp_path):
+    spider = make_spider(tmp_path, [
+        {"name": "Markets", "kind": "rss", "url": "https://a.test/rss", "fixture": "market.rss"},
+        {"name": "SEC", "kind": "sec", "url": "https://sec.test/atom", "fixture": "sec.atom"},
+    ])
+    titles = [a.title for a in spider.crawl()]
+    assert not any("CPI" in t for t in titles), "macro chatter with no stock is dropped"
+    assert any("Tiny Corp" in t for t in titles), "dilution news is kept: the plan uses it as a veto"
+    assert any("FDA" in t for t in titles) and any("Nvidia" in t for t in titles)
+    assert any(t.startswith("8-K") for t in titles), "8-K Item 2.02 counts as an earnings catalyst"
+
+
+def test_filter_rules():
+    from newsspider.models import Article
+
+    spider = Spider(Config(user_agent="t", database=":memory:"), store=Store(":memory:"), fetcher=FakeFetcher({}))
+
+    def art(tickers, catalysts):
+        return Article("s", "t", "https://x.test", NOW, tickers=tickers, catalysts=catalysts)
+
+    assert spider.relevant(art(["ACME"], ["earnings"]))
+    assert spider.relevant(art(["ACME"], ["offering"]))
+    assert not spider.relevant(art([], ["earnings"]))            # no stock named
+    assert not spider.relevant(art(["ACME"], []))                # opinion / general piece
+    assert not spider.relevant(art(["ACME"], ["macro"]))         # macro only
+    spider.config.filter = {"keep_macro": True, "extra_catalysts": ["insider"]}
+    assert spider.relevant(art(["ACME"], ["macro"])) and spider.relevant(art(["ACME"], ["insider"]))
+    spider.config.filter = {"enabled": False}
+    assert spider.relevant(art([], []))
+
+
+def test_sec_item_codes_map_to_catalysts():
+    assert "earnings" in tag_catalysts("8-K Item 2.02: Results of Operations and Financial Condition")
+    assert "contract" in tag_catalysts("Item 1.01 Entry into a Material Definitive Agreement")
+    assert "offering" in tag_catalysts("424B5 - Tiny Corp (0000000002) (Filer)")
+    assert "offering" in tag_catalysts("Item 3.02 Unregistered Sales of Equity Securities")
+    assert "bankruptcy" in tag_catalysts("Item 1.03 Bankruptcy or Receivership")

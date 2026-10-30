@@ -21,6 +21,15 @@ watchlist = ["AAPL", "NVDA", "TSLA", "AMD", "MSFT", "META", "AMZN", "SPY", "QQQ"
 "Meta Platforms" = "META"
 "Amazon" = "AMZN"
 
+# Only keep news the trading plan can act on: a named stock plus a buy catalyst (earnings, guidance,
+# FDA, contract, upgrade, buyback) or a veto catalyst (offering, bankruptcy, legal, short report,
+# halt, merger). Market chatter, opinion and macro stories are dropped before they are stored.
+[filter]
+enabled = true
+require_ticker = true
+keep_macro = false        # true to also keep Fed/CPI/jobs stories for context
+extra_catalysts = []      # e.g. ["insider", "split", "leadership"]
+
 [alerts]
 min_score = 6.0            # print/send an alert when a new story scores this high
 webhook_url = ""           # optional Discord or Slack incoming-webhook URL
@@ -95,6 +104,7 @@ url = "https://www.globenewswire.com/RssFeed/orgclass/1/feedTitle/GlobeNewswire%
 name = "Federal Reserve"
 kind = "rss"
 url = "https://www.federalreserve.gov/feeds/press_all.xml"
+enabled = false            # macro only; turn on together with filter.keep_macro
 
 [[sources]]
 name = "SEC 8-K filings"
