@@ -110,6 +110,21 @@ def _bot_parts(spider: Spider):
     return Plan.from_config(spider.config.bot), RiskRules.from_config(spider.config.risk)
 
 
+def _archive(spider: Spider):
+    from .bars import BarArchive
+
+    return BarArchive(spider.config.database, spider.fetcher)
+
+
+def _print_breakdown(trades) -> None:
+    from .backtest import breakdown
+
+    for name, groups in breakdown(trades).items():
+        print(f"\n  by {name:<16} trades  win%  expectancy")
+        for key, st in groups.items():
+            print(f"  {key:<19} {st['trades']:>6} {st['win_rate_pct']:>5.0f} {st['expectancy_r']:>+10.2f}R")
+
+
 def cmd_bot_backtest(spider: Spider, args) -> None:
     from .backtest import default_loader, passes_live_gate, run_backtest
 
@@ -120,10 +135,10 @@ def cmd_bot_backtest(spider: Spider, args) -> None:
         from .strategy24 import Plan24, by_session_stats, default_loader_24, run_backtest_24
 
         print(f"replaying {len(articles)} stories from the last {span} with the 24/5 News Reaction plan (extended-hours bars)...")
-        report = run_backtest_24(Plan24.from_config(spider.config.bot24), rules, articles, default_loader_24(spider.fetcher), equity=args.equity)
+        report = run_backtest_24(Plan24.from_config(spider.config.bot24), rules, articles, default_loader_24(spider.fetcher, _archive(spider)), equity=args.equity)
     else:
         print(f"replaying {len(articles)} stories from the last {span} with the regular-hours Catalyst Momentum plan...")
-        report = run_backtest(plan, rules, articles, default_loader(spider.fetcher), equity=args.equity)
+        report = run_backtest(plan, rules, articles, default_loader(spider.fetcher, _archive(spider)), equity=args.equity)
     for t in report.trades:
         print(f"{t.day} {t.entry_time:%H:%M} {t.ticker:<6} {t.qty:>5} @ {t.entry:<9.2f} -> {t.exit:<9.2f} {t.r:+.2f}R {t.pnl:>+10.2f}  {t.exit_reason:<14} {t.news[:60]}")
     if args.verbose:
@@ -137,9 +152,51 @@ def cmd_bot_backtest(spider: Spider, args) -> None:
         for name, st in by_session_stats(report.trades).items():
             print(f"  {name:<18} {st['trades']:>7} {st['wins']:>5} {st['total_r']:>+8.2f} {st['pnl']:>+10.2f}")
     ok, verdict = passes_live_gate(report.stats, spider.config.bot.get("live_min_trades", 30), spider.config.bot.get("live_min_profit_factor", 1.2))
+    if report.trades:
+        _print_breakdown(report.trades)
     print(f"\nlive-trading gate: {'PASS' if ok else 'NOT YET'}: {verdict}")
     Path(args.report).write_text(json.dumps(report.to_dict(), indent=2, default=str))
     print(f"full report saved to {args.report}")
+
+
+def cmd_bot_tune(spider: Spider, args) -> None:
+    from .backtest import default_loader, run_backtest
+    from .tune import GRIDS, as_toml, tune
+
+    _, rules = _bot_parts(spider)
+    articles = spider.store.recent(args.since, limit=1_000_000)
+    if args.plan == "24h":
+        from .strategy24 import Plan24, default_loader_24, run_backtest_24
+
+        base, section = Plan24.from_config(spider.config.bot24), "bot24"
+        loader = default_loader_24(spider.fetcher, _archive(spider))
+        run = lambda plan, arts: run_backtest_24(plan, rules, arts, loader)  # noqa: E731
+    else:
+        from .strategy import Plan
+
+        base, section = Plan.from_config(spider.config.bot), "bot"
+        loader = default_loader(spider.fetcher, _archive(spider))
+        run = lambda plan, arts: run_backtest(plan, rules, arts, loader)  # noqa: E731
+    grid = GRIDS[args.plan]
+    combos = 1
+    for values in grid.values():
+        combos *= len(values)
+    print(f"tuning {combos} variants on {len(articles)} stories: pick on the older 70%, check on the newer 30%...")
+    baseline, rows, best, verdict = tune(base, articles, run, grid, min_trades=args.min_trades)
+
+    def line(name, train, test):
+        t = f"{test['trades']:>4} {test['expectancy_r']:>+7.2f}R {test['profit_factor']:>5}" if test else ""
+        print(f"  {name[:62]:<62} {train['trades']:>4} {train['expectancy_r']:>+7.2f}R {train['profit_factor']:>5}   {t}")
+
+    print(f"\n  {'variant':<62} {'older 70%':>19}   {'newer 30% (unseen)':>19}")
+    line(baseline.name, baseline.train, baseline.test)
+    for row in rows:
+        line(row.name, row.train, row.test)
+    print(f"\n{verdict}")
+    if best:
+        print(f"\nto use it, change these lines under [{section}] in config.toml, then paper-trade it before trusting it:")
+        print(as_toml(best.changes))
+
 
 
 def _make_broker(spider: Spider, args):
@@ -171,6 +228,7 @@ def cmd_bot_run(spider: Spider, args) -> None:
     from .trader import Trader
 
     plan, rules = _bot_parts(spider)
+    archive = _archive(spider)  # every finished day of prices the bot sees is kept for future backtests
     if args.plan == "24h":
         from .broker import PaperBroker
         from .strategy24 import Plan24
@@ -182,7 +240,7 @@ def cmd_bot_run(spider: Spider, args) -> None:
         broker = PaperBroker(files[0], spider.config.bot.get("paper_cash", 100_000))
         trader = Trader24(
             Plan24.from_config(spider.config.bot24), rules, broker,
-            bars=lambda ticker: fetch_bars(spider.fetcher, ticker, extended=True),
+            bars=lambda ticker: archive.recent(ticker, extended=True),
             news=lambda: spider.store.recent(timedelta(days=4), limit=1_000_000),
             journal=files[1],
         )
@@ -191,7 +249,7 @@ def cmd_bot_run(spider: Spider, args) -> None:
     broker = _make_broker(spider, args)
     trader = Trader(
         plan, rules, broker,
-        bars=lambda ticker: fetch_bars(spider.fetcher, ticker),
+        bars=lambda ticker: archive.recent(ticker),
         news=lambda: spider.store.recent(timedelta(days=4), limit=1_000_000),
         journal=_paper_files(spider, "regular")[1],
     )
@@ -262,6 +320,11 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--plan", choices=["regular", "24h"], default="regular",
                    help="regular-hours Catalyst Momentum, or 24/5 News Reaction for stocks traded around the clock")
     p.set_defaults(func=cmd_bot_backtest)
+    p = bot_sub.add_parser("tune", help="walk-forward test of plan variants; recommends only what holds up on unseen news")
+    p.add_argument("--plan", choices=["regular", "24h"], default="regular")
+    p.add_argument("--since", type=duration, default=timedelta(days=60))
+    p.add_argument("--min-trades", type=int, default=10)
+    p.set_defaults(func=cmd_bot_tune)
     p = bot_sub.add_parser("run", help="trade live news every minute during market hours")
     p.add_argument("--broker", choices=["paper", "alpaca"], default="paper")
     p.add_argument("--live", action="store_true", help="real money (Alpaca only, needs a passing backtest)")

@@ -11,6 +11,9 @@ Rules (long only, flat by the close):
      VWAP, no more than 1% above the range high (no chasing). Entries only until 11:30 ET.
   4. Exit: stop under the higher of the opening-range low and VWAP. Take profit at 2R. Move the stop
      to breakeven at +1R. Anything still open is sold at 15:55 ET.
+  5. Filters added to cut the commonest losers: skip gaps over 15% (big gaps tend to fade) and skip
+     buys while the market (SPY) is down 0.5%+ on the day or under its VWAP.
+  Optional exits to test with `bot tune`: sell part at +1R and trail the rest instead of a fixed target.
 """
 
 from __future__ import annotations
@@ -35,6 +38,7 @@ class Plan:
     min_price: float = 5.0
     min_dollar_volume: float = 20e6
     min_gap_pct: float = 2.0
+    max_gap_pct: float = 15.0
     min_rel_volume: float = 2.0
     opening_range_minutes: int = 15
     max_chase_pct: float = 1.0
@@ -46,6 +50,13 @@ class Plan:
     target_r: float = 2.0
     breakeven_r: float = 1.0
     slippage_pct: float = 0.05
+    market_filter: bool = True
+    market_ticker: str = "SPY"
+    market_min_change_pct: float = -0.5
+    market_above_vwap: bool = True
+    scale_out_r: float = 0.0      # 0 = off; else sell scale_out_pct of the position at this R
+    scale_out_pct: float = 50.0
+    trail_bars: int = 0           # 0 = off; else trail the stop under the lowest low of the last N bars
     bullish: set[str] = field(default_factory=lambda: set(BULLISH))
     avoid: set[str] = field(default_factory=lambda: set(AVOID))
 
@@ -64,6 +75,7 @@ class Signal:
     stop: float
     target: float
     reason: str
+    meta: dict = field(default_factory=dict)
 
 
 # --- news ------------------------------------------------------------------
@@ -78,6 +90,27 @@ def news_verdict(article: dict, plan: Plan) -> tuple[bool, str]:
     if article["sentiment"] < plan.min_sentiment:
         return False, f"sentiment {article['sentiment']:+.2f} too weak"
     return True, f"{', '.join(sorted(cats & plan.bullish))} news, sentiment {article['sentiment']:+.2f}"
+
+
+def news_strength(article: dict) -> float:
+    """Ranks candidates when several qualify: catalyst weight, tone, and how many outlets ran the story."""
+    from .enrich import CATALYSTS
+
+    weight = sum(CATALYSTS[c][0] for c in article["catalysts"] if c in CATALYSTS)
+    outlets = len(article.get("sources") or [article.get("source", "")])
+    return round(weight * (1 + max(0.0, article["sentiment"])) * (1 + 0.25 * (outlets - 1)), 3)
+
+
+def market_ok(plan, bars: list[Bar], prev_close: float | None, use_vwap: bool = True) -> tuple[bool, str]:
+    """The broad market must not be falling: longs into a weak tape fail more often."""
+    if not plan.market_filter or not bars or not prev_close:
+        return True, "market filter off or no market data"
+    change = (bars[-1].c / prev_close - 1) * 100
+    if change < plan.market_min_change_pct:
+        return False, f"market weak: {plan.market_ticker} {change:+.2f}% on the day"
+    if use_vwap and plan.market_above_vwap and bars[-1].c < vwap(bars):
+        return False, f"market under VWAP: {plan.market_ticker} {bars[-1].c:.2f} < {vwap(bars):.2f}"
+    return True, f"market ok: {plan.market_ticker} {change:+.2f}%"
 
 
 def session_for(published: datetime) -> date:
@@ -108,8 +141,16 @@ def qualifying_news(articles: list[dict], plan: Plan) -> dict[tuple[str, date], 
 # --- price confirmation ----------------------------------------------------
 
 
-def check_entry(plan: Plan, ticker: str, today: list[Bar], history: list[list[Bar]], news_at: datetime) -> tuple[Signal | None, str]:
-    """Decide on the latest bar of `today` (bars so far). `history` holds prior sessions, oldest first."""
+def check_entry(
+    plan: Plan,
+    ticker: str,
+    today: list[Bar],
+    history: list[list[Bar]],
+    news_at: datetime,
+    market: tuple[list[Bar], float] | None = None,
+) -> tuple[Signal | None, str]:
+    """Decide on the latest bar of `today` (bars so far). `history` holds prior sessions, oldest first.
+    `market` is the index's bars today plus its previous close, for the market filter."""
     if not today or not history:
         return None, "not enough price history"
     bar = today[-1]
@@ -126,6 +167,8 @@ def check_entry(plan: Plan, ticker: str, today: list[Bar], history: list[list[Ba
     gap = (today[0].o / prev_close - 1) * 100
     if gap < plan.min_gap_pct:
         return None, f"gap {gap:+.1f}% below {plan.min_gap_pct}%"
+    if gap > plan.max_gap_pct:
+        return None, f"gap {gap:+.1f}% too big, likely to fade"
     if bar.c < plan.min_price:
         return None, f"price ${bar.c:.2f} under ${plan.min_price}"
     dollar_volume = sum(sum(b.v for b in day) * day[-1].c for day in history) / len(history)
@@ -144,6 +187,11 @@ def check_entry(plan: Plan, ticker: str, today: list[Bar], history: list[list[Ba
     if (bar.c / or_high - 1) * 100 > plan.max_chase_pct:
         return None, "too extended above the opening range"
 
+    if market is not None:
+        ok, why = market_ok(plan, [b for b in market[0] if b.t <= bar.t], market[1])
+        if not ok:
+            return None, why
+
     entry = bar.c
     stop = max(or_low, level) * 0.999
     risk_pct = (entry - stop) / entry * 100
@@ -153,4 +201,5 @@ def check_entry(plan: Plan, ticker: str, today: list[Bar], history: list[list[Ba
         stop = entry * (1 - plan.min_stop_pct / 100)
     target = entry + plan.target_r * (entry - stop)
     reason = f"gap {gap:+.1f}%, {rel_volume:.1f}x volume, broke opening range {or_high:.2f} above VWAP {level:.2f}"
-    return Signal(ticker, now, round(entry, 4), round(stop, 4), round(target, 4), reason), reason
+    meta = {"gap_pct": round(gap, 2), "rel_volume": round(rel_volume, 2), "entry_hour": bar.t.hour}
+    return Signal(ticker, now, round(entry, 4), round(stop, 4), round(target, 4), reason, meta), reason

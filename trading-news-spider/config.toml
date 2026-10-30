@@ -136,6 +136,7 @@ min_sentiment = 0.2
 min_price = 5.0
 min_dollar_volume = 20000000   # average daily $ volume, so fills are realistic
 min_gap_pct = 2.0              # must open at least 2% above yesterday's close
+max_gap_pct = 15.0             # skip bigger gaps: they tend to fade
 min_rel_volume = 2.0           # at least 2x normal volume for the time of day
 opening_range_minutes = 15
 max_chase_pct = 1.0            # skip if already >1% above the opening-range high
@@ -147,6 +148,13 @@ max_stop_pct = 3.0
 target_r = 2.0                 # take profit at 2x the risk
 breakeven_r = 1.0              # move stop to entry once +1R
 slippage_pct = 0.05            # backtest cost per side
+market_filter = true           # no buys while the market (SPY) is weak
+market_ticker = "SPY"
+market_min_change_pct = -0.5   # ...down 0.5%+ on the day
+market_above_vwap = true       # ...or under its VWAP
+scale_out_r = 0.0              # 0 = off. e.g. 1.0 sells part of the position at +1R
+scale_out_pct = 50.0
+trail_bars = 0                 # 0 = off. e.g. 10 trails the stop under the last 10 bars' low (no fixed target)
 paper_account = "paper_account.json"
 paper_cash = 100000
 journal = "bot_journal.jsonl"
@@ -159,6 +167,7 @@ live_min_profit_factor = 1.2
 # Backtest it with: newsspider bot backtest --plan 24h
 [bot24]
 min_move_pct = 2.0             # up 2%+ from the last price before the story
+max_move_pct = 20.0            # skip bigger moves: likely exhausted
 min_rel_volume = 3.0           # 3x normal volume for that time of day
 min_window_dollar_volume = 250000   # $ traded since the story; extended hours are thin
 reaction_minutes = 15
@@ -172,6 +181,12 @@ max_hold_minutes = 240
 weekend_exit = "19:55"         # always flat before the Friday 20:00 close
 veto_hours = 12                # a dilution/legal/etc. story this close cancels the trade
 slippage_pct = 0.15            # wider overnight spreads
+market_filter = true           # no buys while SPY is 0.5%+ below its last regular close
+market_min_change_pct = -0.5
+overnight_data = false         # true only with a price feed covering 20:00-4:00
+scale_out_r = 0.0
+scale_out_pct = 50.0
+trail_bars = 0
 
 [risk]
 risk_per_trade_pct = 0.5       # lose at most 0.5% of the account per trade

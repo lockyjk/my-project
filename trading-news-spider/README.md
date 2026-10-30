@@ -114,6 +114,33 @@ newsspider bot status                # paper P&L, open positions, recent decisio
 
 Notes: it uses Yahoo's free unofficial minute data for decisions, which can lag or stop working, so use a paid data feed for real money. The bot must be running during market hours. It doesn't know about market holidays unless you use Alpaca, which reports when the market is open. Nothing here is financial advice.
 
+### Making it more profitable
+
+Built in and switched on by default:
+- **Market filter:** no buys while SPY is down 0.5%+ on the day or trading under its VWAP. Good news fails more often when the whole market is falling.
+- **Gap cap:** skip stocks that gap more than 15% (20% for the 24/5 plan). Huge gaps are often already priced in and tend to fade.
+- **News-strength ranking:** when several stocks qualify, the strongest story goes first. Strength comes from the catalyst type, how positive the story is, and how many outlets ran it.
+- **Price archive:** every finished day of minute prices the bot sees is saved in `news.db`. Yahoo deletes 1-minute history after about 30 days; the archive keeps it, so backtests can cover months.
+
+Built in, but off until the tuner shows they help:
+- **Scale-out and trailing stop:** sell half at +1R, move the stop to breakeven, and trail the rest under the low of the last 10 one-minute bars instead of using a fixed 2R target. News moves are lopsided: most fizzle and a few run far. A fixed target caps exactly the trades that pay for the losers.
+
+Tools to find what works:
+- **Backtest breakdowns:** every backtest splits results by catalyst, entry hour and gap size, so you can see, for example, that analyst upgrades lose money while earnings make it.
+- **`newsspider bot tune`:** tries 24 variations of the plan (gap, volume, exit style, market filter) on the older 70% of your news. It then checks the best ones on the newest 30%, which it never saw, and recommends a change only if it also wins there. That stops you picking settings that just got lucky on the past.
+
+```bash
+newsspider bot tune --since 60d             # regular-hours plan
+newsspider bot tune --plan 24h --since 60d  # 24/5 plan
+```
+
+Ideas for later, roughly in order of expected payoff:
+1. **Size of the earnings surprise:** use the filing spider's numbers to measure how big the beat was (revenue and EPS against the prior year), and trade only large beats.
+2. **Float and short interest:** stocks with few shares available and heavy short selling move hardest on news. This needs a data source for both.
+3. **The short side:** the bot already detects dilution, offering and short-seller news as vetoes. Shorting those would roughly double the number of opportunities. It needs a broker that allows shorting and locates shares.
+4. **Faster news:** a paid real-time newswire (for example Benzinga) beats free RSS by seconds to minutes, and those minutes are much of the edge.
+5. **Paid minute data that includes the overnight session,** so the 24/5 plan can trade from 20:00 to 4:00.
+
 ### 24/5 stocks (round-the-clock trading)
 
 Some brokers trade US stocks from Sunday 20:00 to Friday 20:00 ET. Most catalysts arrive outside regular hours (earnings at 16:05 or 7:00, FDA decisions, 8-K filings), so there's a second plan built for that, **24/5 News Reaction** (`newsspider/strategy24.py`, settings in `[bot24]`):

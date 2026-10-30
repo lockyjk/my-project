@@ -60,6 +60,19 @@ class PaperBroker:
         self._save()
         return pnl
 
+    def sell_part(self, ticker: str, qty: int, price: float, reason: str, at: datetime | None = None) -> float:
+        pos = self.positions[ticker]
+        qty = min(qty, pos.qty)
+        if qty >= pos.qty:
+            return self.sell(ticker, price, reason, at)
+        pos.qty -= qty
+        self.cash += qty * price
+        pnl = qty * (price - pos.entry)
+        self.fills.append({"side": "sell", "ticker": ticker, "qty": qty, "price": price, "pnl": round(pnl, 2),
+                           "reason": reason, "at": (at or datetime.now(timezone.utc)).isoformat()})
+        self._save()
+        return pnl
+
     def move_stop(self, ticker: str, stop: float) -> None:
         self.positions[ticker].stop = stop
         self.positions[ticker].at_breakeven = True

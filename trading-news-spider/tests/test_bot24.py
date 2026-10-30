@@ -154,6 +154,7 @@ def test_backtest_24_end_to_end():
         "THIN": quiet_after_hours(volume=20) + reaction_day([], volume=100, pre_volume=20),
     }
     articles = [story(tickers=(t,)) for t in data]
+    data["SPY"] = []  # no index data: the market filter stands aside
     report = run_backtest_24(PLAN, RiskRules(), articles, lambda t, when: data[t])
     stats = report.stats
     assert stats["trades"] == 2 and stats["win_rate_pct"] == 50.0
@@ -205,3 +206,28 @@ def test_paper_trader_24_flat_by_8pm_and_skips_without_prices(tmp_path):
     trader.news = lambda: [night]
     trader.tick(at(WED, 23, 30))
     assert "no live prices" in (tmp_path / "j.jsonl").read_text()
+
+
+
+# --- improvements ------------------------------------------------------------------------
+
+
+def test_exhausted_move_is_skipped():
+    bars = quiet_after_hours() + [Bar(b.t, b.o * 1.2, b.h * 1.2, b.l * 1.2, b.c * 1.2, b.v) if b.t >= NEWS else b
+                                  for b in reaction_day([])]
+    trade, reason = find_trade_24(PLAN, "ACME", bars, NEWS)
+    assert trade is None and "too big" in reason
+
+
+def test_market_filter_24_uses_last_regular_close():
+    from newsspider.strategy24 import market_reference
+
+    spy = [bar(at(WED, 15, 59), 500, 500, 1000)] + [bar(at(WED, 16, 0) + timedelta(minutes=i), 500, 495, 100) for i in range(60)]
+    known, ref = market_reference(spy, at(WED, 16, 30))
+    assert ref == 500 and known[-1].c == 495
+    bars = quiet_after_hours() + reaction_day(ramp(103.3, 0.03, 60))
+    trade, reason = find_trade_24(PLAN, "ACME", bars, NEWS, index=spy)
+    assert trade is None and reason.startswith("market weak")  # SPY -1% after hours
+    calm = [bar(at(WED, 15, 59), 500, 500, 1000)] + [bar(at(WED, 16, 0) + timedelta(minutes=i), 500, 500.5, 100) for i in range(60)]
+    trade, _ = find_trade_24(PLAN, "ACME", bars, NEWS, index=calm)
+    assert trade is not None and trade.meta["session"] == "after-hours"

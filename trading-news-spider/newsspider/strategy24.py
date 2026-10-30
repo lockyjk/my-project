@@ -13,6 +13,7 @@ the moment the story came out instead:
   4. Exit: stop under the higher of the reaction low and that VWAP, 2R target, breakeven at +1R,
      sell after 4 hours at most, and always before the Friday 20:00 close for the weekend.
   Costs: 0.15% slippage per side, three times the regular-hours plan, for wider overnight spreads.
+  Filters: skip moves over 20% (exhausted), and skip while SPY is down 0.5%+ from its last close.
 """
 
 from __future__ import annotations
@@ -25,7 +26,7 @@ from typing import Callable
 from .bars import ET, Bar
 from .backtest import Report, Trade, apply_risk, simulate_trade
 from .risk import RiskRules
-from .strategy import AVOID, BULLISH, Plan, Signal, _t, news_verdict
+from .strategy import AVOID, BULLISH, Plan, Signal, _t, market_ok, news_verdict
 
 
 @dataclass
@@ -33,6 +34,7 @@ class Plan24:
     min_sentiment: float = 0.2
     min_price: float = 5.0
     min_move_pct: float = 2.0
+    max_move_pct: float = 20.0
     min_rel_volume: float = 3.0
     min_window_dollar_volume: float = 250_000
     reaction_minutes: int = 15
@@ -47,6 +49,13 @@ class Plan24:
     overnight_data: bool = False  # True only with a price feed that covers 20:00-4:00
     veto_hours: float = 12
     slippage_pct: float = 0.15
+    market_filter: bool = True
+    market_ticker: str = "SPY"
+    market_min_change_pct: float = -0.5
+    market_above_vwap: bool = False  # VWAP means little in thin extended hours
+    scale_out_r: float = 0.0
+    scale_out_pct: float = 50.0
+    trail_bars: int = 0
     bullish: set[str] = field(default_factory=lambda: set(BULLISH))
     avoid: set[str] = field(default_factory=lambda: set(AVOID))
 
@@ -115,8 +124,20 @@ def _next_open(t: datetime) -> datetime:
     return sunday if sunday > t else sunday + timedelta(days=7)
 
 
-def check_entry_24(plan: Plan24, ticker: str, bars: list[Bar], news_at: datetime) -> tuple[Signal | None, str]:
-    """Decide on the latest bar of `bars` (everything known so far, oldest first)."""
+def market_reference(index: list[Bar], t: datetime) -> tuple[list[Bar], float | None]:
+    """Index bars known at `t`, and its last regular-hours close before the current session."""
+    known = [b for b in index if b.t <= t]
+    regular = [b for b in known if time(9, 30) <= b.t.time() < time(16, 0)]
+    if t.time() >= time(16, 0):
+        prior = [b for b in regular if b.t.date() <= t.date()]
+    else:
+        prior = [b for b in regular if b.t.date() < t.date()]
+    return known, (prior[-1].c if prior else None)
+
+
+def check_entry_24(plan: Plan24, ticker: str, bars: list[Bar], news_at: datetime, index: list[Bar] | None = None) -> tuple[Signal | None, str]:
+    """Decide on the latest bar of `bars` (everything known so far, oldest first). `index` holds the
+    market index's bars (SPY) for the market filter."""
     if not bars:
         return None, "no price data"
     bar = bars[-1]
@@ -139,6 +160,8 @@ def check_entry_24(plan: Plan24, ticker: str, bars: list[Bar], news_at: datetime
         return None, f"price ${bar.c:.2f} under ${plan.min_price}"
     if move < plan.min_move_pct:
         return None, f"move {move:+.1f}% since the news, below {plan.min_move_pct}%"
+    if move > plan.max_move_pct:
+        return None, f"move {move:+.1f}% since the news is too big, likely exhausted"
     traded_value = sum(b.v * b.c for b in after)
     if traded_value < plan.min_window_dollar_volume:
         return None, f"too thin: ${traded_value / 1e3:.0f}k traded since the news"
@@ -162,6 +185,10 @@ def check_entry_24(plan: Plan24, ticker: str, bars: list[Bar], news_at: datetime
         return None, "no breakout above reaction range and VWAP"
     if (bar.c / high - 1) * 100 > plan.max_chase_pct:
         return None, "too extended above the reaction range"
+    if index is not None and plan.market_filter:
+        ok, why = market_ok(plan, *market_reference(index, bar.t), use_vwap=plan.market_above_vwap)
+        if not ok:
+            return None, why
     entry, stop = bar.c, max(low, level) * 0.999
     risk_pct = (entry - stop) / entry * 100
     if risk_pct > plan.max_stop_pct:
@@ -170,7 +197,8 @@ def check_entry_24(plan: Plan24, ticker: str, bars: list[Bar], news_at: datetime
         stop = entry * (1 - plan.min_stop_pct / 100)
     reason = (f"{session_name(bar.t)}: {move:+.1f}% since news, {rel_volume:.1f}x volume, "
               f"broke reaction range {high:.2f} above VWAP {level:.2f}")
-    return Signal(ticker, now, round(entry, 4), round(stop, 4), round(entry + plan.target_r * (entry - stop), 4), reason), reason
+    meta = {"move_pct": round(move, 2), "rel_volume": round(rel_volume, 2), "session": session_name(bar.t)}
+    return Signal(ticker, now, round(entry, 4), round(stop, 4), round(entry + plan.target_r * (entry - stop), 4), reason, meta), reason
 
 
 def must_exit_24(plan: Plan24, entered: datetime, t: datetime) -> bool:
@@ -190,19 +218,21 @@ def time_exit_24(plan: Plan24, entered: datetime) -> Callable[[Bar], bool]:
     return lambda bar: must_exit_24(plan, entered, bar.t)
 
 
-def find_trade_24(plan: Plan24, ticker: str, bars: list[Bar], news_at: datetime, news: str = "") -> tuple[Trade | None, str]:
-    reason = "no entry signal"
+def find_trade_24(plan: Plan24, ticker: str, bars: list[Bar], news_at: datetime, news: str = "", index: list[Bar] | None = None) -> tuple[Trade | None, str]:
+    reason, market_block = "no entry signal", ""
     start = next((i for i, b in enumerate(bars) if b.t + timedelta(minutes=1) > news_at), None)
     if start is None:
         return None, "no price data after the news"
     for i in range(start + 1, len(bars)):
-        signal, reason = check_entry_24(plan, ticker, bars[:i], news_at)
+        signal, reason = check_entry_24(plan, ticker, bars[:i], news_at, index)
         if signal:
             trade = simulate_trade(plan, signal, bars[i:], news, time_exit_24(plan, bars[i].t))
             return trade, signal.reason
+        if reason.startswith("market"):
+            market_block = market_block or reason
         if reason.startswith(("entry window over", "price", "no price before")):
             break
-    return None, reason
+    return None, market_block or reason
 
 
 def run_backtest_24(
@@ -215,8 +245,10 @@ def run_backtest_24(
     """`load_bars(ticker, news_at)` returns extended-hours bars from about a week before the story to a day after."""
     raw, skipped = [], []
     for ticker, when, art in news_events(articles, plan):
-        trade, why = find_trade_24(plan, ticker, load_bars(ticker, when), when, art["title"])
+        index = load_bars(plan.market_ticker, when) if plan.market_filter else None
+        trade, why = find_trade_24(plan, ticker, load_bars(ticker, when), when, art["title"], index)
         if trade:
+            trade.catalysts = sorted(set(art["catalysts"]) & plan.bullish)
             raw.append(trade)
         else:
             skipped.append((ticker, when.isoformat(timespec="minutes"), why))
@@ -234,10 +266,15 @@ def by_session_stats(trades: list[Trade]) -> dict[str, dict]:
     return out
 
 
-def default_loader_24(fetcher) -> Callable[[str, datetime], list[Bar]]:
+def default_loader_24(fetcher, archive=None) -> Callable[[str, datetime], list[Bar]]:
+    """Extended-hours bars from a week before the story to a day after, archive first, memoized."""
+    from functools import lru_cache
+
     from .bars import fetch_bars
 
+    @lru_cache(maxsize=4096)
     def load(ticker: str, news_at: datetime) -> list[Bar]:
-        return fetch_bars(fetcher, ticker, news_at - timedelta(days=7), news_at + timedelta(days=1), extended=True)
+        start, end = news_at - timedelta(days=7), news_at + timedelta(days=1)
+        return archive.range(ticker, start, end, extended=True) if archive else fetch_bars(fetcher, ticker, start, end, extended=True)
 
     return load

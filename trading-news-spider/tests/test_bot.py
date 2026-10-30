@@ -47,6 +47,13 @@ def scenario(after: list[float], gap_open: float = 104.0, volume: float = 3000) 
     return days
 
 
+def calm_market(change: float = 0.2) -> dict[date, list[Bar]]:
+    """SPY: flat history at 100, today drifting up `change` percent (or down if negative)."""
+    days = history()
+    days[DAY] = session(DAY, ramp(100.0, change / 390, 390), 50000, start=100.0)
+    return days
+
+
 def ramp(start: float, step: float, n: int) -> list[float]:
     return [round(start + step * (i + 1), 4) for i in range(n)]
 
@@ -156,7 +163,7 @@ def test_position_sizing():
 
 def test_backtest_end_to_end():
     win, lose = scenario(ramp(105.8, 0.05, 90)), scenario(ramp(105.8, -0.05, 60))
-    tickers = {"WIN": win, "LOSE": lose, "FLAT": scenario([], gap_open=100.5)}
+    tickers = {"WIN": win, "LOSE": lose, "FLAT": scenario([], gap_open=100.5), "SPY": calm_market()}
     articles = [article(tickers=(t,)) for t in tickers] + [article(title="Bad Co offering", cats=("offering",), tickers=("BAD",))]
     report = run_backtest(PLAN, RiskRules(), articles, lambda t, d: tickers[t])
     stats = report.stats
@@ -251,3 +258,170 @@ def test_alpaca_needs_keys(monkeypatch):
     monkeypatch.delenv("ALPACA_API_KEY_ID", raising=False)
     with pytest.raises(RuntimeError, match="ALPACA_API_KEY_ID"):
         AlpacaBroker()
+
+
+# --- improvements: gap cap, market filter, scale-out and trailing, ranking, archive ----------------
+
+
+def test_gap_too_big_is_skipped():
+    sig, why = entry_on(scenario([], gap_open=120.0))
+    assert sig is None and why.startswith("gap +20.0% too big")
+
+
+def test_market_filter_blocks_weak_tape():
+    days = scenario(ramp(105.8, 0.05, 60))
+    today, hist = days[DAY], [b for d, b in sorted(days.items()) if d < DAY]
+    weak = calm_market(-1.0)
+    spy = (weak[DAY], 100.0)
+    sig, why = check_entry(PLAN, "ACME", today[:21], hist, datetime(2026, 10, 28, 7, 0, tzinfo=ET), spy)
+    assert sig is None and why.startswith("market")
+    strong = calm_market(0.4)
+    sig, _ = check_entry(PLAN, "ACME", today[:21], hist, datetime(2026, 10, 28, 7, 0, tzinfo=ET), (strong[DAY], 100.0))
+    assert sig is not None
+
+
+def test_backtest_skips_trades_in_weak_market():
+    tickers = {"WIN": scenario(ramp(105.8, 0.05, 90)), "SPY": calm_market(-1.0)}
+    report = run_backtest(PLAN, RiskRules(), [article(tickers=("WIN",))], lambda t, d: tickers[t])
+    assert report.stats["trades"] == 0 and report.skipped[0][2].startswith("market")
+
+
+def test_scale_out_and_trailing_lets_a_runner_run():
+    from dataclasses import replace
+
+    runner = ramp(105.8, 0.05, 150)  # a long trend: about 7R if held
+    fixed = play(runner)
+    trail_plan = replace(PLAN, scale_out_r=1.0, scale_out_pct=50, trail_bars=10)
+    days = scenario(runner + ramp(runner[-1], -0.08, 40))
+    sig, i = entry_on(days)
+    trailed = simulate_trade(trail_plan, sig, days[DAY][i:])
+    assert fixed.exit_reason == "target" and fixed.r < 2
+    assert trailed.exit_reason.startswith("trailing stop") and trailed.r > fixed.r + 1
+
+
+def test_scale_out_on_a_failed_trade_still_banks_half():
+    from dataclasses import replace
+
+    plan = replace(PLAN, scale_out_r=1.0, scale_out_pct=50)
+    up = ramp(105.8, 0.05, 22)  # just past +1R
+    days = scenario(up + ramp(up[-1], -0.05, 60))
+    sig, i = entry_on(days)
+    trade = simulate_trade(plan, sig, days[DAY][i:])
+    assert trade.exit_reason == "breakeven stop (after scale-out)" and 0.4 < trade.r < 0.6
+
+
+def test_news_strength_ranks_stronger_stories_first():
+    from newsspider.strategy import news_strength
+
+    big = {**article(cats=("earnings", "guidance")), "sources": ["A", "B", "C"]}
+    small = {**article(cats=("analyst",), sentiment=0.3), "sources": ["A"]}
+    assert news_strength(big) > news_strength(small) * 3
+
+
+def test_breakdown_groups_trades():
+    from newsspider.backtest import breakdown
+
+    tickers = {"WIN": scenario(ramp(105.8, 0.05, 90)), "LOSE": scenario(ramp(105.8, -0.05, 60)), "SPY": calm_market()}
+    articles = [article(tickers=("WIN",)), article(tickers=("LOSE",), cats=("analyst",))]
+    report = run_backtest(PLAN, RiskRules(), articles, lambda t, d: tickers[t])
+    groups = breakdown(report.trades)
+    assert groups["catalyst"]["earnings"]["expectancy_r"] > 0 > groups["catalyst"]["analyst"]["expectancy_r"]
+    assert groups["gap / move"]["4-8%"]["trades"] == 2
+
+
+def test_bar_archive_keeps_finished_days(tmp_path, monkeypatch):
+    from newsspider import bars as bars_mod
+    from newsspider.bars import BarArchive
+
+    days = scenario(ramp(105.8, 0.05, 90))
+    every = [b for d in days.values() for b in d]
+    calls = []
+
+    def fake_fetch(fetcher, ticker, start=None, end=None, extended=False):
+        calls.append(ticker)
+        return [b for b in every if (start is None or start <= b.t < end)]
+
+    monkeypatch.setattr(bars_mod, "fetch_bars", fake_fetch)
+    archive = BarArchive(str(tmp_path / "bars.db"), fetcher=object())
+    start = datetime(2026, 10, 20, tzinfo=ET)
+    end = datetime(2026, 10, 29, tzinfo=ET)
+    first = archive.range("ACME", start, end)
+    assert len(first) == len(every) and calls == ["ACME"]
+    offline = BarArchive(str(tmp_path / "bars.db"), fetcher=None)  # Yahoo gone: the archive still answers
+    assert len(offline.range("ACME", start, end)) == len(every)
+
+
+def test_trader_scales_out_trails_and_survives_restart(tmp_path):
+    from dataclasses import replace
+
+    plan = replace(PLAN, scale_out_r=1.0, scale_out_pct=50, trail_bars=10)
+    runner = ramp(105.8, 0.05, 150)
+    days = scenario(runner + ramp(runner[-1], -0.08, 40))
+    days_spy = calm_market()
+    acme = [b for d in days.values() for b in d]
+    spy = [b for d in days_spy.values() for b in d]
+    bars = lambda t: spy if t == "SPY" else acme  # noqa: E731
+    journal, account = tmp_path / "j.jsonl", tmp_path / "acct.json"
+
+    def trader():
+        return Trader(plan, RiskRules(), PaperBroker(account, 100_000), bars=bars, news=lambda: [article()], journal=journal)
+
+    bot = trader()
+    t = datetime(2026, 10, 28, 9, 30, tzinfo=ET)
+    while t < datetime(2026, 10, 28, 10, 30, tzinfo=ET):
+        bot.tick(t)
+        t += timedelta(minutes=1)
+    bot = trader()  # restart mid-trade: the stop and scale-out state come back from the journal
+    assert bot.book["ACME"]["scaled"] and bot.book["ACME"]["stop"] > bot.book["ACME"]["entry"]
+    while t.hour < 16:
+        bot.tick(t)
+        t += timedelta(minutes=1)
+    events = [json.loads(line) for line in journal.read_text().splitlines()]
+    kinds = [e["event"] for e in events if e["event"] not in ("skip", "trail")]
+    assert kinds == ["entry", "scale-out", "exit"]
+    assert events[-1]["reason"] == "trailing stop" and events[-1]["pnl"] > 0
+    half = next(e for e in events if e["event"] == "scale-out")
+    assert events[-1]["pnl"] > half["pnl"]  # the runner made more than the half sold at 1R
+    assert bot.broker.equity() > 100_000 + 2 * half["pnl"]
+
+
+# --- walk-forward tuner -----------------------------------------------------------------------
+
+
+def test_split_by_time_keeps_order():
+    from newsspider.tune import split_by_time
+
+    arts = [article(when=datetime(2026, 10, d, 7, 0, tzinfo=ET)) for d in range(1, 11)]
+    train, test, cut = split_by_time(arts)
+    assert len(train) == 7 and len(test) == 3 and max(a["published"] for a in train) < min(a["published"] for a in test)
+
+
+def test_tune_recommends_only_what_holds_up_on_unseen_news():
+    from newsspider.backtest import Report, Trade
+    from newsspider.tune import GRIDS, tune
+
+    def fake_run(plan, arts):
+        # Pretend trailing exits earn 0.6R/trade, fixed 3R 0.5R on old news but -0.2R on new, current 0.2R.
+        newer = arts and arts[0]["published"] >= "2026-10-08"
+        r = 0.2
+        if plan.trail_bars:
+            r = 0.6
+        elif plan.target_r == 3.0:
+            r = -0.2 if newer else 0.9
+        trades = [Trade("X", DAY, datetime(2026, 10, 28, 10, tzinfo=ET), 100, 99, datetime(2026, 10, 28, 11, tzinfo=ET),
+                        100 + r, "t", r, "", "", qty=10, pnl=10 * r) for _ in range(len(arts) * 2)]
+        return Report(trades, [], 100_000, 100_000 + sum(t.pnl for t in trades), 1.0)
+
+    arts = [article(when=datetime(2026, 10, d, 7, 0, tzinfo=ET)) for d in range(1, 11)]
+    baseline, rows, best, verdict = tune(PLAN, arts, fake_run, GRIDS["regular"], min_trades=5)
+    assert rows[0].changes["target_r"] == 3.0          # best on older news...
+    assert best is None and "did not beat" in verdict   # ...but it failed on newer news, so no recommendation
+
+    def fake_run_honest(plan, arts):
+        r = 0.6 if plan.trail_bars else 0.2
+        trades = [Trade("X", DAY, datetime(2026, 10, 28, 10, tzinfo=ET), 100, 99, datetime(2026, 10, 28, 11, tzinfo=ET),
+                        100 + r, "t", r, "", "", qty=10, pnl=10 * r) for _ in range(len(arts) * 2)]
+        return Report(trades, [], 100_000, 100_000 + sum(t.pnl for t in trades), 1.0)
+
+    baseline, rows, best, verdict = tune(PLAN, arts, fake_run_honest, GRIDS["regular"], min_trades=5)
+    assert best is not None and best.changes["trail_bars"] == 10 and verdict.startswith("recommended")

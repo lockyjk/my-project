@@ -6,6 +6,7 @@ from dataclasses import asdict
 from datetime import datetime, timedelta
 
 from .bars import ET, Bar
+from .strategy import news_strength
 from .strategy24 import Plan24, check_entry_24, is_open_24_5, must_exit_24, news_events
 from .trader import Trader
 
@@ -39,7 +40,7 @@ class Trader24(Trader):
                 self.log("exit", now, ticker=ticker, price=last.c, reason="time exit", pnl=round(pnl, 2))
                 self.book.pop(ticker, None)
             else:
-                self._check_levels(ticker, last, lvl, now)
+                self._check_levels(ticker, bars, lvl, now)
         return prices
 
     def _look_for_entries(self, now: datetime, day: str, prices: dict[str, float]) -> None:
@@ -47,6 +48,8 @@ class Trader24(Trader):
         live = [(t, when, art) for t, when, art in news_events(self.news(), self.plan) if when <= now < when + window]
         if not live:
             return
+        live.sort(key=lambda e: news_strength(e[2]), reverse=True)
+        index = self._known(self.plan.market_ticker, now) if self.plan.market_filter else None
         equity = self.broker.equity(prices)
         traded = self.traded.setdefault(day, set()) | self.broker.traded_today(day)
         for ticker, when, art in live:
@@ -60,7 +63,7 @@ class Trader24(Trader):
             if not bars or now - (bars[-1].t + timedelta(minutes=1)) > STALE:
                 self._skip(now, ticker, "no live prices right now (the free feed has no 20:00-4:00 data)")
                 continue
-            signal, why = check_entry_24(self.plan, ticker, bars, when)
+            signal, why = check_entry_24(self.plan, ticker, bars, when, index)
             if not signal:
                 self._skip(now, ticker, why)
                 continue

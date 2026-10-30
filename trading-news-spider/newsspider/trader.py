@@ -12,7 +12,7 @@ from typing import Callable
 from .bars import ET, OPEN, Bar, by_session
 from .broker import PaperBroker
 from .risk import RiskRules
-from .strategy import Plan, _t, check_entry, qualifying_news
+from .strategy import Plan, _t, check_entry, news_strength, qualifying_news
 
 
 class Trader:
@@ -44,8 +44,10 @@ class Trader:
                     self.traded.setdefault(event["at"][:10], set()).add(event["ticker"])
                 elif event["event"] == "exit":
                     book.pop(event["ticker"], None)
-                elif event["event"] == "breakeven" and event["ticker"] in book:
+                elif event["event"] in ("breakeven", "trail") and event["ticker"] in book:
                     book[event["ticker"]]["stop"], book[event["ticker"]]["at_breakeven"] = event["stop"], True
+                elif event["event"] == "scale-out" and event["ticker"] in book:
+                    book[event["ticker"]].update(scaled=True, at_breakeven=True, stop=event["stop"], qty=event["qty_left"])
         return book
 
     def log(self, event: str, now: datetime, **data) -> str:
@@ -89,32 +91,59 @@ class Trader:
                 self.book.pop(ticker, None)
                 continue
             if lvl:  # positions the bot did not open are left alone
-                self._check_levels(ticker, last, lvl, now)
+                self._check_levels(ticker, today, lvl, now)
         return prices
 
-    def _check_levels(self, ticker: str, last: Bar, lvl: dict, now: datetime) -> None:
-        """Stop, target and breakeven for one open trade, judged on the latest bar."""
+    def _check_levels(self, ticker: str, bars: list[Bar], lvl: dict, now: datetime) -> None:
+        """Stop, scale-out, target, breakeven and trailing for one open trade, in the backtest's order."""
+        last, plan = bars[-1], self.plan
         local = isinstance(self.broker, PaperBroker)  # Alpaca brackets fill stops and targets themselves
+        entry, risk = lvl["entry"], lvl["entry"] - lvl["initial_stop"]
+        trailing = getattr(plan, "trail_bars", 0) > 0
         if local and last.l <= lvl["stop"]:
             price = min(lvl["stop"], last.o)
-            why = "breakeven stop" if lvl.get("at_breakeven") else "stop"
-        elif local and last.h >= lvl["target"]:
-            price, why = max(lvl["target"], last.o), "target"
-        else:
-            risk = lvl["entry"] - lvl["initial_stop"]
-            if not lvl.get("at_breakeven") and last.h >= lvl["entry"] + self.plan.breakeven_r * risk:
-                self.broker.move_stop(ticker, lvl["entry"])
-                lvl["stop"], lvl["at_breakeven"] = lvl["entry"], True
-                self.log("breakeven", now, ticker=ticker, stop=lvl["entry"])
-            return
+            why = "trailing stop" if trailing and lvl["stop"] > entry else "breakeven stop" if lvl.get("at_breakeven") else "stop"
+            return self._close(ticker, price, why, now)
+        scale_r = getattr(plan, "scale_out_r", 0.0)
+        if local and scale_r and not lvl.get("scaled") and last.h >= entry + scale_r * risk:
+            qty = int(lvl["qty"] * plan.scale_out_pct / 100)
+            if qty >= 1:
+                price = max(entry + scale_r * risk, last.o)
+                pnl = self.broker.sell_part(ticker, qty, price, "scale-out", at=now)
+                stop = max(lvl["stop"], entry)
+                self.broker.move_stop(ticker, stop)
+                lvl.update(scaled=True, at_breakeven=True, stop=stop, qty=lvl["qty"] - qty)
+                self.log("scale-out", now, ticker=ticker, sold=qty, price=round(price, 4), pnl=round(pnl, 2), stop=stop, qty_left=lvl["qty"])
+        if local and not trailing and last.h >= lvl["target"]:
+            return self._close(ticker, max(lvl["target"], last.o), "target", now)
+        if not lvl.get("at_breakeven") and last.h >= entry + plan.breakeven_r * risk:
+            self.broker.move_stop(ticker, entry)
+            lvl["stop"], lvl["at_breakeven"] = entry, True
+            self.log("breakeven", now, ticker=ticker, stop=entry)
+        if trailing and lvl.get("at_breakeven"):
+            trail = min(b.l for b in bars[-plan.trail_bars:])
+            if trail > lvl["stop"]:
+                self.broker.move_stop(ticker, trail)
+                lvl["stop"] = trail
+                self.log("trail", now, ticker=ticker, stop=round(trail, 4))
+
+    def _close(self, ticker: str, price: float, why: str, now: datetime) -> None:
         pnl = self.broker.sell(ticker, price, why, at=now)
         self.log("exit", now, ticker=ticker, price=round(price, 4), reason=why, pnl=round(pnl, 2))
         self.book.pop(ticker, None)
+
+    def _market(self, now: datetime) -> tuple[list[Bar], float] | None:
+        if not self.plan.market_filter:
+            return None
+        today, history = self._today(self.plan.market_ticker, now)
+        return (today, history[-1][-1].c) if today and history else None
 
     def _look_for_entries(self, now: datetime, day: str, prices: dict[str, float]) -> None:
         candidates = {t: art for (t, session), art in qualifying_news(self.news(), self.plan).items() if session == now.date()}
         if not candidates:
             return
+        candidates = dict(sorted(candidates.items(), key=lambda kv: news_strength(kv[1]), reverse=True))
+        market = self._market(now)
         equity = self.broker.equity(prices)
         traded = self.traded.setdefault(day, set()) | self.broker.traded_today(day)
         for ticker, art in candidates.items():
@@ -128,7 +157,7 @@ class Trader:
             if today and now - (today[-1].t + timedelta(minutes=1)) > timedelta(minutes=3):
                 self._skip(now, ticker, "price data is stale")
                 continue
-            signal, why = check_entry(self.plan, ticker, today, history, art["published_at"])
+            signal, why = check_entry(self.plan, ticker, today, history, art["published_at"], market)
             if not signal:
                 self._skip(now, ticker, why)
                 continue
