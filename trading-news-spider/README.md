@@ -75,6 +75,45 @@ Page controls: pause/play (space), ½× to 4× speed (`+`/`-`), replay (`r`). UR
 
 The SEC needs a real contact email in `user_agent` (see `config.toml`).
 
+## The trading bot
+
+`newsspider bot` day-trades the news the spider collects, following one written plan: **Catalyst Momentum**. The full rules are in `newsspider/strategy.py`, and every number is in `config.toml` under `[bot]` and `[risk]`.
+
+**The plan, in short.** It only buys (no short selling) and never holds overnight.
+
+1. **News:** since the last close, the stock had a positive story about earnings, guidance, an FDA decision, a contract, an analyst upgrade or a buyback. Stocks with dilution, bankruptcy, short-seller, legal or halt news are skipped for the day. So are merger targets, because they stick near the deal price.
+2. **Stock is "in play":**
+   - it opened at least 2% above yesterday's close (the gap);
+   - it is trading at least 2× its normal volume for that time of day;
+   - the price is $5 or more;
+   - it trades at least $20M a day on average.
+3. **Entry:** between 9:45 and 11:30 ET, a 1-minute bar closes above the first 15 minutes' high (the opening range) and above VWAP (the volume-weighted average price), but no more than 1% above that high, so it doesn't chase.
+4. **Exit:**
+   - the stop goes under the opening-range low or VWAP, whichever is higher;
+   - take profit at 2R (twice the amount risked);
+   - move the stop to the entry price at +1R;
+   - sell anything still open at 15:55.
+5. **Risk:**
+   - 0.5% of the account at risk per trade, and no position bigger than 25% of the account;
+   - at most 3 positions open at once and 6 trades a day, with one entry per stock per day;
+   - stop for the day after losing 1.5%.
+
+It is built on two effects that have been studied: after good earnings or guidance surprises, stocks tend to keep drifting the same way (post-earnings-announcement drift), and opening-range breakouts have worked better on high-volume news stocks than on the average stock. **That is not proof that it will make money.** Effects like these weaken, costs and slippage eat small edges, and a plan can fit the past and still fail. That's why the bot is built around testing:
+
+```bash
+newsspider watch                     # leave running for a few weeks so the spider builds up news history
+newsspider bot backtest --since 30d  # replay the plan over that news with real 1-minute bars
+newsspider bot run                   # paper-trade live with a simulated $100k account
+newsspider bot status                # paper P&L, open positions, recent decisions
+```
+
+- **Backtest:** replays every story in the database against the minute bars that followed it. Fills are pessimistic: entry at the next bar's open plus slippage, a stop that gaps fills at the worse price, and if the stop and the target both hit in the same minute the stop counts first. It reports win rate, average win and loss in R, expectancy, profit factor, return and maximum drawdown, and saves every trade to `bot_report.json`. Yahoo only keeps about 30 days of 1-minute bars, so backtest news soon after collecting it.
+- **Paper trading** (the default): a local simulated account in `paper_account.json`. Every entry, skip and exit is logged with its reason in `bot_journal.jsonl`.
+- **Alpaca:** `--broker alpaca` trades through [Alpaca](https://alpaca.markets) using your `ALPACA_API_KEY_ID` and `ALPACA_API_SECRET_KEY`. It uses Alpaca's paper account unless you add `--live`. Orders are brackets, so the stop and target sit on Alpaca's servers even if your computer goes off.
+- **Live money is locked:** `--live` refuses to start unless the saved backtest has at least 30 trades, positive expectancy and a profit factor of at least 1.2. Then you must type `LIVE` to confirm. Paper-trade for a few weeks first and compare the results with the backtest. If they differ a lot, the backtest is too optimistic.
+
+Notes: it uses Yahoo's free unofficial minute data for decisions, which can lag or stop working, so use a paid data feed for real money. The bot must be running during market hours. It doesn't know about market holidays unless you use Alpaca, which reports when the market is open. Nothing here is financial advice.
+
 ## Adding sources
 
 Add a `[[sources]]` block to `config.toml` with `kind = "rss"`, `"sec"` or `"reddit"`. Put `{ticker}` in the URL and set `per_ticker = true` to run it for every watchlist symbol.

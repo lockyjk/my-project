@@ -117,3 +117,36 @@ name = "r/stocks"
 kind = "reddit"
 url = "https://www.reddit.com/r/stocks/new.json?limit=50"
 enabled = false
+
+# ---------------------------------------------------------------------------
+# Trading bot: the Catalyst Momentum plan (see newsspider/strategy.py).
+# Every number below is a rule of the plan. Change them only after backtesting.
+[bot]
+min_sentiment = 0.2
+min_price = 5.0
+min_dollar_volume = 20000000   # average daily $ volume, so fills are realistic
+min_gap_pct = 2.0              # must open at least 2% above yesterday's close
+min_rel_volume = 2.0           # at least 2x normal volume for the time of day
+opening_range_minutes = 15
+max_chase_pct = 1.0            # skip if already >1% above the opening-range high
+entry_start = "09:45"
+entry_end = "11:30"
+exit_time = "15:55"            # never hold overnight
+min_stop_pct = 0.5
+max_stop_pct = 3.0
+target_r = 2.0                 # take profit at 2x the risk
+breakeven_r = 1.0              # move stop to entry once +1R
+slippage_pct = 0.05            # backtest cost per side
+paper_account = "paper_account.json"
+paper_cash = 100000
+journal = "bot_journal.jsonl"
+require_backtest_for_live = true
+live_min_trades = 30
+live_min_profit_factor = 1.2
+
+[risk]
+risk_per_trade_pct = 0.5       # lose at most 0.5% of the account per trade
+max_position_pct = 25.0
+max_open_positions = 3
+daily_loss_limit_pct = 1.5     # stop for the day after -1.5%
+max_trades_per_day = 6

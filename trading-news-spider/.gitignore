@@ -2,3 +2,6 @@ news.db
 __pycache__/
 *.csv
 .pytest_cache/
+paper_account.json
+bot_journal.jsonl
+bot_report.json

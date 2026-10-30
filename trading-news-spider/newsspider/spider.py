@@ -35,6 +35,8 @@ class Config:
     aliases: dict[str, str] = field(default_factory=dict)
     alerts: dict = field(default_factory=dict)
     sources: list[dict] = field(default_factory=list)
+    bot: dict = field(default_factory=dict)
+    risk: dict = field(default_factory=dict)
 
     @classmethod
     def load(cls, path: str | Path) -> Config:
