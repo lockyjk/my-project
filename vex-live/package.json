@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node --env-file-if-exists=.env src/index.js",
     "test-chat": "node --env-file-if-exists=.env src/index.js --test",
-    "demo": "node --env-file-if-exists=.env src/index.js --test --mock"
+    "demo": "node --env-file-if-exists=.env src/index.js --test --mock",
+    "get-art": "node scripts/get-art.mjs"
   },
   "engines": {
     "node": ">=22.9"
