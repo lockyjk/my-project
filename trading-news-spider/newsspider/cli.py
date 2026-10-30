@@ -9,7 +9,9 @@ import logging
 import re
 import sys
 import time
+import webbrowser
 from datetime import timedelta
+from pathlib import Path
 
 from .alerts import alert, format_line
 from .quotes import get_quotes
@@ -78,6 +80,29 @@ def cmd_export(spider: Spider, args) -> None:
         print(f"wrote {len(items)} stories to {args.output}")
 
 
+def cmd_filing(spider: Spider, args) -> None:
+    from .filing import latest_filing_url, parse_filing
+    from .report import render
+
+    if args.file:
+        url, html = args.file, Path(args.file).read_text(errors="replace")
+    else:
+        if "example.com" in spider.config.user_agent:
+            print("warning: set a real contact email in config.toml user_agent; SEC rejects anonymous requests", file=sys.stderr)
+        url, company = latest_filing_url(spider.fetcher, args.ticker, args.form)
+        print(f"reading {company} {args.form}: {url}")
+        resp = spider.fetcher.get(url)
+        if not resp:
+            sys.exit(f"could not download {url}")
+        html = resp.text
+    filing = parse_filing(html, url=url, ticker="" if args.file else args.ticker, form=args.form)
+    out = Path(args.output or f"{filing.ticker or 'filing'}-{args.form}-spider.html".lower())
+    out.write_text(render(filing, caption=args.caption, brand=args.brand))
+    print(f"{len(filing.rows)} statement figures, {len(filing.text_figures)} figures in text -> {out}")
+    if args.open:
+        webbrowser.open(out.resolve().as_uri())
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="newsspider", description="News scraper for day trading.")
     parser.add_argument("-c", "--config", default="config.toml")
@@ -91,6 +116,16 @@ def main(argv: list[str] | None = None) -> None:
     p = sub.add_parser("watch", help="crawl forever and alert on high-impact news")
     p.add_argument("--interval", type=int, help="seconds between crawls (default from config)")
     p.set_defaults(func=cmd_watch)
+
+    p = sub.add_parser("filing", help="animated spider that reads a company's latest 10-K/10-Q")
+    p.add_argument("ticker", nargs="?", default="", help="e.g. MSFT")
+    p.add_argument("--form", default="10-K", choices=["10-K", "10-Q", "20-F", "40-F"])
+    p.add_argument("--file", help="read a filing saved on disk instead of downloading")
+    p.add_argument("--caption", default="", help="big title text over the document (for recording)")
+    p.add_argument("--brand", default="newsspider", help="name shown in the report header")
+    p.add_argument("-o", "--output")
+    p.add_argument("--open", action="store_true", help="open the result in your browser")
+    p.set_defaults(func=cmd_filing)
 
     for name, func, help_text in [
         ("top", cmd_top, "highest-impact stories collected so far"),

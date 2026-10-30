@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITLE__</title>
+<style>
+  :root {
+    --pink: #ff2d8a;
+    --yellow: #ffe600;
+    --ink: #f4f4f6;
+    --dim: #8a8a96;
+    --panel: #0b0b0f;
+    --line: #22222b;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #000; color: var(--ink); font-family: var(--sans); overflow: hidden; }
+
+  .sp-app { position: relative; height: 100dvh; max-width: 560px; margin: 0 auto; display: grid; grid-template-rows: 62fr 38fr; background: var(--panel); }
+  @media (min-width: 1100px) {
+    body:not(.sp-phone) .sp-app { max-width: 1500px; grid-template-rows: 1fr; grid-template-columns: 1fr 440px; }
+  }
+  .sp-phone .sp-app { max-width: min(560px, calc(100dvh * 9 / 16)); }
+
+  /* The filing itself */
+  .sp-paper { position: absolute; inset: 0; overflow: auto; background: #e9e9ec; scrollbar-width: none; }
+  .sp-paper::-webkit-scrollbar { display: none; }
+  .sp-wrap { position: relative; margin: 0 auto; }
+  .sp-page { position: absolute; top: 0; left: 0; width: 816px; padding: 48px 56px 160px; background: #fff; color: #000; transform-origin: 0 0; font-family: "Times New Roman", serif; }
+  .sp-page img { max-width: 100%; height: auto; }
+  .sp-overlay { position: absolute; top: 0; left: 0; pointer-events: none; overflow: visible; z-index: 5; }
+  .sp-badges { position: absolute; inset: 0; pointer-events: none; z-index: 6; }
+
+  [data-spider].sp-current { outline: 2.5px solid var(--pink); outline-offset: 2px; }
+  [data-spider="stat"].sp-found { background: rgba(255, 230, 0, .55); outline: 1.5px solid var(--pink); outline-offset: 1px; }
+  [data-spider="text"].sp-found { background: var(--pink); color: #fff; font-family: var(--mono); font-size: .95em; padding: 0 2px; }
+  .sp-badge { position: absolute; transform: translate(-50%, 0); background: var(--pink); color: #fff; font: 800 22px/1 var(--mono); padding: 6px 10px; border-radius: 8px; box-shadow: 0 0 0 3px #fff, 0 6px 24px rgba(255, 45, 138, .45); animation: sp-pop 1.9s ease-out forwards; white-space: nowrap; }
+  @keyframes sp-pop { 0% { opacity: 0; transform: translate(-50%, 10px) scale(.6); } 12% { opacity: 1; transform: translate(-50%, 0) scale(1.08); } 20% { transform: translate(-50%, 0) scale(1); } 75% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -14px); } }
+
+  .sp-caption { position: absolute; top: 18px; left: 0; right: 0; z-index: 20; text-align: center; padding: 0 14px; pointer-events: none;
+    font: 900 clamp(28px, 7.5vw, 44px)/1.05 var(--sans); letter-spacing: -.5px; color: #fff;
+    -webkit-text-stroke: 2px #000; paint-order: stroke fill; text-shadow: 0 3px 0 #000; }
+  .sp-caption:empty { display: none; }
+  .sp-pill { position: absolute; z-index: 20; left: 50%; transform: translateX(-50%); bottom: 14px; display: flex; gap: 16px; align-items: center;
+    background: rgba(10, 10, 14, .92); border: 1px solid #ffffff22; border-radius: 999px; padding: 10px 22px; font: 700 18px var(--mono); white-space: nowrap;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, .4); }
+  .sp-pill b { color: var(--pink); }
+  .sp-pill.sp-done b { color: var(--yellow); }
+  .sp-paper-frame { position: relative; overflow: hidden; }
+
+  /* Report panel */
+  .sp-panel { overflow: auto; padding: 14px 16px 40px; font: 13px/1.45 var(--mono); border-top: 1px solid var(--line); scrollbar-width: thin; scrollbar-color: #333 transparent; }
+  @media (min-width: 1100px) { body:not(.sp-phone) .sp-panel { border-top: 0; border-left: 1px solid var(--line); } }
+  .sp-head { font: 600 14px var(--sans); color: var(--dim); display: flex; flex-wrap: wrap; gap: 4px 14px; }
+  .sp-head b { color: var(--ink); }
+  .sp-head .sp-check { color: var(--pink); }
+  .sp-co { font: 800 17px var(--sans); margin: 6px 0 2px; letter-spacing: .2px; }
+  .sp-co span { font-weight: 500; color: var(--dim); }
+  .sp-count { color: var(--dim); margin-bottom: 10px; }
+  .sp-sec { margin-top: 16px; }
+  .sp-sec h3 { margin: 0 0 4px; font: 800 12px var(--mono); letter-spacing: 1.5px; text-transform: uppercase; display: grid; grid-template-columns: 1fr 92px 92px; color: var(--ink); }
+  .sp-sec h3 span { text-align: right; color: var(--dim); font-weight: 600; }
+  .sp-row { display: grid; grid-template-columns: 1fr 92px 92px; padding: 2px 0; border-bottom: 1px dashed var(--line); color: var(--dim); transition: color .3s; }
+  .sp-row > span:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
+  .sp-row.sp-on { color: var(--ink); }
+  .sp-cell-new { animation: sp-flash 1.2s ease-out; }
+  @keyframes sp-flash { 0% { background: var(--pink); color: #fff; } 100% { background: transparent; } }
+  .sp-units { color: var(--dim); font-size: 11px; margin-top: 2px; }
+  .sp-take .sp-row { grid-template-columns: 1fr auto; }
+  .sp-take .sp-row.sp-on span:last-child { color: var(--yellow); font-weight: 700; }
+  .sp-fig { display: grid; grid-template-columns: 1fr auto; gap: 0 10px; padding: 5px 0; border-bottom: 1px dashed var(--line); }
+  .sp-fig b { color: var(--ink); font-size: 15px; }
+  .sp-fig small { color: var(--dim); grid-column: 1 / -1; font-size: 11px; }
+  .sp-fig .sp-pg { color: var(--dim); text-align: right; }
+  .sp-items div { color: #3d3d47; font-weight: 700; padding: 1px 0; transition: color .4s; text-transform: uppercase; }
+  .sp-items div.sp-on { color: var(--ink); }
+  .sp-items div.sp-here { color: var(--pink); }
+  .sp-empty { color: var(--dim); font-style: italic; }
+  .sp-src { margin-top: 18px; font-size: 11px; color: var(--dim); }
+  .sp-src a { color: var(--dim); }
+
+  .sp-controls { position: fixed; top: 10px; right: 10px; z-index: 50; display: flex; gap: 6px; }
+  .sp-controls button { font: 700 12px var(--mono); color: #fff; background: rgba(20, 20, 26, .85); border: 1px solid #ffffff2a; border-radius: 8px; padding: 6px 9px; cursor: pointer; }
+  .sp-controls button.sp-sel { background: var(--pink); border-color: var(--pink); }
+  .sp-clean .sp-controls { display: none; }
+</style>
+</head>
+<body>
+<div class="sp-app">
+  <div class="sp-paper-frame">
+    <div class="sp-paper" id="sp-paper">
+      <div class="sp-wrap" id="sp-wrap">
+        <div class="sp-page" id="sp-page">
+__DOCUMENT__
+          <svg class="sp-overlay" id="sp-overlay" xmlns="http://www.w3.org/2000/svg"></svg>
+          <div class="sp-badges" id="sp-badges"></div>
+        </div>
+      </div>
+    </div>
+    <div class="sp-caption">__CAPTION__</div>
+    <div class="sp-pill" id="sp-pill"></div>
+  </div>
+  <aside class="sp-panel" id="sp-panel" aria-live="polite"></aside>
+</div>
+<div class="sp-controls" id="sp-controls">
+  <button id="sp-play" title="Pause / play (space)">❚❚</button>
+  <button data-speed="0.5">½×</button><button data-speed="1">1×</button><button data-speed="2">2×</button><button data-speed="4">4×</button>
+  <button id="sp-replay" title="Replay (r)">↺</button>
+</div>
+<script type="application/json" id="sp-data">__DATA__</script>
+<script>
+(() => {
+  const D = JSON.parse(document.getElementById("sp-data").textContent);
+  const $ = (id) => document.getElementById(id);
+  const params = new URLSearchParams(location.search);
+  if (params.has("phone")) document.body.classList.add("sp-phone");
+  if (params.has("clean")) document.body.classList.add("sp-clean");
+  const paper = $("sp-paper"), wrap = $("sp-wrap"), page = $("sp-page"), svg = $("sp-overlay"), badges = $("sp-badges"), panel = $("sp-panel"), pill = $("sp-pill");
+  const NS = "http://www.w3.org/2000/svg";
+  const PAGE_W = 816;
+  let speed = Number(params.get("speed")) || 1, paused = false, scale = 1;
+
+  // ---------- number formatting ----------
+  const fmt = (v, kind) => {
+    if (v == null) return "—";
+    if (kind === "eps") return v < 0 ? `(${Math.abs(v).toFixed(2)})` : v.toFixed(2);
+    const m = Math.abs(v) / 1e6;
+    const s = m >= 100 ? Math.round(m).toLocaleString("en-US") : m.toLocaleString("en-US", { maximumFractionDigits: 1 });
+    return v < 0 ? `(${s})` : s;
+  };
+
+  // ---------- panel ----------
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  const sections = [...new Set(D.rows.map((r) => r.section))];
+  panel.innerHTML = `
+    <div class="sp-head"><span><span class="sp-check">✓</span> <b>__BRAND__</b> report</span><span>Scanning <b>${esc(D.company.toUpperCase())}</b></span></div>
+    <div class="sp-co">${esc(D.company.toUpperCase())} <span>${esc(D.ticker)} · ${esc(D.form)}</span></div>
+    <div class="sp-count" id="sp-count"></div>
+    ${sections.map((sec) => `
+      <div class="sp-sec"><h3>${esc(sec)}<span>${D.fyCur}</span><span>${D.fyPrior}</span></h3>
+      ${D.rows.map((r, i) => r.section !== sec ? "" : `
+        <div class="sp-row" id="sp-row-${i}"><span>${esc(r.label)}</span><span data-p="cur">···</span><span data-p="prior">···</span></div>`).join("")}
+      </div>`).join("")}
+    <div class="sp-units">$ in millions, shares in millions, except per-share figures</div>
+    <div class="sp-sec sp-take"><h3>Spider's take</h3>
+      ${D.derived.map((d, i) => `<div class="sp-row" id="sp-take-${i}"><span>${esc(d.label)}</span><span>···</span></div>`).join("") || '<div class="sp-empty">not enough figures</div>'}
+    </div>
+    <div class="sp-sec"><h3>Sections read</h3><div class="sp-items">
+      ${D.sections.map((s, i) => `<div id="sp-item-${i}">${esc(s.name)}${s.title ? ": " + esc(s.title) : ""}</div>`).join("") || '<div class="sp-empty">none found</div>'}
+    </div></div>
+    <div class="sp-sec"><h3>More from the filing</h3><div class="sp-units">other figures the spider read, with their page</div><div id="sp-figs"></div></div>
+    <div class="sp-src">Source: <a href="${esc(D.url)}" target="_blank" rel="noopener">SEC EDGAR filing</a>. Figures from the filing's inline XBRL tags. Not investment advice.</div>`;
+
+  const totalRows = D.rows.length;
+  let shownRows = 0;
+  const setCount = (done) => {
+    $("sp-count").textContent = `${shownRows} of ${totalRows} report figures shown`;
+    pill.innerHTML = `<span>${esc(D.ticker)} ${esc(D.form)}</span><b>${done ? "✓ " : ""}${shownRows} of ${totalRows} figures</b>`;
+    pill.classList.toggle("sp-done", !!done);
+  };
+  setCount(false);
+
+  // ---------- targets in document order ----------
+  const refs = {};
+  D.rows.forEach((r, i) => ["cur", "prior"].forEach((p) => { if (r[p]) (refs[r[p].el] ||= []).push({ type: "stat", row: i, period: p }); }));
+  D.textFigures.forEach((f, i) => (refs[f.el] ||= []).push({ type: "text", index: i }));
+  const targets = [...page.querySelectorAll("[data-spider]")].filter((el) => refs[el.id]);
+  const sectionEls = D.sections.map((s, i) => ({ i, el: document.getElementById(s.el) })).filter((s) => s.el);
+
+  // ---------- layout / coordinates ----------
+  function layout() {
+    scale = Math.min(1, paper.clientWidth / PAGE_W);
+    page.style.transform = `scale(${scale})`;
+    wrap.style.width = PAGE_W * scale + "px";
+    wrap.style.height = page.offsetHeight * scale + "px";
+    svg.setAttribute("width", PAGE_W);
+    svg.setAttribute("height", page.offsetHeight);
+  }
+  const box = (el) => {
+    const r = el.getBoundingClientRect(), p = page.getBoundingClientRect();
+    return { x: (r.left - p.left) / scale, y: (r.top - p.top) / scale, w: r.width / scale, h: r.height / scale };
+  };
+  window.addEventListener("resize", layout);
+  layout();
+
+  // ---------- simulation clock (pause and speed apply to everything) ----------
+  let sim = 0, last = performance.now();
+  const waits = [];
+  const sleep = (ms) => new Promise((res) => waits.push({ at: sim + ms, res }));
+
+  // ---------- the spider ----------
+  const body = { x: PAGE_W / 2, y: 120, vx: 0, vy: 0 };
+  const LEGS = [];
+  [[-70, -96], [-98, -34], [-94, 34], [-66, 102]].forEach(([fx, fy], k) => {
+    for (const side of [-1, 1]) {
+      const off = { x: Math.abs(fx) * side, y: fy };
+      const hip = { x: 7 * side, y: -15 + k * 10 };
+      const len = Math.hypot(off.x - hip.x, off.y - hip.y) * 0.62;
+      LEGS.push({ off, hip, len, side, group: (k + (side > 0 ? 1 : 0)) % 2, foot: { x: body.x + off.x, y: body.y + off.y }, step: null });
+    }
+  });
+  const g = (tag, attrs, parent = svg) => { const n = document.createElementNS(NS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); parent.appendChild(n); return n; };
+  const threadLayer = g("g", {});
+  const legLayer = g("g", {});
+  const legEls = LEGS.map(() => ({
+    line: g("polyline", { fill: "none", stroke: "#ff2d8a", "stroke-width": 3.2, "stroke-linejoin": "round", "stroke-linecap": "round" }, legLayer),
+    knee: g("circle", { r: 4, fill: "#ffe600" }, legLayer),
+    foot: g("circle", { r: 4.5, fill: "#ffe600" }, legLayer),
+  }));
+  const bodyG = g("g", {});
+  g("rect", { x: -13, y: -38, width: 26, height: 76, rx: 6, fill: "#0a0a0a", stroke: "#ff2d8a", "stroke-width": 2.5 }, bodyG);
+  g("circle", { cx: 0, cy: 22, r: 7, fill: "#ff2d8a" }, bodyG);
+  g("rect", { x: -7, y: -30, width: 14, height: 3, rx: 1.5, fill: "#ff2d8a", opacity: .6 }, bodyG);
+
+  const threads = [];
+  let path = null;
+  function walkTo(x, y) {
+    const dist = Math.hypot(x - body.x, y - body.y);
+    return new Promise((res) => (path = { fx: body.x, fy: body.y, tx: x, ty: y, t0: sim, dur: Math.min(1700, Math.max(380, dist * 0.9)), wob: (Math.random() - .5) * Math.min(120, dist * .25), res }));
+  }
+  const ease = (t) => (t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+
+  function updateSpider(dt) {
+    const px = body.x, py = body.y;
+    if (path) {
+      const t = Math.min(1, (sim - path.t0) / path.dur), e = ease(t);
+      const dx = path.tx - path.fx, dy = path.ty - path.fy, d = Math.hypot(dx, dy) || 1;
+      const arc = Math.sin(Math.PI * e) * path.wob;
+      body.x = path.fx + dx * e + (-dy / d) * arc;
+      body.y = path.fy + dy * e + (dx / d) * arc;
+      if (t >= 1) { const r = path.res; path = null; r(); }
+    }
+    if (dt > 0) { body.vx = (body.x - px) / dt * 1000; body.vy = (body.y - py) / dt * 1000; }
+    const anyStepping = [0, 1].map((gr) => LEGS.some((l) => l.step && l.group === gr));
+    LEGS.forEach((leg, i) => {
+      const ideal = { x: body.x + leg.off.x + body.vx * .09, y: body.y + leg.off.y + body.vy * .09 };
+      if (leg.step) {
+        const t = Math.min(1, (sim - leg.step.t0) / leg.step.dur);
+        leg.foot.x = leg.step.fx + (leg.step.tx - leg.step.fx) * t;
+        leg.foot.y = leg.step.fy + (leg.step.ty - leg.step.fy) * t;
+        leg.lift = Math.sin(Math.PI * t);
+        if (t >= 1) leg.step = null;
+      } else if (Math.hypot(ideal.x - leg.foot.x, ideal.y - leg.foot.y) > 42 && !anyStepping[1 - leg.group]) {
+        leg.step = { fx: leg.foot.x, fy: leg.foot.y, tx: ideal.x + body.vx * .07, ty: ideal.y + body.vy * .07, t0: sim, dur: 120 };
+      } else leg.lift = 0;
+      // Two-bone leg with the knee bent up and outward.
+      const hx = body.x + leg.hip.x, hy = body.y + leg.hip.y;
+      const fx = leg.foot.x, fy = leg.foot.y;
+      const dx = fx - hx, dy = fy - hy, d = Math.hypot(dx, dy) || 1;
+      const reach = Math.min(d / 2, leg.len);
+      const a = Math.sqrt(Math.max(0, leg.len * leg.len - reach * reach));
+      let nx = -dy / d, ny = dx / d;
+      if (nx * leg.side * .6 - ny < 0) { nx = -nx; ny = -ny; }
+      const kx = hx + dx / 2 + nx * a, ky = hy + dy / 2 + ny * a;
+      const el = legEls[i];
+      el.line.setAttribute("points", `${hx},${hy} ${kx},${ky} ${fx},${fy}`);
+      el.knee.setAttribute("cx", kx); el.knee.setAttribute("cy", ky);
+      el.foot.setAttribute("cx", fx); el.foot.setAttribute("cy", fy);
+      el.foot.setAttribute("r", 4.5 + (leg.lift || 0) * 3);
+    });
+    const tilt = Math.max(-18, Math.min(18, body.vx * .02));
+    bodyG.setAttribute("transform", `translate(${body.x},${body.y}) rotate(${tilt})`);
+    threadLayer.innerHTML = "";
+    threads.forEach((th, i) => {
+      const age = threads.length - i;
+      g("line", { x1: body.x, y1: body.y + 22, x2: th.x, y2: th.y, stroke: i % 2 ? "#ffe600" : "#ff2d8a", "stroke-width": 3, opacity: Math.max(.15, 1 - age * .14), "stroke-linecap": "round" }, threadLayer);
+      g("circle", { cx: th.x, cy: th.y, r: 5, fill: "#ffe600", opacity: Math.max(.15, 1 - age * .14) }, threadLayer);
+    });
+  }
+
+  // ---------- camera ----------
+  let userScrollUntil = 0;
+  ["wheel", "touchstart"].forEach((ev) => paper.addEventListener(ev, () => (userScrollUntil = performance.now() + 4000), { passive: true }));
+  function camera(dt) {
+    if (performance.now() < userScrollUntil) return;
+    const wantTop = body.y * scale - paper.clientHeight * .45;
+    const wantLeft = body.x * scale - paper.clientWidth / 2;
+    const k = Math.min(1, dt / 1000 * 5 * Math.max(1, speed * .7));
+    paper.scrollTop += (wantTop - paper.scrollTop) * k;
+    paper.scrollLeft += (wantLeft - paper.scrollLeft) * k;
+  }
+
+  // ---------- frame loop ----------
+  let lastSection = -1;
+  function frame(now) {
+    const realDt = Math.min(50, now - last); last = now;
+    const dt = paused ? 0 : realDt * speed;
+    sim += dt;
+    for (let i = waits.length - 1; i >= 0; i--) if (waits[i].at <= sim) waits.splice(i, 1)[0].res();
+    updateSpider(dt);
+    camera(realDt);
+    // Mark Item sections as read once the spider walks past their heading.
+    sectionEls.forEach((s) => {
+      if (!s.read && box(s.el).y < body.y) {
+        s.read = true;
+        $("sp-item-" + s.i)?.classList.add("sp-on");
+        if (lastSection >= 0) $("sp-item-" + lastSection)?.classList.remove("sp-here");
+        $("sp-item-" + s.i)?.classList.add("sp-here");
+        lastSection = s.i;
+      }
+    });
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // ---------- discovering figures ----------
+  function badge(text, b) {
+    const n = document.createElement("div");
+    n.className = "sp-badge";
+    n.textContent = text;
+    n.style.left = b.x + b.w / 2 + "px";
+    n.style.top = b.y + b.h + 8 + "px";
+    badges.appendChild(n);
+    setTimeout(() => n.remove(), 2200);
+  }
+  const reveal = (el) => { el.classList.remove("sp-cell-new"); void el.offsetWidth; el.classList.add("sp-cell-new"); };
+  const keepVisible = (el) => {
+    const top = el.offsetTop - panel.offsetTop;
+    if (top < panel.scrollTop + 40 || top > panel.scrollTop + panel.clientHeight - 60) panel.scrollTo({ top: top - panel.clientHeight / 3, behavior: "smooth" });
+  };
+
+  function discover(el) {
+    const b = box(el);
+    el.classList.remove("sp-current");
+    el.classList.add("sp-found");
+    threads.push({ x: b.x + b.w / 2, y: b.y + b.h / 2 });
+    if (threads.length > 6) threads.shift();
+    for (const ref of refs[el.id]) {
+      if (ref.type === "stat") {
+        const r = D.rows[ref.row], rowEl = $("sp-row-" + ref.row), cell = rowEl.querySelector(`[data-p="${ref.period}"]`);
+        cell.textContent = fmt(r[ref.period].value, r.kind);
+        reveal(cell);
+        if (!rowEl.classList.contains("sp-on")) { rowEl.classList.add("sp-on"); shownRows++; setCount(false); }
+        keepVisible(rowEl);
+        badge(fmt(r[ref.period].value, r.kind), b);
+      } else {
+        const f = D.textFigures[ref.index];
+        const item = document.createElement("div");
+        item.className = "sp-fig";
+        item.innerHTML = `<span>Figure in text · ${esc(f.section)}</span><b>${esc(f.text)}</b><small>${esc(f.context)}</small><span></span><span class="sp-pg">p.${f.page}</span>`;
+        $("sp-figs").appendChild(item);
+        reveal(item);
+        keepVisible(item);
+        badge(f.text, b);
+      }
+    }
+  }
+
+  async function run() {
+    await sleep(500);
+    for (const el of targets) {
+      const b = box(el);
+      if (!b.w && !b.h) continue; // hidden in the document
+      el.classList.add("sp-current");
+      const x = Math.max(110, Math.min(PAGE_W - 110, b.x + b.w / 2 + (Math.random() - .5) * 60));
+      await walkTo(x, b.y - 70);
+      await sleep(140);
+      discover(el);
+      await sleep(refs[el.id][0].type === "stat" ? 420 : 650);
+    }
+    setCount(true);
+    for (let i = 0; i < D.derived.length; i++) {
+      const row = $("sp-take-" + i);
+      row.lastElementChild.textContent = D.derived[i].text;
+      row.classList.add("sp-on");
+      reveal(row.lastElementChild);
+      keepVisible(row);
+      await sleep(450);
+    }
+  }
+
+  // ---------- controls ----------
+  const speedButtons = [...document.querySelectorAll("[data-speed]")];
+  const setSpeed = (s) => { speed = s; speedButtons.forEach((b) => b.classList.toggle("sp-sel", Number(b.dataset.speed) === s)); };
+  const togglePause = () => { paused = !paused; $("sp-play").textContent = paused ? "▶" : "❚❚"; };
+  speedButtons.forEach((b) => b.addEventListener("click", () => setSpeed(Number(b.dataset.speed))));
+  $("sp-play").addEventListener("click", togglePause);
+  $("sp-replay").addEventListener("click", () => location.reload());
+  document.addEventListener("keydown", (e) => {
+    if (e.key === " ") { e.preventDefault(); togglePause(); }
+    if (e.key === "r") location.reload();
+    if (e.key === "+" || e.key === "=") setSpeed(Math.min(8, speed * 2));
+    if (e.key === "-") setSpeed(Math.max(.25, speed / 2));
+  });
+  setSpeed(speed);
+
+  // Wait for images (logos, charts) so figure positions are final before the spider sets off.
+  Promise.all([...page.querySelectorAll("img")].map((img) => img.complete ? null : new Promise((r) => { img.onload = img.onerror = r; })))
+    .then(() => { layout(); run(); });
+})();
+</script>
+</body>
+</html>

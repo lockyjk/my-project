@@ -3,7 +3,7 @@ name = "newsspider"
 version = "1.0.0"
 description = "News scraper and ranker for day trading"
 requires-python = ">=3.11"
-dependencies = ["feedparser>=6.0", "requests>=2.31"]
+dependencies = ["feedparser>=6.0", "requests>=2.31", "beautifulsoup4>=4.12", "lxml>=5"]
 
 [project.optional-dependencies]
 test = ["pytest>=8"]
@@ -17,6 +17,9 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 packages = ["newsspider"]
+
+[tool.setuptools.package-data]
+newsspider = ["*.html"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

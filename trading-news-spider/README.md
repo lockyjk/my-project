@@ -1,6 +1,6 @@
 # Trading news spider
 
-Crawls financial news, press releases, SEC filings and (optionally) Reddit, then ranks every story by how likely it is to move a stock **right now**. It's built for day trading: fresh, high-impact, ticker-specific news comes first.
+Crawls financial news, press releases, SEC filings and (optionally) Reddit, ranks every story by how likely it is to move a stock **right now**, and can send an animated spider through any company's 10-K. It's built for day trading: fresh, high-impact, ticker-specific news comes first.
 
 ## What it does
 
@@ -53,6 +53,27 @@ Output line format:
 ```
 
 The arrow shows sentiment, then the score, the story's age, tickers, catalyst tags, headline and source.
+
+## The filing spider 🕷️
+
+`newsspider filing <TICKER>` downloads a company's latest 10-K (or `--form 10-Q`) from SEC EDGAR and builds a self-contained HTML page where an animated spider crawls the real filing:
+
+- It walks down the document and boxes every key figure as it reads it, then draws pink and yellow threads to what it found and flashes the value.
+- The report panel fills in live: income statement, balance sheet and cash flow (current vs prior year), "Spider's take" ratios (growth, margins, free cash flow, current ratio, cash returned to shareholders), the Items it has read, and dollar amounts from the text with their page numbers.
+- The figures come from the filing's inline XBRL tags, so they are exact and the spider knows where each one sits on the page. Segment-only and quarterly figures are ignored.
+
+```bash
+newsspider filing MSFT --open
+newsspider filing NVDA --caption "Wall Street's newest analyst is a spider 🕷️" -o nvda.html
+newsspider filing --file saved-10k.htm      # a filing you already downloaded
+```
+
+Page controls: pause/play (space), ½× to 4× speed (`+`/`-`), replay (`r`). URL options:
+- `?phone`: locks a 9:16 frame for screen-recording Shorts or TikToks.
+- `?clean`: hides the controls.
+- `?speed=2`: starts at that speed.
+
+The SEC needs a real contact email in `user_agent` (see `config.toml`).
 
 ## Adding sources
 
