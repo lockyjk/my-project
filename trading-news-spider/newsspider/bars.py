@@ -11,7 +11,7 @@ from .fetch import Fetcher
 
 ET = ZoneInfo("America/New_York")
 OPEN, CLOSE = time(9, 30), time(16, 0)
-BARS_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1m&includePrePost=false&{span}"
+BARS_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1m&includePrePost={extended}&{span}"
 
 
 @dataclass(frozen=True)
@@ -40,11 +40,12 @@ def parse_bars(payload: str) -> list[Bar]:
     return bars
 
 
-def fetch_bars(fetcher: Fetcher, ticker: str, start: datetime | None = None, end: datetime | None = None) -> list[Bar]:
-    """Last 5 sessions by default. Yahoo serves 1-minute bars for about the last 30 days, 7 days per request."""
+def fetch_bars(fetcher: Fetcher, ticker: str, start: datetime | None = None, end: datetime | None = None, extended: bool = False) -> list[Bar]:
+    """Last 5 sessions by default. Yahoo serves 1-minute bars for about the last 30 days, 7 days per request.
+    `extended` adds pre-market (4:00-9:30) and after-hours (16:00-20:00); Yahoo has no overnight bars."""
     span = f"period1={int(start.timestamp())}&period2={int(end.timestamp())}" if start and end else "range=5d"
-    resp = fetcher.get(BARS_URL.format(ticker=ticker, span=span))
-    return parse_bars(resp.text) if resp else []
+    resp = fetcher.get(BARS_URL.format(ticker=ticker, span=span, extended=str(extended).lower()))
+    return sorted(parse_bars(resp.text), key=lambda b: b.t) if resp else []
 
 
 def by_session(bars: list[Bar]) -> dict[date, list[Bar]]:

@@ -116,8 +116,14 @@ def cmd_bot_backtest(spider: Spider, args) -> None:
     plan, rules = _bot_parts(spider)
     articles = spider.store.recent(args.since, limit=1_000_000)
     span = f"{args.since.days}d" if args.since.days else f"{args.since.seconds // 3600}h"
-    print(f"replaying {len(articles)} stories from the last {span} against minute bars...")
-    report = run_backtest(plan, rules, articles, default_loader(spider.fetcher), equity=args.equity)
+    if args.plan == "24h":
+        from .strategy24 import Plan24, by_session_stats, default_loader_24, run_backtest_24
+
+        print(f"replaying {len(articles)} stories from the last {span} with the 24/5 News Reaction plan (extended-hours bars)...")
+        report = run_backtest_24(Plan24.from_config(spider.config.bot24), rules, articles, default_loader_24(spider.fetcher), equity=args.equity)
+    else:
+        print(f"replaying {len(articles)} stories from the last {span} with the regular-hours Catalyst Momentum plan...")
+        report = run_backtest(plan, rules, articles, default_loader(spider.fetcher), equity=args.equity)
     for t in report.trades:
         print(f"{t.day} {t.entry_time:%H:%M} {t.ticker:<6} {t.qty:>5} @ {t.entry:<9.2f} -> {t.exit:<9.2f} {t.r:+.2f}R {t.pnl:>+10.2f}  {t.exit_reason:<14} {t.news[:60]}")
     if args.verbose:
@@ -126,6 +132,10 @@ def cmd_bot_backtest(spider: Spider, args) -> None:
     print()
     for key, value in report.stats.items():
         print(f"  {key.replace('_', ' '):<18} {value}")
+    if args.plan == "24h" and report.trades:
+        print("\n  by session          trades  wins  total R       P&L")
+        for name, st in by_session_stats(report.trades).items():
+            print(f"  {name:<18} {st['trades']:>7} {st['wins']:>5} {st['total_r']:>+8.2f} {st['pnl']:>+10.2f}")
     ok, verdict = passes_live_gate(report.stats, spider.config.bot.get("live_min_trades", 30), spider.config.bot.get("live_min_profit_factor", 1.2))
     print(f"\nlive-trading gate: {'PASS' if ok else 'NOT YET'}: {verdict}")
     Path(args.report).write_text(json.dumps(report.to_dict(), indent=2, default=str))
@@ -220,6 +230,8 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--since", type=duration, default=timedelta(days=30))
     p.add_argument("--equity", type=float, default=100_000)
     p.add_argument("--report", default="bot_report.json")
+    p.add_argument("--plan", choices=["regular", "24h"], default="regular",
+                   help="regular-hours Catalyst Momentum, or 24/5 News Reaction for stocks traded around the clock")
     p.set_defaults(func=cmd_bot_backtest)
     p = bot_sub.add_parser("run", help="trade live news every minute during market hours")
     p.add_argument("--broker", choices=["paper", "alpaca"], default="paper")

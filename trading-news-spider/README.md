@@ -114,6 +114,23 @@ newsspider bot status                # paper P&L, open positions, recent decisio
 
 Notes: it uses Yahoo's free unofficial minute data for decisions, which can lag or stop working, so use a paid data feed for real money. The bot must be running during market hours. It doesn't know about market holidays unless you use Alpaca, which reports when the market is open. Nothing here is financial advice.
 
+### 24/5 stocks (round-the-clock trading)
+
+Some brokers trade US stocks from Sunday 20:00 to Friday 20:00 ET. Most catalysts arrive outside regular hours (earnings at 16:05 or 7:00, FDA decisions, 8-K filings), so there's a second plan built for that, **24/5 News Reaction** (`newsspider/strategy24.py`, settings in `[bot24]`):
+
+```bash
+newsspider bot backtest --plan 24h --since 30d
+```
+
+- **Anchor:** the moment the story came out, not the 9:30 open. The starting price is the last price before the story, and the reaction range is the first 15 minutes after it.
+- **Entry:** up 2%+ from that starting price, 3×+ normal volume for that time of day, $250k+ traded since the story, and a breakout above the reaction range and above VWAP measured from the story. It must enter within 2 hours.
+- **Exit:** 2R target, breakeven at +1R, held no longer than 4 hours, and always sold before the Friday 20:00 close.
+- **Costs:** 0.15% slippage per side, three times the regular-hours plan, because spreads are wider at night.
+- **News rules:** the same buy and veto catalysts as the regular plan. A veto story within 12 hours cancels the trade, each stock trades at most once per 24 hours, and weekend news waits for the Sunday 20:00 open.
+- **Report:** trades and P&L split by session (overnight, pre-market, regular, after-hours), so you can see where the edge is, if there is one.
+
+**Data limit:** Yahoo's free minute bars cover pre-market (4:00–9:30) and after-hours (16:00–20:00), but **not the overnight session (20:00–4:00)**. Stories that break overnight are judged on the next pre-market bars, so a backtest can't show overnight entries. Testing true overnight trading needs a data feed that includes the overnight session. Live trading in those hours also needs a broker that supports it, and extended-hours orders usually have to be limit orders.
+
 ## Adding sources
 
 Add a `[[sources]]` block to `config.toml` with `kind = "rss"`, `"sec"` or `"reddit"`. Put `{ticker}` in the URL and set `per_ticker = true` to run it for every watchlist symbol.

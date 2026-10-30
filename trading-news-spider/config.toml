@@ -154,6 +154,25 @@ require_backtest_for_live = true
 live_min_trades = 30
 live_min_profit_factor = 1.2
 
+# The 24/5 News Reaction plan (newsspider/strategy24.py), for stocks that trade Sunday 20:00 to
+# Friday 20:00 ET. It anchors on the moment the story came out instead of the 9:30 open.
+# Backtest it with: newsspider bot backtest --plan 24h
+[bot24]
+min_move_pct = 2.0             # up 2%+ from the last price before the story
+min_rel_volume = 3.0           # 3x normal volume for that time of day
+min_window_dollar_volume = 250000   # $ traded since the story; extended hours are thin
+reaction_minutes = 15
+entry_window_minutes = 120     # enter within 2 hours of the story
+max_chase_pct = 1.0
+min_stop_pct = 0.75
+max_stop_pct = 4.0
+target_r = 2.0
+breakeven_r = 1.0
+max_hold_minutes = 240
+weekend_exit = "19:55"         # always flat before the Friday 20:00 close
+veto_hours = 12                # a dilution/legal/etc. story this close cancels the trade
+slippage_pct = 0.15            # wider overnight spreads
+
 [risk]
 risk_per_trade_pct = 0.5       # lose at most 0.5% of the account per trade
 max_position_pct = 25.0

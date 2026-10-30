@@ -36,6 +36,7 @@ class Config:
     alerts: dict = field(default_factory=dict)
     sources: list[dict] = field(default_factory=list)
     bot: dict = field(default_factory=dict)
+    bot24: dict = field(default_factory=dict)
     filter: dict = field(default_factory=dict)
     risk: dict = field(default_factory=dict)
 

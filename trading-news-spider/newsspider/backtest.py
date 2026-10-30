@@ -33,18 +33,20 @@ class Trade:
     pnl: float = 0.0
 
 
-def simulate_trade(plan: Plan, signal: Signal, after: list[Bar], news: str = "") -> Trade | None:
-    """Play out a signal over the bars that follow it."""
+def simulate_trade(plan, signal: Signal, after: list[Bar], news: str = "", time_exit: Callable[[Bar], bool] | None = None) -> Trade | None:
+    """Play out a signal over the bars that follow it. `time_exit(bar)` says when to sell at that bar's open."""
     if not after:
         return None
+    if time_exit is None:
+        exit_at = _t(plan.exit_time)
+        time_exit = lambda bar: bar.t.time() >= exit_at  # noqa: E731
     entry = after[0].o * (1 + plan.slippage_pct / 100)
     risk = entry - signal.stop
     if risk <= 0:
         return None
     stop, target, at_breakeven = signal.stop, entry + plan.target_r * risk, False
-    exit_at = _t(plan.exit_time)
     for bar in after:
-        if bar.t.time() >= exit_at:
+        if time_exit(bar):
             price, why, when = bar.o, "time exit", bar.t
             break
         if bar.l <= stop:
@@ -128,7 +130,11 @@ def run_backtest(
         else:
             skipped.append((ticker, day.isoformat(), why))
 
-    # Apply the account's risk rules in time order, compounding equity day by day.
+    return apply_risk(raw, skipped, rules, equity)
+
+
+def apply_risk(raw: list[Trade], skipped: list, rules: RiskRules, equity: float) -> Report:
+    """Apply the account's risk rules in time order, compounding equity day by day."""
     start, peak, max_dd = equity, equity, 0.0
     taken: list[Trade] = []
     for day in sorted({t.day for t in raw}):
