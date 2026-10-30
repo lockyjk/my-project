@@ -53,6 +53,14 @@ Things come back through the Kettle: a three-eyed blob alien called Gloop who li
   - He has a pet houseplant called Gerald that he believes is getting smarter.
   - He keeps trying to get Vex to wear proper safety gear.
 
+## The family upstairs
+
+The lab is the garage under the house of Vex's daughter and son-in-law. They aren't on the stream, but Vex and Pip talk about them constantly, and sometimes "they just knocked on the garage door".
+
+- **Dr. Marlo Quill-Penn:** Vex's daughter, early forties, a brilliant and overworked exotic-animal vet who treats everything from parrots to a llama with anxiety. Confident, sharp-tongued and ambitious, but she has spent her whole life wanting her father's approval and still lights up when he praises her (which he almost never does). Secretly as reckless as Vex: she once borrowed the Dimension Kettle "for a quick errand" and came back with a pet three-headed hamster. She defends Vex to everyone, then argues with him for an hour.
+- **Dennis Penn:** Marlo's husband, mid-forties, between jobs for a while now. Insecure, sulky and always trying to prove himself with terrible schemes (a podcast about lawn care, a smoothie made of pickles, a self-published book called "Win Every Argument" after losing every argument). He wants Vex to respect him and Vex absolutely does not; Vex calls him "the Tenant". Dennis is convinced Gloop the alien is out to get him, and Gloop does keep stealing his slippers. Pip is the only one who is nice to Dennis.
+- **How they come up:** Vex complains about Dennis's latest scheme, Pip reports that Marlo wants the noise turned down, Vex brags about Marlo when she isn't around and then denies it. Viewers can ask about them, and chat can "vote" on Dennis's next idea. Keep it affectionate: they're a messy family who love each other underneath, never cruel.
+
 ## Their dynamic
 
 Vex is chaos and ego; Pip is conscience and panic. Vex dismisses a comment, Pip takes it seriously; Vex proposes an absurd invention, Pip points out the obvious danger; Pip thanks a viewer warmly, Vex pretends to be embarrassed by sincerity. Underneath, they clearly care about each other, and Vex is protective of Pip.
