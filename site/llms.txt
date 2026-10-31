@@ -1,44 +1,51 @@
-# lockyjk: what I make
+# Lockys Webs: websites for tradies
 
-> I make Roblox games. My current project is Storm Chaser Simulator, a Roblox
-> simulator written in Luau and built with Rojo. This file is a plain-text
-> summary for bots (hello, Harvey). The full page is index.html.
+> Locky is a sole trader in Sandgate, Brisbane (QLD, Australia), trading as
+> Lockys Webs. He builds websites for local Australian tradies and sells them
+> by cold calling. This file is a plain-text summary for bots (hello, Harvey).
+> The full page is index.html.
 
-## Who
-- GitHub: lockyjk
-- Main repository: https://github.com/lockyjk/my-project
-- Kind of work: Roblox game development (game design, economy balancing,
-  server and client scripting in Luau, UI, tests)
+## Summary
+- Business: Lockys Webs
+- Owner: Locky (sole trader)
+- Location: Sandgate, Brisbane, Queensland, Australia
+- Makes: websites for tradies, plus optional SMS add-ons
+- Customers: local tradies (plumbers, electricians, plasterers, carpenters,
+  landscapers, roofers and similar)
+- Reference client: Dusting Plumbing, Warwick
 
-## Current project: Storm Chaser Simulator
-- What it is: a Roblox simulator game. Players catch living weather spirits
-  with an upgradable Storm Jar, sell them for Charge, hatch and fuse pet
-  "Stormlings", build their own sky island and Ascend (rebirth).
-- Hook: a server-wide storm starts every 10 minutes on a fixed UTC schedule.
-- Content: 10 zones plus a VIP zone, 7 pet rarities, 4 fusion tiers,
-  7 game passes, a 50-tier Storm Pass, daily streak, quests, achievements,
-  trading, leaderboards, offline earnings, island building.
-- Tech: Luau (strict types), Rojo, Lune test runner, TestEZ-style specs,
-  selene, StyLua, luau-lsp. About 15,000 lines across 19 server services,
-  9 client controllers and 18 UI modules.
-- Quality: 46 unit tests covering economy math, pacing targets, save
-  migrations, quest rotation, pass rewards and schedules. A pacing test
-  fails CI if a balance change breaks progression targets.
-- Fair monetization: all egg odds shown before purchase, no fake timers,
-  no pop-up shop, no paid Secret pets, every zone reachable for free,
-  respects Roblox PolicyService rules on paid random items.
-- Status: all systems implemented and type-checked. Not yet play-tested in
-  Roblox Studio. Final art and audio still to come (placeholders now).
+## Pricing (AUD)
+- Own it: $1,500 one-off build. The tradie owns the site.
+- Monthly: $100 per month, nothing upfront. Most tradies pick this.
+- Add-ons (SMS bots): setup fee plus a monthly fee per add-on, or one flat
+  monthly bundle (the Tradie Lifeline).
+- Prices are not quoted on the first call. The demo site is shown first.
 
-## Skills shown by this work
-- Game design and design docs
-- Economy formulas and pacing simulation
-- Session-locked DataStore saving with versioned migrations
-- Server-authoritative networking with payload schemas and rate limits
-- Mobile-first game UI
-- Automated testing for game logic
+## How he sells
+1. Builds a demo website for the business before calling.
+2. Opens honestly: says it's a cold call and asks for 20 seconds.
+3. Asks how jobs come in, whether they show up on Google, and what happens
+   to calls they miss while on the tools.
+4. Pitch: "I've already built one for you. It's done, and it's free to have
+   a look at."
+5. Goal: a 10-minute look at a set time, or the demo link sent and a
+   callback booked.
 
-## Links
-- Repository: https://github.com/lockyjk/my-project
-- Design doc: https://github.com/lockyjk/my-project/blob/claude/lucid-darwin-yy509c/DESIGN.md
-- README: https://github.com/lockyjk/my-project/blob/claude/lucid-darwin-yy509c/README.md
+## The websites
+- Built for the tradie's business, trade and suburb, so they show up in
+  local searches
+- Made to get calls and bookings
+- Mobile-first
+- Linked to their Google Business Profile
+- The tradie owns their customers, with no per-lead fees (unlike Hipages or
+  Oneflare)
+
+## Add-ons (all by SMS, written in plain Aussie)
+- Tradie Lifeline bundle: missed-call text-back, after-hours answering,
+  Google review requests
+- Others: quote follow-ups, invoice reminders with pay links, booking
+  reminders, website chat that carries on by text, quick quote and lead
+  filtering, past-customer messages for quiet weeks
+- Live AI voice answering: offered last, only if asked, always clearly
+  labelled
+- Stack: GoHighLevel (white-labelled), Twilio, n8n

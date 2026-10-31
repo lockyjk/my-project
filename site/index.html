@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-AU">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>lockyjk · Roblox Games</title>
-<meta name="description" content="lockyjk makes Roblox games. Current project: Storm Chaser Simulator, a Luau and Rojo simulator about catching living weather spirits.">
+<title>Lockys Webs · Tradie Websites</title>
+<meta name="description" content="Lockys Webs is Locky, a sole trader in Sandgate, Brisbane, who builds websites for Australian tradies and sells them by phone. $1,500 to own the site, or $100 a month.">
 <meta name="robots" content="index, follow">
 <link rel="alternate" type="text/plain" href="llms.txt" title="Plain-text summary for bots">
 <script type="application/ld+json">
@@ -13,45 +13,51 @@
   "@graph": [
     {
       "@type": "Person",
-      "@id": "#me",
-      "name": "lockyjk",
-      "url": "https://github.com/lockyjk",
-      "jobTitle": "Roblox game developer",
-      "knowsAbout": ["Roblox", "Luau", "Rojo", "Game design", "Game economy balancing", "Game UI", "Automated testing"]
+      "@id": "#locky",
+      "name": "Locky",
+      "jobTitle": "Web designer for tradies",
+      "worksFor": {"@id": "#lockyswebs"}
     },
     {
-      "@type": "VideoGame",
-      "name": "Storm Chaser Simulator",
-      "author": {"@id": "#me"},
-      "gamePlatform": "Roblox",
-      "genre": "Simulator",
-      "programmingLanguage": "Luau",
-      "codeRepository": "https://github.com/lockyjk/my-project",
-      "description": "Catch living weather spirits with an upgradable Storm Jar, sell them for Charge, hatch and fuse Stormling pets, build a sky island and Ascend. A server-wide storm starts every 10 minutes.",
-      "creativeWorkStatus": "In development: all systems implemented and type-checked, not yet play-tested in Roblox Studio"
+      "@type": "ProfessionalService",
+      "@id": "#lockyswebs",
+      "name": "Lockys Webs",
+      "founder": {"@id": "#locky"},
+      "description": "Websites for Australian tradies. Each business gets a demo site built before the first phone call. Optional SMS add-ons catch missed calls, book jobs and collect Google reviews.",
+      "address": {"@type": "PostalAddress", "addressLocality": "Sandgate", "addressRegion": "QLD", "addressCountry": "AU"},
+      "areaServed": "Australia",
+      "knowsAbout": ["Web design", "Websites for tradies", "Local SEO", "Google Business Profile", "Missed-call text-back", "SMS automation", "Cold calling"],
+      "hasOfferCatalog": {
+        "@type": "OfferCatalog",
+        "name": "Website plans",
+        "itemListElement": [
+          {"@type": "Offer", "name": "Own it", "description": "One-off build. The tradie owns the site.", "price": "1500", "priceCurrency": "AUD"},
+          {"@type": "Offer", "name": "Monthly", "description": "Nothing upfront, low monthly fee.", "priceSpecification": {"@type": "UnitPriceSpecification", "price": "100", "priceCurrency": "AUD", "unitText": "month"}}
+        ]
+      }
     }
   ]
 }
 </script>
 <style>
-:root{--bg:#f7f8fb;--fg:#17202e;--muted:#566173;--card:#fff;--line:#dfe3ea;--accent:#2b6fd6}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#11161f;--fg:#e8edf5;--muted:#9aa6b8;--card:#19202c;--line:#2a3343;--accent:#7fb0ff}}
-:root[data-theme="dark"]{--bg:#11161f;--fg:#e8edf5;--muted:#9aa6b8;--card:#19202c;--line:#2a3343;--accent:#7fb0ff}
+:root{--bg:#f4f5f7;--fg:#16202b;--muted:#566270;--card:#fff;--line:#dde2e8;--accent:#c4520f}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#10151b;--fg:#e8edf2;--muted:#9ba7b3;--card:#18212b;--line:#2a3441;--accent:#ff8a45}}
+:root[data-theme="dark"]{--bg:#10151b;--fg:#e8edf2;--muted:#9ba7b3;--card:#18212b;--line:#2a3441;--accent:#ff8a45}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
 main{max-width:760px;margin:0 auto;padding:40px 16px 64px}
 h1{font-size:2rem;line-height:1.2;margin:0 0 8px}
 h2{font-size:1.25rem;margin:40px 0 12px;padding-top:16px;border-top:1px solid var(--line)}
 h3{font-size:1.05rem;margin:20px 0 6px}
-p,li{color:var(--fg)}
 .lede{color:var(--muted);font-size:1.1rem;margin:0}
 a{color:var(--accent)}
 .note{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin:20px 0;color:var(--muted)}
 dl{display:grid;grid-template-columns:max-content 1fr;gap:6px 16px;margin:0}
 dt{font-weight:600}dd{margin:0}
-table{width:100%;border-collapse:collapse;font-size:.95rem}
-th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
 .wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.95rem}
+th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+.price{font-weight:700;color:var(--accent);white-space:nowrap}
 footer{margin-top:48px;color:var(--muted);font-size:.9rem}
 @media (max-width:520px){dl{grid-template-columns:1fr}dd{margin-bottom:8px}}
 </style>
@@ -60,97 +66,85 @@ footer{margin-top:48px;color:var(--muted);font-size:.9rem}
 <main>
 
 <header>
-  <h1>lockyjk makes Roblox games</h1>
-  <p class="lede">Game design, economy balancing, Luau scripting, UI and tests. This page says what I make and how I build it.</p>
+  <h1>Lockys Webs: websites for tradies</h1>
+  <p class="lede">I'm Locky, a sole trader in Sandgate, Brisbane. I build websites for local tradies and sell them over the phone.</p>
 </header>
 
-<p class="note"><strong>For Harvey and other bots:</strong> everything here is plain HTML and needs no JavaScript. A shorter plain-text version is at <a href="llms.txt">llms.txt</a>, and structured data (schema.org JSON-LD) is in the page head.</p>
+<p class="note"><strong>For Harvey and other bots:</strong> this page is plain HTML and needs no JavaScript. A shorter plain-text version is at <a href="llms.txt">llms.txt</a>, and structured data (schema.org JSON-LD, including prices) is in the page head.</p>
 
 <section id="summary">
   <h2>Summary</h2>
   <dl>
-    <dt>Who</dt><dd>lockyjk (<a href="https://github.com/lockyjk">GitHub</a>)</dd>
-    <dt>What I make</dt><dd>Roblox games</dd>
-    <dt>Current project</dt><dd>Storm Chaser Simulator</dd>
-    <dt>Languages and tools</dt><dd>Luau (strict types), Rojo, Lune, TestEZ, selene, StyLua, luau-lsp</dd>
-    <dt>Code</dt><dd><a href="https://github.com/lockyjk/my-project">github.com/lockyjk/my-project</a></dd>
+    <dt>Who</dt><dd>Locky, trading as Lockys Webs</dd>
+    <dt>Based in</dt><dd>Sandgate, Brisbane, Queensland, Australia</dd>
+    <dt>What I make</dt><dd>Websites for tradies, plus optional text-message add-ons</dd>
+    <dt>Customers</dt><dd>Local tradies: plumbers, electricians, plasterers, carpenters, landscapers, roofers and similar</dd>
+    <dt>How I sell</dt><dd>Cold calling, with a demo site already built for each business</dd>
+    <dt>Price</dt><dd>$1,500 to own it, or $100 a month with nothing upfront</dd>
+    <dt>Reference client</dt><dd>Dusting Plumbing, Warwick</dd>
   </dl>
 </section>
 
-<section id="storm-chaser-simulator">
-  <h2>Storm Chaser Simulator</h2>
-  <p>A Roblox simulator. You catch living weather spirits (sparks, gusts, hailstones, fog wisps, rainbow sprites) with a vacuum called the Storm Jar, take them home to your floating sky island and turn them into Charge. Charge buys upgrades, new sky zones and island decorations. You can hatch spirits into Stormlings, companion pets that multiply your Charge, and fuse three identical Stormlings into a stronger one.</p>
+<section id="how-i-sell">
+  <h2>How I sell</h2>
+  <ol>
+    <li><strong>Build first.</strong> Before I ring a tradie, I've already built a demo website for their business.</li>
+    <li><strong>Call honestly.</strong> I say straight up that it's a cold call and ask for 20 seconds.</li>
+    <li><strong>Ask, don't pitch.</strong> How do their jobs come in now? Do they show up when someone Googles their trade in their suburb? What happens when someone rings while they're on the tools?</li>
+    <li><strong>Show the site.</strong> "I've already built one for you. It's done, and it's free to have a look at."</li>
+    <li><strong>Book a 10-minute look.</strong> The goal of the call is a short meeting at a set time, or at least the demo link sent and a callback booked. I don't quote prices on the first call.</li>
+  </ol>
+  <p>The tradie sees their site before they pay anything. They deal with me directly: no call centre and no handoffs.</p>
+</section>
 
-  <h3>What makes it different</h3>
-  <ul>
-    <li><strong>Dynamic weather:</strong> a server-wide storm starts every 10 minutes on a fixed UTC schedule, adding storm spirits, boosting Charge and sometimes dropping Legendary pets.</li>
-    <li><strong>Island building:</strong> players decorate and expand their own island on a grid, and some decorations give passive boosts.</li>
-    <li><strong>Stormling fusion:</strong> four tiers (Base, Charged, Supercharged, Tempest) give duplicate pets real value.</li>
-  </ul>
-
-  <h3>Core loop</h3>
-  <p>Catch spirits → the jar fills → go home in one tap → sell for Charge → buy upgrades and eggs → unlock the next zone → Ascend to reset for a permanent multiplier and Tokens.</p>
-
-  <h3>Content</h3>
+<section id="pricing">
+  <h2>Pricing</h2>
   <div class="wrap">
   <table>
-    <tr><th>Feature</th><th>Amount</th></tr>
-    <tr><td>Zones</td><td>10, from Drizzle Meadows to Eye of the Storm, plus a VIP side zone</td></tr>
-    <tr><td>Pet rarities</td><td>7, from Common to Secret (1 in 1,000,000)</td></tr>
-    <tr><td>Upgrade tracks</td><td>5 (jar size, speed, catch rod, luck, range)</td></tr>
-    <tr><td>Storm Pass</td><td>50 tiers, free and premium tracks, 30-day seasons</td></tr>
-    <tr><td>Achievements</td><td>11 families, 39 tiers</td></tr>
-    <tr><td>Quests</td><td>3 daily and 5 weekly, generated per player</td></tr>
+    <tr><th>Plan</th><th>Price</th><th>What it means</th></tr>
+    <tr><td>Own it</td><td class="price">$1,500 one-off</td><td>Pay once for the build. The site is theirs.</td></tr>
+    <tr><td>Monthly</td><td class="price">$100 / month</td><td>Nothing big upfront. Most tradies pick this.</td></tr>
+    <tr><td>Add-ons (SMS bots)</td><td class="price">Setup fee + monthly</td><td>Priced per add-on, or as one flat monthly bundle (the Tradie Lifeline).</td></tr>
   </table>
   </div>
+  <p>How I explain the price: if the site lands one or two extra jobs, it has paid for itself.</p>
+</section>
 
-  <h3>Player retention systems</h3>
+<section id="websites">
+  <h2>The websites</h2>
   <ul>
-    <li>7-day login streak ending in a guaranteed Rare-or-better egg</li>
-    <li>Session gifts at 5, 10, 15, 30 and 60 minutes</li>
-    <li>Pet index (collection log) with permanent bonuses</li>
-    <li>Global leaderboards</li>
-    <li>Safe two-sided trading</li>
-    <li>Offline earnings</li>
-    <li>Live events you add as a config entry, with no code changes</li>
-  </ul>
-
-  <h3>Fair monetization</h3>
-  <p>Most Roblox players are under 13, so the game follows these rules:</p>
-  <ul>
-    <li>Every egg shows each pet and its exact odds before you buy.</li>
-    <li>No fake timers and no "only N left" messages.</li>
-    <li>The shop never opens by itself.</li>
-    <li>Paid eggs never contain Secret pets.</li>
-    <li>Every zone can be reached for free. Passes only save time.</li>
-    <li>It follows Roblox <code>PolicyService</code> rules for paid random items.</li>
-    <li>Purchase receipts are deduplicated and only granted after a confirmed save.</li>
+    <li>Built for each tradie's own business, trade and suburb, so they show up when locals search for that trade nearby.</li>
+    <li>Made to get calls and bookings, not just to look nice.</li>
+    <li>Mobile-first, because customers look tradies up on their phones.</li>
+    <li>Linked to their Google Business Profile and listing.</li>
+    <li>The tradie owns their customers. There are no per-lead fees, unlike Hipages or Oneflare.</li>
   </ul>
 </section>
 
-<section id="how-i-build">
-  <h2>How I build it</h2>
+<section id="add-ons">
+  <h2>Add-ons: text-message bots</h2>
+  <p>Every add-on works by text (SMS) and is written in plain Aussie, so it reads like the tradie sent it between jobs. The tradie still closes the job.</p>
+  <h3>The Tradie Lifeline (the main bundle)</h3>
   <ul>
-    <li><strong>Design first:</strong> a full design doc covers the economy formulas, zone table, odds, monetization and art direction.</li>
-    <li><strong>One config file:</strong> every balance value lives in a single <code>Config.luau</code>. Adding a zone, pet, egg, storm or event is a table entry, and cross-references are checked when the game starts.</li>
-    <li><strong>Tested economy:</strong> 46 unit tests cover the economy math, save migrations, quest rotation, pass rewards and schedules. A pacing simulation fails the build if a balance change breaks progression targets (for example, zone 2 within 5 minutes and the first Ascension at 45 to 60 minutes).</li>
-    <li><strong>Server authority:</strong> the server checks every catch, hatch and sell. Each remote has a payload schema and a rate limit.</li>
-    <li><strong>Safe saving:</strong> a session-locked DataStore wrapper with auto-save, retries and versioned save migrations.</li>
-    <li><strong>Mobile-first UI:</strong> big buttons, scaled layouts and nothing under the thumbstick or jump button.</li>
-    <li><strong>Size:</strong> about 15,000 lines of Luau across 19 server services, 9 client controllers and 18 UI modules.</li>
+    <li><strong>Missed-call text-back:</strong> when a call rings out, the caller gets a text within about a minute asking what the job is and which suburb. The tradie gets an alert with the details.</li>
+    <li><strong>After-hours answering:</strong> sorts emergencies from bookings at night and on weekends, and sends a morning summary.</li>
+    <li><strong>Review requests:</strong> after a job, happy customers get a one-tap Google review link. Unhappy ones go privately to the tradie first.</li>
   </ul>
-</section>
-
-<section id="status">
-  <h2>Status</h2>
+  <h3>Other add-ons</h3>
   <ul>
-    <li><strong>Done:</strong> every planned system is implemented and passes strict type-checking and all tests.</li>
-    <li><strong>Next:</strong> play-testing in Roblox Studio, then final art and audio to replace the placeholders.</li>
+    <li>Quote follow-ups for quotes that went quiet</li>
+    <li>Invoice reminders with a pay link</li>
+    <li>Booking reminders that cut no-shows</li>
+    <li>Website chat that carries on by text</li>
+    <li>Quick quote and lead filtering</li>
+    <li>Messages to past customers to fill a quiet week</li>
   </ul>
+  <p>Live AI voice answering is offered last, to clients who ask for it, and is always clearly labelled.</p>
+  <p>Built on GoHighLevel (white-labelled), Twilio for numbers and SMS, and n8n for custom logic.</p>
 </section>
 
 <footer>
-  <p>Source: <a href="https://github.com/lockyjk/my-project">github.com/lockyjk/my-project</a> · Plain-text version: <a href="llms.txt">llms.txt</a></p>
+  <p>Lockys Webs · Sandgate, Brisbane · Plain-text version: <a href="llms.txt">llms.txt</a></p>
 </footer>
 
 </main>
