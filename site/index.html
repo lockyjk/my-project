@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>lockyjk · Roblox Games</title>
+<meta name="description" content="lockyjk makes Roblox games. Current project: Storm Chaser Simulator, a Luau and Rojo simulator about catching living weather spirits.">
+<meta name="robots" content="index, follow">
+<link rel="alternate" type="text/plain" href="llms.txt" title="Plain-text summary for bots">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Person",
+      "@id": "#me",
+      "name": "lockyjk",
+      "url": "https://github.com/lockyjk",
+      "jobTitle": "Roblox game developer",
+      "knowsAbout": ["Roblox", "Luau", "Rojo", "Game design", "Game economy balancing", "Game UI", "Automated testing"]
+    },
+    {
+      "@type": "VideoGame",
+      "name": "Storm Chaser Simulator",
+      "author": {"@id": "#me"},
+      "gamePlatform": "Roblox",
+      "genre": "Simulator",
+      "programmingLanguage": "Luau",
+      "codeRepository": "https://github.com/lockyjk/my-project",
+      "description": "Catch living weather spirits with an upgradable Storm Jar, sell them for Charge, hatch and fuse Stormling pets, build a sky island and Ascend. A server-wide storm starts every 10 minutes.",
+      "creativeWorkStatus": "In development: all systems implemented and type-checked, not yet play-tested in Roblox Studio"
+    }
+  ]
+}
+</script>
+<style>
+:root{--bg:#f7f8fb;--fg:#17202e;--muted:#566173;--card:#fff;--line:#dfe3ea;--accent:#2b6fd6}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#11161f;--fg:#e8edf5;--muted:#9aa6b8;--card:#19202c;--line:#2a3343;--accent:#7fb0ff}}
+:root[data-theme="dark"]{--bg:#11161f;--fg:#e8edf5;--muted:#9aa6b8;--card:#19202c;--line:#2a3343;--accent:#7fb0ff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:760px;margin:0 auto;padding:40px 16px 64px}
+h1{font-size:2rem;line-height:1.2;margin:0 0 8px}
+h2{font-size:1.25rem;margin:40px 0 12px;padding-top:16px;border-top:1px solid var(--line)}
+h3{font-size:1.05rem;margin:20px 0 6px}
+p,li{color:var(--fg)}
+.lede{color:var(--muted);font-size:1.1rem;margin:0}
+a{color:var(--accent)}
+.note{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin:20px 0;color:var(--muted)}
+dl{display:grid;grid-template-columns:max-content 1fr;gap:6px 16px;margin:0}
+dt{font-weight:600}dd{margin:0}
+table{width:100%;border-collapse:collapse;font-size:.95rem}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.wrap{overflow-x:auto}
+footer{margin-top:48px;color:var(--muted);font-size:.9rem}
+@media (max-width:520px){dl{grid-template-columns:1fr}dd{margin-bottom:8px}}
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <h1>lockyjk makes Roblox games</h1>
+  <p class="lede">Game design, economy balancing, Luau scripting, UI and tests. This page says what I make and how I build it.</p>
+</header>
+
+<p class="note"><strong>For Harvey and other bots:</strong> everything here is plain HTML and needs no JavaScript. A shorter plain-text version is at <a href="llms.txt">llms.txt</a>, and structured data (schema.org JSON-LD) is in the page head.</p>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <dl>
+    <dt>Who</dt><dd>lockyjk (<a href="https://github.com/lockyjk">GitHub</a>)</dd>
+    <dt>What I make</dt><dd>Roblox games</dd>
+    <dt>Current project</dt><dd>Storm Chaser Simulator</dd>
+    <dt>Languages and tools</dt><dd>Luau (strict types), Rojo, Lune, TestEZ, selene, StyLua, luau-lsp</dd>
+    <dt>Code</dt><dd><a href="https://github.com/lockyjk/my-project">github.com/lockyjk/my-project</a></dd>
+  </dl>
+</section>
+
+<section id="storm-chaser-simulator">
+  <h2>Storm Chaser Simulator</h2>
+  <p>A Roblox simulator. You catch living weather spirits (sparks, gusts, hailstones, fog wisps, rainbow sprites) with a vacuum called the Storm Jar, take them home to your floating sky island and turn them into Charge. Charge buys upgrades, new sky zones and island decorations. You can hatch spirits into Stormlings, companion pets that multiply your Charge, and fuse three identical Stormlings into a stronger one.</p>
+
+  <h3>What makes it different</h3>
+  <ul>
+    <li><strong>Dynamic weather:</strong> a server-wide storm starts every 10 minutes on a fixed UTC schedule, adding storm spirits, boosting Charge and sometimes dropping Legendary pets.</li>
+    <li><strong>Island building:</strong> players decorate and expand their own island on a grid, and some decorations give passive boosts.</li>
+    <li><strong>Stormling fusion:</strong> four tiers (Base, Charged, Supercharged, Tempest) give duplicate pets real value.</li>
+  </ul>
+
+  <h3>Core loop</h3>
+  <p>Catch spirits → the jar fills → go home in one tap → sell for Charge → buy upgrades and eggs → unlock the next zone → Ascend to reset for a permanent multiplier and Tokens.</p>
+
+  <h3>Content</h3>
+  <div class="wrap">
+  <table>
+    <tr><th>Feature</th><th>Amount</th></tr>
+    <tr><td>Zones</td><td>10, from Drizzle Meadows to Eye of the Storm, plus a VIP side zone</td></tr>
+    <tr><td>Pet rarities</td><td>7, from Common to Secret (1 in 1,000,000)</td></tr>
+    <tr><td>Upgrade tracks</td><td>5 (jar size, speed, catch rod, luck, range)</td></tr>
+    <tr><td>Storm Pass</td><td>50 tiers, free and premium tracks, 30-day seasons</td></tr>
+    <tr><td>Achievements</td><td>11 families, 39 tiers</td></tr>
+    <tr><td>Quests</td><td>3 daily and 5 weekly, generated per player</td></tr>
+  </table>
+  </div>
+
+  <h3>Player retention systems</h3>
+  <ul>
+    <li>7-day login streak ending in a guaranteed Rare-or-better egg</li>
+    <li>Session gifts at 5, 10, 15, 30 and 60 minutes</li>
+    <li>Pet index (collection log) with permanent bonuses</li>
+    <li>Global leaderboards</li>
+    <li>Safe two-sided trading</li>
+    <li>Offline earnings</li>
+    <li>Live events you add as a config entry, with no code changes</li>
+  </ul>
+
+  <h3>Fair monetization</h3>
+  <p>Most Roblox players are under 13, so the game follows these rules:</p>
+  <ul>
+    <li>Every egg shows each pet and its exact odds before you buy.</li>
+    <li>No fake timers and no "only N left" messages.</li>
+    <li>The shop never opens by itself.</li>
+    <li>Paid eggs never contain Secret pets.</li>
+    <li>Every zone can be reached for free. Passes only save time.</li>
+    <li>It follows Roblox <code>PolicyService</code> rules for paid random items.</li>
+    <li>Purchase receipts are deduplicated and only granted after a confirmed save.</li>
+  </ul>
+</section>
+
+<section id="how-i-build">
+  <h2>How I build it</h2>
+  <ul>
+    <li><strong>Design first:</strong> a full design doc covers the economy formulas, zone table, odds, monetization and art direction.</li>
+    <li><strong>One config file:</strong> every balance value lives in a single <code>Config.luau</code>. Adding a zone, pet, egg, storm or event is a table entry, and cross-references are checked when the game starts.</li>
+    <li><strong>Tested economy:</strong> 46 unit tests cover the economy math, save migrations, quest rotation, pass rewards and schedules. A pacing simulation fails the build if a balance change breaks progression targets (for example, zone 2 within 5 minutes and the first Ascension at 45 to 60 minutes).</li>
+    <li><strong>Server authority:</strong> the server checks every catch, hatch and sell. Each remote has a payload schema and a rate limit.</li>
+    <li><strong>Safe saving:</strong> a session-locked DataStore wrapper with auto-save, retries and versioned save migrations.</li>
+    <li><strong>Mobile-first UI:</strong> big buttons, scaled layouts and nothing under the thumbstick or jump button.</li>
+    <li><strong>Size:</strong> about 15,000 lines of Luau across 19 server services, 9 client controllers and 18 UI modules.</li>
+  </ul>
+</section>
+
+<section id="status">
+  <h2>Status</h2>
+  <ul>
+    <li><strong>Done:</strong> every planned system is implemented and passes strict type-checking and all tests.</li>
+    <li><strong>Next:</strong> play-testing in Roblox Studio, then final art and audio to replace the placeholders.</li>
+  </ul>
+</section>
+
+<footer>
+  <p>Source: <a href="https://github.com/lockyjk/my-project">github.com/lockyjk/my-project</a> · Plain-text version: <a href="llms.txt">llms.txt</a></p>
+</footer>
+
+</main>
+</body>
+</html>

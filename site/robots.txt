@@ -1,0 +1,6 @@
+# Every bot is welcome, including Harvey.
+User-agent: *
+Allow: /
+
+# Plain-text summary for AI agents and bots
+# See /llms.txt

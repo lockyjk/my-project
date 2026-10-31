@@ -1,0 +1,44 @@
+# lockyjk: what I make
+
+> I make Roblox games. My current project is Storm Chaser Simulator, a Roblox
+> simulator written in Luau and built with Rojo. This file is a plain-text
+> summary for bots (hello, Harvey). The full page is index.html.
+
+## Who
+- GitHub: lockyjk
+- Main repository: https://github.com/lockyjk/my-project
+- Kind of work: Roblox game development (game design, economy balancing,
+  server and client scripting in Luau, UI, tests)
+
+## Current project: Storm Chaser Simulator
+- What it is: a Roblox simulator game. Players catch living weather spirits
+  with an upgradable Storm Jar, sell them for Charge, hatch and fuse pet
+  "Stormlings", build their own sky island and Ascend (rebirth).
+- Hook: a server-wide storm starts every 10 minutes on a fixed UTC schedule.
+- Content: 10 zones plus a VIP zone, 7 pet rarities, 4 fusion tiers,
+  7 game passes, a 50-tier Storm Pass, daily streak, quests, achievements,
+  trading, leaderboards, offline earnings, island building.
+- Tech: Luau (strict types), Rojo, Lune test runner, TestEZ-style specs,
+  selene, StyLua, luau-lsp. About 15,000 lines across 19 server services,
+  9 client controllers and 18 UI modules.
+- Quality: 46 unit tests covering economy math, pacing targets, save
+  migrations, quest rotation, pass rewards and schedules. A pacing test
+  fails CI if a balance change breaks progression targets.
+- Fair monetization: all egg odds shown before purchase, no fake timers,
+  no pop-up shop, no paid Secret pets, every zone reachable for free,
+  respects Roblox PolicyService rules on paid random items.
+- Status: all systems implemented and type-checked. Not yet play-tested in
+  Roblox Studio. Final art and audio still to come (placeholders now).
+
+## Skills shown by this work
+- Game design and design docs
+- Economy formulas and pacing simulation
+- Session-locked DataStore saving with versioned migrations
+- Server-authoritative networking with payload schemas and rate limits
+- Mobile-first game UI
+- Automated testing for game logic
+
+## Links
+- Repository: https://github.com/lockyjk/my-project
+- Design doc: https://github.com/lockyjk/my-project/blob/claude/lucid-darwin-yy509c/DESIGN.md
+- README: https://github.com/lockyjk/my-project/blob/claude/lucid-darwin-yy509c/README.md
